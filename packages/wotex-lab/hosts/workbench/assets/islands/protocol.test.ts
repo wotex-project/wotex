@@ -26,7 +26,9 @@ const server = await createServer({
   resolve: { alias: { $lib: new URL("../", import.meta.url).pathname } },
   server: { middlewareMode: true, watch: null, ws: false },
 })
+
 after(() => server.close())
+
 const canonical: typeof import("$lib/islands/canonical.ts") = (await server.ssrLoadModule(
   new URL("./canonical.ts", import.meta.url).pathname,
 )) as typeof import("$lib/islands/canonical.ts")

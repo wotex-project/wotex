@@ -1,0 +1,3 @@
+JsFunctionExpression() as $function where {
+  register_diagnostic(span = $function, message = "Use an arrow function instead of a function expression.")
+}

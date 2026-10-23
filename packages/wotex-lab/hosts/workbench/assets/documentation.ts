@@ -1,3 +1,23 @@
+const catalogueStatus = (query: string, count: number) => {
+  if (!query) {
+    return ""
+  }
+  if (count === 0) {
+    return "No matches"
+  }
+  return `${count} ${count === 1 ? "match" : "matches"}`
+}
+
+const requestedCatalogue = (hash: string) => {
+  if (hash === "#doc-api") {
+    return "api"
+  }
+  if (hash === "#doc-packages") {
+    return "packages"
+  }
+  return "article"
+}
+
 const updateNavigation = (root: HTMLElement, view: string) => {
   const section = view === "article" ? (root.dataset.docSection ?? "guides") : view
   for (const link of root.querySelectorAll<HTMLAnchorElement>(".doc-primary-nav a")) {
@@ -23,11 +43,7 @@ const filterCatalogue = (catalogue: HTMLElement, query: string) => {
   }
   const status = catalogue.querySelector<HTMLElement>("[data-doc-catalogue-status]")
   if (status) {
-    status.textContent = query
-      ? count === 0
-        ? "No matches"
-        : `${count} ${count === 1 ? "match" : "matches"}`
-      : ""
+    status.textContent = catalogueStatus(query, count)
   }
 }
 
@@ -58,12 +74,7 @@ const mountReader = () => {
   theme()
 
   const catalogueView = () => {
-    const requested =
-      location.hash === "#doc-api"
-        ? "api"
-        : location.hash === "#doc-packages"
-          ? "packages"
-          : "article"
+    const requested = requestedCatalogue(location.hash)
     const view =
       requested !== "article" && root.querySelector(`[data-doc-catalogue="${requested}"]`)
         ? requested

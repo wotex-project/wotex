@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Button from "$lib/primitives/button/button.svelte"
+
   let {
     title,
     message,
@@ -16,8 +18,14 @@
   <h2>{title}</h2>
   <p>{message}</p>
   {#if onretry}
-    <button type="button" class="wl-button" data-wotex-variant="secondary" onclick={onretry}>
+    <Button
+      unstyled
+      type="button"
+      class="wl-button"
+      data-wotex-variant="secondary"
+      onclick={onretry}
+    >
       Retry
-    </button>
+    </Button>
   {/if}
 </section>

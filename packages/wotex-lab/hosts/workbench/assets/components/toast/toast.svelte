@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Button from "$lib/primitives/button/button.svelte"
+
   let {
     message,
     kind = "neutral",
@@ -13,8 +15,14 @@
 <div class="wl-state" data-wotex-state={kind} role={kind === "danger" ? "alert" : "status"}>
   <p>{message}</p>
   {#if ondismiss}
-    <button type="button" class="wl-button" data-wotex-variant="secondary" onclick={ondismiss}>
+    <Button
+      unstyled
+      type="button"
+      class="wl-button"
+      data-wotex-variant="secondary"
+      onclick={ondismiss}
+    >
       Dismiss
-    </button>
+    </Button>
   {/if}
 </div>

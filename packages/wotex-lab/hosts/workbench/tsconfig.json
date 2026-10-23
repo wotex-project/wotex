@@ -20,6 +20,7 @@
     "assets/**/*.ts",
     "assets/**/*.svelte",
     "vite.config.ts",
-    "bin/**/*.ts"
+    "bin/**/*.ts",
+    "tools/lint/**/*.ts"
   ]
 }

@@ -1,0 +1,3 @@
+JsMethodObjectMember() as $method where {
+  register_diagnostic(span = $method, message = "Use an arrow function property instead of object method shorthand.")
+}

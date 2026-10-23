@@ -8,9 +8,11 @@
   "files": {
     "ignoreUnknown": true,
     "includes": [
-      "assets/**/*.{ts,svelte,css}",
+      "assets/**/*.{ts,js,mjs,cjs,svelte,css}",
+      "bin/*.js",
       "bin/*.mjs",
       "bin/*.ts",
+      "tools/lint/**/*.{ts,js,mjs,cjs}",
       "bin/*.cjs",
       ".storybook/**",
       "vite.config.ts",
@@ -44,6 +46,23 @@
       "whitespaceSensitivity": "css"
     }
   },
+  "plugins": [
+    {
+      "resolutionKind": "config",
+      "path": "./tools/lint/biome/no-classes.grit",
+      "includes": ["**/*.ts", "**/*.js", "**/*.mjs", "**/*.cjs", "!**/*.test.ts"]
+    },
+    {
+      "resolutionKind": "config",
+      "path": "./tools/lint/biome/no-function-expressions.grit",
+      "includes": ["**/*.ts", "**/*.js", "**/*.mjs", "**/*.cjs"]
+    },
+    {
+      "resolutionKind": "config",
+      "path": "./tools/lint/biome/no-object-methods.grit",
+      "includes": ["**/*.ts", "**/*.js", "**/*.mjs", "**/*.cjs"]
+    }
+  ],
   "linter": {
     "enabled": true,
     "rules": {
@@ -60,7 +79,12 @@
         "noUnusedImports": "error",
         "noUnusedVariables": "error"
       },
+      "nursery": {
+        "useConsistentFunctionStyle": { "level": "error", "options": { "style": "expression" } },
+        "noThisOutsideOfClass": "error"
+      },
       "style": {
+        "noNestedTernary": "error",
         "useBlockStatements": "error",
         "noNonNullAssertion": "error",
         "noParameterAssign": "error",

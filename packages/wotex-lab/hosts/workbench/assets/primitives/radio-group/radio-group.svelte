@@ -20,6 +20,8 @@
     disabled?: boolean
     onchange?: (value: string) => void
   } = $props()
+
+  const selectItem = (value: string) => () => onchange?.(value)
 </script>
 
 <fieldset {disabled}>
@@ -32,7 +34,7 @@
         value={option.value}
         checked={option.value === value}
         disabled={option.disabled}
-        onchange={() => onchange?.(option.value)}
+        onchange={selectItem(option.value)}
       > {option.label}</label
     >
   {/each}

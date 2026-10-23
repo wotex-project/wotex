@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ContextMenuItem } from "$lib/components/canvas-context-menu/context-menu.ts"
+  import Button from "$lib/primitives/button/button.svelte"
   import { nextItemIndex } from "$lib/primitives/menu-navigation.ts"
 
   let {
@@ -63,6 +64,8 @@
       items[next]?.focus()
     }
   }
+
+  const selectItem = (id: string) => () => choose(id)
 </script>
 
 <div
@@ -75,14 +78,15 @@
   onkeydown={move}
 >
   {#each menuItems as item, index (item.id)}
-    <button
+    <Button
+      unstyled
       {@attach bindFirstAction(index)}
       type="button"
       role="menuitem"
       disabled={!connected || item.disabled}
-      onclick={() => choose(item.id)}
+      onclick={selectItem(item.id)}
     >
       {item.label}
-    </button>
+    </Button>
   {/each}
 </div>

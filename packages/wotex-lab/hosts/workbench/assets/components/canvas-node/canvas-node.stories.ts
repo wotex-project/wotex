@@ -6,6 +6,7 @@ const meta: Meta = { title: "Components/canvas-node", component: NodeExample }
 export default meta
 
 type Story = StoryObj
+
 export const Thing: Story = {
   args: { kind: "thing", payload: componentStory("canvas-node", "Thing") },
 }

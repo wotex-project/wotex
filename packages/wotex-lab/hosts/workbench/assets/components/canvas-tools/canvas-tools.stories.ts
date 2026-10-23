@@ -11,6 +11,7 @@ const meta: Meta = {
 export default meta
 
 type Story = StoryObj
+
 export const Connected: Story = { args: componentStory("canvas-tools", "Connected") }
 export const Disconnected: Story = { args: componentStory("canvas-tools", "Disconnected") }
 export const Saving: Story = { args: componentStory("canvas-tools", "Saving") }

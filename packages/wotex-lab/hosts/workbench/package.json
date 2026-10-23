@@ -12,11 +12,12 @@
     "check:browser:islands": "node bin/check_islands_browser.mjs",
     "check": "pnpm run lint && pnpm run audit:dependencies && pnpm run typecheck && pnpm run test:layout && pnpm run build && node bin/check_assets.mjs",
     "audit:dependencies": "pnpm audit --audit-level low",
-    "test:layout": "node --experimental-strip-types --import ./bin/register_aliases.ts --test assets/layout-profile.test.ts assets/islands/canvas-model.test.ts assets/islands/metric-plot.test.ts assets/islands/protocol.test.ts assets/primitives/menu-navigation.test.ts assets/live-view-hook.test.ts bin/frontend_architecture.test.ts assets/islands/hook.test.ts",
+    "test:layout": "node --experimental-strip-types --import ./bin/register_aliases.ts --test assets/layout-profile.test.ts assets/islands/canvas-model.test.ts assets/islands/metric-plot.test.ts assets/islands/protocol.test.ts assets/primitives/menu-navigation.test.ts assets/live-view-hook.test.ts assets/islands/hook.test.ts tools/lint/*.test.ts",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-    "format": "biome format --write . && node --experimental-strip-types bin/check_frontend_architecture.ts --fix",
-    "lint": "biome check --error-on-warnings . && node --experimental-strip-types bin/check_frontend_architecture.ts",
-    "lint:fix": "biome check --write . && node --experimental-strip-types bin/check_frontend_architecture.ts --fix"
+    "format": "biome format --write . && node --experimental-strip-types tools/lint/biome-host.ts format --write . && node --experimental-strip-types tools/lint/format.ts",
+    "lint": "biome check --error-on-warnings . && node --experimental-strip-types tools/lint/biome-host.ts check --error-on-warnings . && pnpm run lint:style",
+    "lint:fix": "biome check --write . && node --experimental-strip-types tools/lint/biome-host.ts check --write . && node --experimental-strip-types tools/lint/format.ts && pnpm run lint:style",
+    "lint:style": "node --experimental-strip-types tools/lint/check.ts"
   },
   "dependencies": {
     "@xyflow/svelte": "1.7.0",

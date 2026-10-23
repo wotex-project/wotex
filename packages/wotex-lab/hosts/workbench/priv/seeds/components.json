@@ -1,51 +1,39 @@
 {
-  "button": {
-    "Danger": {
-      "label": "Delete",
-      "variant": "danger"
+  "field": {
+    "Default": {
+      "id": "name",
+      "label": "Name",
+      "name": "name"
     },
-    "Disabled": {
-      "disabled": true,
-      "label": "Unavailable"
-    },
-    "Loading": {
-      "label": "Loading",
-      "loading": true
-    },
-    "Primary": {
-      "label": "Primary action"
+    "Invalid": {
+      "error": "Enter a valid address",
+      "id": "email",
+      "label": "Email",
+      "name": "email",
+      "value": "invalid"
     }
   },
-  "callout": {
-    "Note": {
-      "kind": "note",
-      "title": "Read this first"
-    },
-    "Warning": {
-      "kind": "warning",
-      "title": "Review before continuing"
+  "dialog": {
+    "Open": {
+      "id": "example-dialog",
+      "open": true,
+      "title": "Example dialog"
     }
   },
-  "canvas-context-menu": {
-    "Connection": {
-      "kind": "edge",
-      "label": "Connection actions"
+  "legend": {
+    "Default": {
+      "items": [
+        {
+          "color": "#3457d5",
+          "id": "requests",
+          "label": "Requests"
+        }
+      ],
+      "label": "Series"
     },
-    "Metric": {
-      "kind": "metric",
-      "label": "Metric actions"
-    },
-    "Run": {
-      "kind": "run",
-      "label": "Run result actions"
-    },
-    "Thing": {
-      "kind": "thing",
-      "label": "Thing actions",
-      "operations": [
-        "read",
-        "observe"
-      ]
+    "Empty": {
+      "items": [],
+      "label": "Series"
     }
   },
   "canvas-metric": {
@@ -111,6 +99,28 @@
       "y": 235
     }
   },
+  "icon": {
+    "Default": {
+      "label": "Search",
+      "name": "search"
+    }
+  },
+  "inspector": {
+    "Open": {
+      "fields": [
+        {
+          "label": "State",
+          "value": "Ready"
+        },
+        {
+          "label": "Owner",
+          "value": "Example"
+        }
+      ],
+      "open": true,
+      "title": "Record details"
+    }
+  },
   "canvas-run": {
     "Captured": {
       "chart_index": 0,
@@ -174,21 +184,14 @@
       "y": 120
     }
   },
-  "canvas-tools": {
-    "Connected": {
-      "connected": true
+  "link": {
+    "External": {
+      "href": "https://example.test/docs",
+      "label": "External documentation"
     },
-    "Disconnected": {
-      "connected": false
-    },
-    "Pan": {
-      "pan": true
-    },
-    "Saved": {
-      "saved": true
-    },
-    "Saving": {
-      "saving": true
+    "Internal": {
+      "href": "/guide",
+      "label": "Read the guide"
     }
   },
   "chart": {
@@ -223,12 +226,204 @@
       "title": "Throughput"
     }
   },
+  "select": {
+    "Default": {
+      "id": "region",
+      "label": "Region",
+      "name": "region",
+      "options": [
+        {
+          "label": "Europe",
+          "value": "eu"
+        },
+        {
+          "label": "Americas",
+          "value": "us"
+        }
+      ],
+      "value": "eu"
+    }
+  },
+  "input": {
+    "Default": {
+      "aria-label": "Name",
+      "class": "wl-field",
+      "id": "name",
+      "name": "name"
+    },
+    "Disabled": {
+      "aria-label": "Name",
+      "class": "wl-field",
+      "disabled": true,
+      "id": "name",
+      "name": "name"
+    }
+  },
+  "canvas-tools": {
+    "Connected": {
+      "connected": true
+    },
+    "Disconnected": {
+      "connected": false
+    },
+    "Pan": {
+      "pan": true
+    },
+    "Saved": {
+      "saved": true
+    },
+    "Saving": {
+      "saving": true
+    }
+  },
+  "tooltip": {
+    "Default": {
+      "text": "Additional context"
+    }
+  },
+  "canvas-context-menu": {
+    "Connection": {
+      "kind": "edge",
+      "label": "Connection actions"
+    },
+    "Metric": {
+      "kind": "metric",
+      "label": "Metric actions"
+    },
+    "Run": {
+      "kind": "run",
+      "label": "Run result actions"
+    },
+    "Thing": {
+      "kind": "thing",
+      "label": "Thing actions",
+      "operations": [
+        "read",
+        "observe"
+      ]
+    }
+  },
+  "progress": {
+    "Determinate": {
+      "label": "Upload progress",
+      "value": 64
+    },
+    "Indeterminate": {
+      "label": "Working"
+    }
+  },
+  "tabs": {
+    "Default": {
+      "label": "Example sections",
+      "tabs": [
+        {
+          "content": "Readable summary",
+          "id": "summary",
+          "label": "Summary"
+        },
+        {
+          "content": "Readable details",
+          "id": "details",
+          "label": "Details"
+        }
+      ]
+    }
+  },
+  "navigation": {
+    "CurrentPage": {
+      "current": "/guide",
+      "items": [
+        {
+          "id": "home",
+          "path": "/",
+          "title": "Home"
+        },
+        {
+          "id": "guide",
+          "path": "/guide",
+          "title": "Guide"
+        }
+      ],
+      "label": "Documentation"
+    }
+  },
+  "toast": {
+    "Success": {
+      "kind": "success",
+      "message": "Changes saved"
+    }
+  },
+  "callout": {
+    "Note": {
+      "kind": "note",
+      "title": "Read this first"
+    },
+    "Warning": {
+      "kind": "warning",
+      "title": "Review before continuing"
+    }
+  },
+  "metric-plot": {
+    "Default": {
+      "series": [
+        {
+          "name": "Room",
+          "points": [
+            [
+              0,
+              21.5
+            ],
+            [
+              1,
+              null
+            ],
+            [
+              2,
+              22.0
+            ]
+          ]
+        }
+      ],
+      "title": "Room temperature",
+      "unit": "°C"
+    },
+    "Empty": {
+      "series": [],
+      "title": "Room temperature",
+      "unit": "°C"
+    }
+  },
   "checkbox": {
     "Checked": {
       "checked": true,
       "id": "alerts",
       "label": "Send alerts",
       "name": "alerts"
+    }
+  },
+  "filter": {
+    "Default": {
+      "fields": [
+        {
+          "label": "Contains",
+          "name": "query"
+        },
+        {
+          "label": "State",
+          "name": "state",
+          "options": [
+            {
+              "label": "Any",
+              "value": ""
+            },
+            {
+              "label": "Ready",
+              "value": "ready"
+            }
+          ]
+        }
+      ],
+      "legend": "Filter results"
     }
   },
   "data-grid": {
@@ -267,6 +462,17 @@
       ]
     }
   },
+  "icon-button": {
+    "Default": {
+      "icon": "search",
+      "label": "Open search"
+    },
+    "Disabled": {
+      "disabled": true,
+      "icon": "close",
+      "label": "Unavailable"
+    }
+  },
   "data-table": {
     "Empty": {
       "caption": "Example records",
@@ -296,115 +502,14 @@
       ]
     }
   },
-  "dialog": {
-    "Open": {
-      "id": "example-dialog",
-      "open": true,
-      "title": "Example dialog"
-    }
-  },
-  "disclosure": {
-    "Open": {
-      "open": true,
-      "summary": "More information"
-    }
-  },
-  "field": {
-    "Default": {
-      "id": "name",
-      "label": "Name",
-      "name": "name"
+  "status-badge": {
+    "Danger": {
+      "kind": "danger",
+      "label": "Failed"
     },
-    "Invalid": {
-      "error": "Enter a valid address",
-      "id": "email",
-      "label": "Email",
-      "name": "email",
-      "value": "invalid"
-    }
-  },
-  "filter": {
-    "Default": {
-      "fields": [
-        {
-          "label": "Contains",
-          "name": "query"
-        },
-        {
-          "label": "State",
-          "name": "state",
-          "options": [
-            {
-              "label": "Any",
-              "value": ""
-            },
-            {
-              "label": "Ready",
-              "value": "ready"
-            }
-          ]
-        }
-      ],
-      "legend": "Filter results"
-    }
-  },
-  "icon": {
-    "Default": {
-      "label": "Search",
-      "name": "search"
-    }
-  },
-  "icon-button": {
-    "Default": {
-      "icon": "search",
-      "label": "Open search"
-    },
-    "Disabled": {
-      "disabled": true,
-      "icon": "close",
-      "label": "Unavailable"
-    }
-  },
-  "inspector": {
-    "Open": {
-      "fields": [
-        {
-          "label": "State",
-          "value": "Ready"
-        },
-        {
-          "label": "Owner",
-          "value": "Example"
-        }
-      ],
-      "open": true,
-      "title": "Record details"
-    }
-  },
-  "legend": {
-    "Default": {
-      "items": [
-        {
-          "color": "#3457d5",
-          "id": "requests",
-          "label": "Requests"
-        }
-      ],
-      "label": "Series"
-    },
-    "Empty": {
-      "items": [],
-      "label": "Series"
-    }
-  },
-  "link": {
-    "External": {
-      "href": "https://example.test/docs",
-      "label": "External documentation"
-    },
-    "Internal": {
-      "href": "/guide",
-      "label": "Read the guide"
+    "Success": {
+      "kind": "success",
+      "label": "Ready"
     }
   },
   "menu": {
@@ -442,66 +547,11 @@
       "open": true
     }
   },
-  "metric-plot": {
-    "Default": {
-      "series": [
-        {
-          "name": "Room",
-          "points": [
-            [
-              0,
-              21.5
-            ],
-            [
-              1,
-              null
-            ],
-            [
-              2,
-              22.0
-            ]
-          ]
-        }
-      ],
-      "title": "Room temperature",
-      "unit": "°C"
-    },
-    "Empty": {
-      "series": [],
-      "title": "Room temperature",
-      "unit": "°C"
-    }
-  },
-  "navigation": {
-    "CurrentPage": {
-      "current": "/guide",
-      "items": [
-        {
-          "id": "home",
-          "path": "/",
-          "title": "Home"
-        },
-        {
-          "id": "guide",
-          "path": "/guide",
-          "title": "Guide"
-        }
-      ],
-      "label": "Documentation"
-    }
-  },
-  "panel": {
-    "Default": {
-      "title": "Summary"
-    }
-  },
-  "progress": {
-    "Determinate": {
-      "label": "Upload progress",
-      "value": 64
-    },
-    "Indeterminate": {
-      "label": "Working"
+  "state": {
+    "Disconnected": {
+      "message": "Reconnect to resume.",
+      "state": "disconnected",
+      "title": "Disconnected"
     }
   },
   "radio-group": {
@@ -521,67 +571,32 @@
       "value": "comfortable"
     }
   },
-  "select": {
-    "Default": {
-      "id": "region",
-      "label": "Region",
-      "name": "region",
-      "options": [
-        {
-          "label": "Europe",
-          "value": "eu"
-        },
-        {
-          "label": "Americas",
-          "value": "us"
-        }
-      ],
-      "value": "eu"
-    }
-  },
-  "state": {
-    "Disconnected": {
-      "message": "Reconnect to resume.",
-      "state": "disconnected",
-      "title": "Disconnected"
-    }
-  },
-  "status-badge": {
+  "button": {
     "Danger": {
-      "kind": "danger",
-      "label": "Failed"
+      "label": "Delete",
+      "variant": "danger"
     },
-    "Success": {
-      "kind": "success",
-      "label": "Ready"
+    "Disabled": {
+      "disabled": true,
+      "label": "Unavailable"
+    },
+    "Loading": {
+      "label": "Loading",
+      "loading": true
+    },
+    "Primary": {
+      "label": "Primary action"
     }
   },
-  "tabs": {
+  "panel": {
     "Default": {
-      "label": "Example sections",
-      "tabs": [
-        {
-          "content": "Readable summary",
-          "id": "summary",
-          "label": "Summary"
-        },
-        {
-          "content": "Readable details",
-          "id": "details",
-          "label": "Details"
-        }
-      ]
+      "title": "Summary"
     }
   },
-  "toast": {
-    "Success": {
-      "kind": "success",
-      "message": "Changes saved"
-    }
-  },
-  "tooltip": {
-    "Default": {
-      "text": "Additional context"
+  "disclosure": {
+    "Open": {
+      "open": true,
+      "summary": "More information"
     }
   }
 }

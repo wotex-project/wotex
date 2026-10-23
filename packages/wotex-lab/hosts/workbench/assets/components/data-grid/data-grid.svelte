@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from "svelte"
+  import DataGridCell from "$lib/components/data-grid/data-grid/data-grid-cell.svelte"
   import type { TableColumn, TableRow } from "$lib/components/data-table/data-table.svelte"
 
   let {
@@ -115,19 +116,16 @@
       <!-- biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: The ARIA grid keeps roving focus on cells rather than rows and column headers. -->
       <div role="row" class={`${prefix}-grid-row`} aria-rowindex={rowIndex + 2}>
         {#each columns as column, columnIndex (column.key)}
-          <!-- svelte-ignore a11y_no_static_element_interactions (ARIA grid roving focus) -->
-          <!-- biome-ignore lint/a11y/useSemanticElements: Explicit ARIA grid semantics preserve the roving-cell interaction model. -->
-          <div
-            role="gridcell"
-            aria-colindex={columnIndex + 1}
-            tabindex={isActive(rowIndex, columnIndex) ? 0 : -1}
-            data-wotex-grid-cell={`${rowIndex}:${columnIndex}`}
-            onfocus={() => focusRow(row.key, rowIndex, columnIndex)}
-            onkeydown={(event) => move(event, rowIndex, columnIndex)}
-            ondblclick={() => activateRow(row.key)}
-          >
-            {row.values[column.key] ?? ""}
-          </div>
+          <DataGridCell
+            {row}
+            {column}
+            {rowIndex}
+            {columnIndex}
+            active={isActive(rowIndex, columnIndex)}
+            onfocus={focusRow}
+            onmove={move}
+            onactivate={activateRow}
+          />
         {/each}
       </div>
     {/each}

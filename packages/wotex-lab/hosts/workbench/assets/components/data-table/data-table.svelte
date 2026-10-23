@@ -3,10 +3,12 @@
     key: string
     label: string
   }
+
   export interface TableRow {
     key: string
     values: Record<string, string | number | boolean | null>
   }
+
   let {
     caption,
     columns,

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Button from "$lib/primitives/button/button.svelte"
+
   export interface InspectorField {
     label: string
     value: string
@@ -22,9 +24,15 @@
     <header>
       <h2>{title}</h2>
       {#if onclose}
-        <button type="button" class="wl-button" data-wotex-variant="secondary" onclick={onclose}>
+        <Button
+          unstyled
+          type="button"
+          class="wl-button"
+          data-wotex-variant="secondary"
+          onclick={onclose}
+        >
           Close
-        </button>
+        </Button>
       {/if}
     </header>
     <dl>

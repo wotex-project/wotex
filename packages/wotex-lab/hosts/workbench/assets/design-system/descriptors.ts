@@ -958,6 +958,7 @@ export const componentDescriptors = [
     },
   },
 ] as const
+
 export type ComponentId = (typeof componentDescriptors)[number]["id"]
 
 export const isComponentId = (id: string): id is ComponentId =>

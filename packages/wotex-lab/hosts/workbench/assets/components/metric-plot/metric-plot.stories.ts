@@ -7,5 +7,6 @@ const meta: Meta = { title: "Components/Metric plot", component: MetricPlot }
 export default meta
 
 type Story = StoryObj
+
 export const Default: Story = { args: componentStory("metric-plot", "Default") }
 export const Empty: Story = { args: componentStory("metric-plot", "Empty") }

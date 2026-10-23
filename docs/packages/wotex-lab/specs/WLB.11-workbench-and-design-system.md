@@ -1,7 +1,24 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.30.0. Contract: accepted. Implementation status:
+Specification version: 0.31.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.31 strengthens the frontend source contract through the
+[frontend standard](../frontend-standard.md): named template handlers,
+primitive composition, a 300-line Svelte limit, transitive load-time ordering
+and spacing around types/imports/lifecycle groups. Biome 2.6.2 schema-verified
+rules and GritQL plugins run alongside the Svelte/TypeScript AST gate; negative
+vectors and actual-binary plugin probes run in the existing Lab CI lane.
+Formatting runs only formatting and spacing. Platform constructor exemptions
+are explicit and test classes remain subject to AST checks.
+
+The canvas surface keeps its path and public props while its rune state moves
+to a closure factory with reactive getters and setters for existing bindings.
+Repeated grid/tab/filter rows own local handlers and domain controls compose
+native primitives. The standalone Storybook loader preserves receiver and
+lazy-loading behavior through arrow callbacks. UI data, events, command
+authority and the generated control SDK API are unchanged. Native design and
+artifact qualification remain partial.
 
 Version 0.30 adds an executable frontend architecture contract. Base controls
 own `assets/primitives/<name>/`; composed UI owns `assets/components/<name>/`;
@@ -1004,7 +1021,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-S11-15 | Deliver the separate editable WoTEx brand identity and approved asset handoff defined by WLB-C15, preserving the distinction between source values, proposals and accepted identity. |
 | WLB-S11-16 | Deliver the editable Lab page/state/profile inventory and connected task flows defined by WLB-C16, with source-aligned components, adjacent briefs and explicit approval/recovery boundaries. |
 | WLB-S11-17 | Author reference-room, component and island-story sample data in the backend Mix seed source; validate generated room input, reject stale generated outputs, and exclude Storybook sample payloads from production browser code. |
-| WLB-S11-18 | Use typed Svelte 5 runes, arrow functions and closure controllers, delegated markup events, consistent function spacing and alias-based `.ts` imports. Colocate every primitive/composed component with its stories and keep island adapters thin. Enforce the source contract in the frontend gate. |
+| WLB-S11-18 | Use typed Svelte 5 runes, arrow functions and closure controllers, named markup handlers, primitive composition, bounded components, transitive load ordering, consistent spacing and alias-based `.ts` imports. Colocate every primitive/composed component with its stories and keep island adapters thin. Enforce the source contract in the frontend gate. |
 
 ## Executable vectors
 
@@ -1027,7 +1044,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-V11-15 | Inspect the native brand file, source-exact assets/tokens, default/inverse instances and destination exports; verify accepted rules and independently restore the archived native artwork and dependencies. |
 | WLB-V11-16 | Inspect native Lab components and all required page/state/profile mappings, execute named Play journeys including back/cancel/expiry/reconnect, compare with the pinned source and independently restore the native prototype and component links. |
 | WLB-V11-17 | Repeated Mix seeding produces identical bytes without allocating browser state; check-only detects missing or stale output without writes; room admission rejects malformed, duplicate and oversized seeds; a fresh browser renders no Things, readings, Runs, pins or evidence before explicit backend operations. |
-| WLB-V11-18 | AST vectors accept arrows, aliases and delegated Svelte calls and reject classes, function/method declarations, `.js`/relative imports, compound handlers and missing spacing. Every production component has colocated rendered stories; callback-context isolation, enabled-menu navigation and single native activation pass unit/browser regressions. |
+| WLB-V11-18 | AST and installed-Biome vectors accept arrows, accessors, aliases and named Svelte handlers and reject classes outside the documented platform exemptions, function/method declarations, `.js`/relative imports, inline handlers, raw domain controls, oversized components, eager forward calls and missing spacing. Every production component has colocated rendered stories; callback-context isolation, enabled-menu navigation and single native activation pass unit/browser regressions. |
 
 ## Completion boundary
 

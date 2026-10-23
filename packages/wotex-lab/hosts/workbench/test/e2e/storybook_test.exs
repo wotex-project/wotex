@@ -130,6 +130,30 @@ defmodule WotexLabWorkbenchWeb.E2E.StorybookTest do
     |> assert_has("output", text: "view 2")
   end
 
+  test "composed inputs, selects and filter rows preserve native values and keyboard actions", %{
+    conn: conn,
+    origin: origin
+  } do
+    conn
+    |> story(origin, "primitives-input--default")
+    |> fill_in("Name", with: "Workbench")
+    |> assert_has("input", value: "Workbench")
+
+    conn
+    |> story(origin, "primitives-select-control--default")
+    |> select("Region", option: "Americas")
+    |> assert_has("select", selected: "Americas")
+
+    conn
+    |> story(origin, "reporting-filter--default")
+    |> fill_in("Contains", with: "meter")
+    |> select("State", option: "Ready", exact: false)
+    |> assert_has("input", value: "meter")
+    |> assert_has("select", selected: "Ready")
+    |> press("#storybook-root button", "Space")
+    |> assert_has("#storybook-root button:focus", text: "Apply filters")
+  end
+
   defp story(conn, origin, id) do
     conn = visit(conn, "#{origin}/iframe.html?id=#{id}&viewMode=story")
 

@@ -3,13 +3,17 @@
   import more from "$lib/components/canvas/assets/ellipsis.svg"
   import MetricPlot from "$lib/components/metric-plot/metric-plot.svelte"
   import type { CanvasMetricPin } from "$lib/islands/canvas-model.ts"
+  import Button from "$lib/primitives/button/button.svelte"
 
   type Data = CanvasMetricPin & {
     open: (id: string, event: MouseEvent) => void
     changed: () => void
   }
+
   let { data, selected }: NodeProps<Node<Data>> = $props()
   const time = $derived(new Date(data.end_ms).toISOString().slice(11, 19))
+
+  const openMenu = (event: MouseEvent) => data.open(data.id, event)
 </script>
 
 <NodeResizer
@@ -24,14 +28,15 @@
 <article class="wl-canvas-node wl-canvas-metric" class:wl-canvas-node-selected={selected}>
   <header>
     <strong title={data.title}>{data.title}</strong
-    ><button
+    ><Button
+      unstyled
       type="button"
       class="nodrag nopan wl-canvas-icon"
       aria-label={`Actions for ${data.title}`}
-      onclick={(e) => data.open(data.id, e)}
+      onclick={openMenu}
     >
       <img src={more} alt="">
-    </button>
+    </Button>
   </header>
   <p class="wl-canvas-identity">{data.source} · {data.range} · {data.aggregation}</p>
   <MetricPlot series={data.series} unit={data.unit} title={data.title} />

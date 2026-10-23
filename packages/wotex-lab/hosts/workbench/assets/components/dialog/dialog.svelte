@@ -14,9 +14,11 @@
     children?: Snippet
     onclose?: () => void
   } = $props()
+
+  const close = () => onclose?.()
 </script>
 
-<dialog {id} {open} class="wl-dialog" aria-labelledby={`${id}-title`} onclose={() => onclose?.()}>
+<dialog {id} {open} class="wl-dialog" aria-labelledby={`${id}-title`} onclose={close}>
   <h2 id={`${id}-title`}>{title}</h2>
   {#if children}
     {@render children()}

@@ -1,0 +1,3 @@
+or { JsClassDeclaration(), JsClassExpression(), JsClassExportDefaultDeclaration() } as $class where {
+  register_diagnostic(span = $class, message = "Define behavior with a factory function that returns a plain object, not a class.")
+}

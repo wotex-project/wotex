@@ -2,7 +2,9 @@
 export const tokenDigest =
   "sha256:af4dcaee8b8f0d82894ed3979417a74faa592557a77dab843abb6c09267aa82c" as const
 export const tokenThemes = ["system", "light", "dark", "contrast"] as const
+
 export type TokenTheme = (typeof tokenThemes)[number]
+
 export const tokenRoles = {
   "semantic.color.accent": {
     type: "color",
@@ -185,4 +187,5 @@ export const tokenRoles = {
     },
   },
 } as const
+
 export type TokenRole = keyof typeof tokenRoles

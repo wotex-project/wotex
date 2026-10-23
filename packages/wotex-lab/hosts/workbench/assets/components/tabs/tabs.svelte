@@ -1,5 +1,7 @@
 <script lang="ts">
+  import Tab from "$lib/components/tabs/tabs/tab.svelte"
   import { nextItemIndex } from "$lib/primitives/menu-navigation.ts"
+
   export interface TabItem {
     id: string
     label: string
@@ -63,19 +65,15 @@
 <div class={`${prefix}-tabs`}>
   <div role="tablist" aria-label={label}>
     {#each tabs as tab, index (tab.id)}
-      <button
-        id={`${id}-tab-${tab.id}`}
-        type="button"
-        role="tab"
-        aria-selected={selected === tab.id}
-        aria-controls={`${id}-panel-${tab.id}`}
-        tabindex={selected === tab.id ? 0 : -1}
-        disabled={disabled || tab.disabled}
-        onclick={() => choose(tab.id)}
-        onkeydown={(event) => move(event, index)}
-      >
-        {tab.label}
-      </button>
+      <Tab
+        {id}
+        {tab}
+        {index}
+        selected={selected === tab.id}
+        {disabled}
+        onselect={choose}
+        onmove={move}
+      />
     {/each}
   </div>
   {#each tabs as tab (tab.id)}

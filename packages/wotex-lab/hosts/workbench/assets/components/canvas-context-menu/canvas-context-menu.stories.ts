@@ -6,6 +6,7 @@ const meta: Meta = { title: "Components/Canvas context menu", component: Context
 export default meta
 
 type Story = StoryObj
+
 export const Thing: Story = { args: componentStory("canvas-context-menu", "Thing") }
 export const Connection: Story = { args: componentStory("canvas-context-menu", "Connection") }
 export const Metric: Story = { args: componentStory("canvas-context-menu", "Metric") }

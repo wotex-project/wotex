@@ -146,7 +146,18 @@ tabs = %{
   ]
 }
 
+native_input = %{
+  "id" => "name",
+  "name" => "name",
+  "aria-label" => "Name",
+  "class" => "wl-field"
+}
+
 components = %{
+  "input" => %{
+    "Default" => native_input,
+    "Disabled" => Map.put(native_input, "disabled", true)
+  },
   "button" => %{
     "Primary" => %{"label" => "Primary action"},
     "Loading" => %{"label" => "Loading", "loading" => true},

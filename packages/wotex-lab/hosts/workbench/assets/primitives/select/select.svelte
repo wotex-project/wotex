@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SelectControl from "$lib/primitives/select/select-control.svelte"
+
   export interface SelectOption {
     label: string
     value: string
@@ -31,9 +33,17 @@
 
 <div class="wl-control">
   <label for={id}>{label}</label>
-  <select {id} {name} class="wl-select" {value} {disabled} {required} onchange={handleChange}>
+  <SelectControl
+    {id}
+    {name}
+    class="wl-select"
+    {value}
+    {disabled}
+    {required}
+    onchange={handleChange}
+  >
     {#each options as option (option.value)}
       <option value={option.value} disabled={option.disabled}>{option.label}</option>
     {/each}
-  </select>
+  </SelectControl>
 </div>

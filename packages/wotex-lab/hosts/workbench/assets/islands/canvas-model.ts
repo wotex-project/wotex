@@ -74,6 +74,7 @@ export interface CanvasRunPin extends Record<string, unknown> {
 }
 
 export type CanvasPin = CanvasMetricPin | CanvasRunPin
+
 export interface CanvasViewport {
   x: number
   y: number

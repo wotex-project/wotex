@@ -6,6 +6,7 @@ const meta: Meta = { title: "Components/Canvas", component: Canvas }
 export default meta
 
 type Story = StoryObj
+
 export const Connected: Story = {
   args: { payload: islandStory("canvas"), transport: createStoryTransport() },
 }

@@ -27,11 +27,14 @@ are in the root `AGENTS.md`.
   Phoenix and Node, and the reference release starts no Node runtime process.
 - Frontend source uses typed Svelte 5 runes, arrow functions and closure
   factories, with blank lines between functions. Keep event markup to a named
-  handler or one delegated call. Use `$lib`/`$seeds` aliases and actual `.ts`
-  imports. Base controls own `assets/primitives/<name>/`; composed UI owns
+  handler reference; no inline callback functions. Use `$lib`/`$seeds` aliases
+  and actual `.ts` imports. Base controls own `assets/primitives/<name>/`; composed UI owns
   `assets/components/<name>/`; colocate stories. Island adapters reuse those
   components. `pnpm run lint` enforces the AST architecture contract as well
-  as Biome; `pnpm run format` also fixes function spacing.
+  as Biome; `pnpm run format` fixes spacing without running the style gate.
+  Follow `docs/packages/wotex-lab/frontend-standard.md` for the 300-line
+  component limit, primitive composition, load ordering and narrow platform
+  constructor exemptions.
 - Write browser end-to-end tests in Elixir under
   `hosts/workbench/test/e2e/`, using `PhoenixTest.Playwright.Case`.
   Keep `assets/` for frontend source, stories and unit tests; browser journey

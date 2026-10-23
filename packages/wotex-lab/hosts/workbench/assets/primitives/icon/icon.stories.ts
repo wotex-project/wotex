@@ -6,4 +6,5 @@ const meta: Meta = { title: "Primitives/Icon", component: Icon }
 export default meta
 
 type Story = StoryObj
+
 export const Default: Story = { args: componentStory("icon", "Default") }

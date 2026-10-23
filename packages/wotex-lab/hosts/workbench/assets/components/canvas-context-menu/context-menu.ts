@@ -12,14 +12,13 @@ export const contextMenuItems = (
 ): ContextMenuItem[] => {
   const inspect = {
     id: "inspect",
-    label:
-      kind === "edge"
-        ? "Configure connection"
-        : kind === "process"
-          ? "Configure"
-          : kind === "metric" || kind === "run"
-            ? "Rename / sources"
-            : "Inspect",
+    label: {
+      edge: "Configure connection",
+      process: "Configure",
+      metric: "Rename / sources",
+      run: "Rename / sources",
+      thing: "Inspect",
+    }[kind],
   }
   if (kind === "run") {
     return [

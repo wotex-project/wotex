@@ -35,6 +35,7 @@ declare global {
 }
 
 const csrf = document.querySelector<HTMLMetaElement>("meta[name='csrf-token']")?.content
+
 interface BoardSearchHook {
   el: HTMLElement
   hadFocus?: boolean

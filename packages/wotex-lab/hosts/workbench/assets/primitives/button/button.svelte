@@ -1,30 +1,37 @@
 <script lang="ts">
   import type { Snippet } from "svelte"
+  import type { HTMLButtonAttributes } from "svelte/elements"
 
   let {
-    label,
+    label = "",
     variant = "primary",
     disabled = false,
     loading = false,
+    unstyled = false,
     children,
-    onclick,
-  }: {
-    label: string
+    class: className,
+    type = "button",
+    ...attributes
+  }: Omit<HTMLButtonAttributes, "children"> & {
+    label?: string
     variant?: "primary" | "secondary" | "danger"
-    disabled?: boolean
     loading?: boolean
+    unstyled?: boolean
     children?: Snippet
-    onclick?: (event: MouseEvent) => void
   } = $props()
+
+  const classes = $derived(
+    unstyled ? className : ["wl-button", className].filter(Boolean).join(" "),
+  )
 </script>
 
 <button
-  type="button"
-  class="wl-button"
-  data-wotex-variant={variant}
+  {...attributes}
+  {type}
+  class={classes}
+  data-wotex-variant={unstyled ? attributes["data-wotex-variant"] : variant}
   {disabled}
-  aria-busy={loading || undefined}
-  {onclick}
+  aria-busy={loading || attributes["aria-busy"] || undefined}
 >
   {#if children}
     {@render children()}

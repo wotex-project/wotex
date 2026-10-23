@@ -36,7 +36,7 @@ export const observeLayoutProfile = (content: HTMLElement): (() => void) => {
 export const observeLayoutProfileWithin = (root: ParentNode): (() => void) => {
   let content: HTMLElement | null = null
 
-  let stopObservingContent = () => {}
+  const contentObserver = { stop: () => {} }
 
   const bindCurrentContent = () => {
     const nextContent = root.querySelector<HTMLElement>(".wotex-lab .wl-main")
@@ -46,12 +46,12 @@ export const observeLayoutProfileWithin = (root: ParentNode): (() => void) => {
       return
     }
 
-    stopObservingContent()
+    contentObserver.stop()
     content = nextContent
     if (content) {
-      stopObservingContent = observeLayoutProfile(content)
+      contentObserver.stop = observeLayoutProfile(content)
     } else {
-      stopObservingContent = () => {}
+      contentObserver.stop = () => {}
     }
   }
 
@@ -66,7 +66,7 @@ export const observeLayoutProfileWithin = (root: ParentNode): (() => void) => {
 
   return () => {
     observer.disconnect()
-    stopObservingContent()
+    contentObserver.stop()
   }
 }
 
@@ -111,7 +111,7 @@ export const preserveShellFocusAcrossProfiles = (shell: HTMLElement): (() => voi
 export const preserveShellFocusWithin = (root: ParentNode): (() => void) => {
   let shell: HTMLElement | null = null
 
-  let stopPreservingFocus = () => {}
+  const focusObserver = { stop: () => {} }
 
   const bindCurrentShell = () => {
     const nextShell = root.querySelector<HTMLElement>(".wotex-lab")
@@ -119,9 +119,9 @@ export const preserveShellFocusWithin = (root: ParentNode): (() => void) => {
       return
     }
 
-    stopPreservingFocus()
+    focusObserver.stop()
     shell = nextShell
-    stopPreservingFocus = shell ? preserveShellFocusAcrossProfiles(shell) : () => {}
+    focusObserver.stop = shell ? preserveShellFocusAcrossProfiles(shell) : () => {}
   }
 
   const observer = new MutationObserver(bindCurrentShell)
@@ -134,6 +134,6 @@ export const preserveShellFocusWithin = (root: ParentNode): (() => void) => {
 
   return () => {
     observer.disconnect()
-    stopPreservingFocus()
+    focusObserver.stop()
   }
 }

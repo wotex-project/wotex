@@ -6,6 +6,7 @@ const meta: Meta = { title: "Components/canvas-run", component: NodeExample }
 export default meta
 
 type Story = StoryObj
+
 export const Captured: Story = {
   args: { kind: "run_result", payload: componentStory("canvas-run", "Captured") },
 }

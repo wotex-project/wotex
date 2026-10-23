@@ -7,5 +7,7 @@ const meta: Meta = {
   component: TokenReference,
 }
 export default meta
+
 type Story = StoryObj
+
 export const SemanticRoles: Story = {}

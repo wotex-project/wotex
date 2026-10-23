@@ -20,6 +20,7 @@ const config: StorybookConfig = {
   core: {
     disableTelemetry: true,
   },
+
   viteFinal: async (viteConfig) =>
     mergeConfig(viteConfig, {
       base,

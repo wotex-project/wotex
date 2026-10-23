@@ -1,5 +1,7 @@
 <script lang="ts">
+  import Button from "$lib/primitives/button/button.svelte"
   import { nextItemIndex } from "$lib/primitives/menu-navigation.ts"
+
   export interface MenuItem {
     id: string
     label: string
@@ -43,6 +45,8 @@
       button.focus()
     }
   }
+
+  const selectItem = (id: string) => () => choose(id)
 </script>
 
 <div bind:this={root} class="wl-menu">
@@ -50,7 +54,8 @@
   {#if open}
     <div role="menu" aria-label={label}>
       {#each items as item, index (item.id)}
-        <button
+        <Button
+          unstyled
           type="button"
           role="menuitem"
           class="wl-button"
@@ -62,11 +67,11 @@
             ? 0
             : -1}
           disabled={item.disabled}
-          onclick={() => choose(item.id)}
+          onclick={selectItem(item.id)}
           onkeydown={move}
         >
           {item.label}
-        </button>
+        </Button>
       {/each}
     </div>
   {/if}

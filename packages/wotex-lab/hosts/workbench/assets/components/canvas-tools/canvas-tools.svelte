@@ -7,6 +7,8 @@
   import plus from "$lib/components/canvas/assets/plus.svg"
   import save from "$lib/components/canvas/assets/save.svg"
   import connectionsIcon from "$lib/components/canvas/assets/waypoints.svg"
+  import Button from "$lib/primitives/button/button.svelte"
+
   export type CanvasTool =
     | "select"
     | "pan"
@@ -16,6 +18,7 @@
     | "experiments"
     | "save"
     | "fit"
+
   let {
     pan = false,
     connected = true,
@@ -42,19 +45,22 @@
   ])
 
   const selectTool = (id: string) => onselect(id as CanvasTool)
+
+  const selectItem = (id: string) => () => selectTool(id)
 </script>
 
 <nav class="wl-canvas-tools" aria-label="Canvas tools">
   {#each tools as tool (tool.id)}
-    <button
+    <Button
+      unstyled
       type="button"
       aria-label={tool.label}
       aria-pressed={tool.pressed}
       title={tool.id === "save" && saved ? "Layout saved" : tool.label}
       disabled={tool.disabled}
-      onclick={() => selectTool(tool.id)}
+      onclick={selectItem(tool.id)}
     >
       <img src={tool.image} alt="">
-    </button>
+    </Button>
   {/each}
 </nav>

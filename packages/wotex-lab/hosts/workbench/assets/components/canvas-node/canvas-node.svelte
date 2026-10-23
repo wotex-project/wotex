@@ -6,21 +6,31 @@
   import thermometer from "$lib/components/canvas/assets/thermometer.svg"
   import zap from "$lib/components/canvas/assets/zap.svg"
   import type { CanvasNode } from "$lib/islands/canvas-model.ts"
+  import Button from "$lib/primitives/button/button.svelte"
 
   type Data = CanvasNode & {
     open: (id: string, event: MouseEvent) => void
     connectable: boolean
   }
+
   let { data, selected }: NodeProps<Node<Data>> = $props()
-  const icon = $derived(
-    data.kind === "process"
-      ? flask
-      : data.id === "thing-thermostat"
-        ? thermometer
-        : data.id === "thing-meter"
-          ? zap
-          : settings,
-  )
+
+  const resolveIcon = () => {
+    if (data.kind === "process") {
+      return flask
+    }
+    if (data.id === "thing-thermostat") {
+      return thermometer
+    }
+    if (data.id === "thing-meter") {
+      return zap
+    }
+    return settings
+  }
+
+  const icon = $derived(resolveIcon())
+
+  const openMenu = (event: MouseEvent) => data.open(data.id, event)
 </script>
 
 <article
@@ -31,14 +41,15 @@
   <header>
     <img src={icon} width="14" height="14" alt="">
     <strong>{data.title}</strong>
-    <button
+    <Button
+      unstyled
       class="nodrag nopan wl-canvas-icon"
       type="button"
       aria-label={`Actions for ${data.title}`}
-      onclick={(event) => data.open(data.id, event)}
+      onclick={openMenu}
     >
       <img src={more} width="16" height="16" alt="">
-    </button>
+    </Button>
   </header>
   <p class="wl-canvas-identity" title={data.identity}>
     {data.kind === "process" ? "Process" : data.identity}

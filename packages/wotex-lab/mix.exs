@@ -183,6 +183,7 @@ defmodule WotexLab.MixProject do
         [
           "README.md",
           "../../docs/packages/wotex-lab/security.md",
+          "../../docs/packages/wotex-lab/frontend-standard.md",
           "../../docs/packages/wotex-lab/labs/simulators.md",
           {"CHANGELOG.md", [title: "Changelog"]},
           {"LICENSE", [title: "License"]},

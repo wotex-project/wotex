@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Input from "$lib/primitives/input/input.svelte"
+
   let {
     id,
     name,
@@ -27,7 +29,7 @@
 
 <div class="wl-control">
   <label for={id}>{label}</label>
-  <input
+  <Input
     {id}
     {name}
     {type}
@@ -38,7 +40,7 @@
     {disabled}
     {required}
     oninput={handleChange}
-  >
+  />
   {#if error}
     <p id={`${id}-error`} role="alert">{error}</p>
   {/if}

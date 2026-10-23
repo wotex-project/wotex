@@ -1,6 +1,7 @@
 import type { Component } from "svelte"
 
 export type JsonScalar = null | boolean | number | string
+
 export type JsonValue =
   | JsonScalar
   | JsonValue[]

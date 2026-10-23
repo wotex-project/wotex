@@ -11,7 +11,9 @@ const meta: Meta = {
   },
 }
 export default meta
+
 type Story = StoryObj
+
 export const Success: Story = {
   args: componentStory("toast", "Success"),
 }

@@ -1,4 +1,7 @@
 <script lang="ts">
+  import FilterControl from "$lib/components/filter/filter/filter-field.svelte"
+  import Button from "$lib/primitives/button/button.svelte"
+
   export interface FilterField {
     name: string
     label: string
@@ -35,33 +38,19 @@
     }
     onchange?.(values)
   }
+
+  const apply = () => onapply?.(values)
 </script>
 
 <fieldset class="wl-panel">
   <legend>{legend}</legend>
   {#each fields as field (field.name)}
-    <label class="wl-control" for={`${filterId}-${field.name}`}>
-      {field.label}
-      {#if field.options}
-        <select
-          id={`${filterId}-${field.name}`}
-          class="wl-select"
-          value={values[field.name]}
-          onchange={(event) => change(field.name, event.currentTarget.value)}
-        >
-          {#each field.options as option (option.value)}
-            <option value={option.value}>{option.label}</option>
-          {/each}
-        </select>
-      {:else}
-        <input
-          id={`${filterId}-${field.name}`}
-          class="wl-field"
-          value={values[field.name]}
-          oninput={(event) => change(field.name, event.currentTarget.value)}
-        >
-      {/if}
-    </label>
+    <FilterControl
+      id={`${filterId}-${field.name}`}
+      {field}
+      value={values[field.name]}
+      onchange={change}
+    />
   {/each}
-  <button type="button" class="wl-button" onclick={() => onapply?.(values)}>Apply filters</button>
+  <Button unstyled type="button" class="wl-button" onclick={apply}>Apply filters</Button>
 </fieldset>

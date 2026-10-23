@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Button from "$lib/primitives/button/button.svelte"
+
   export interface ChartSeries {
     id: string
     label: string
@@ -32,7 +34,7 @@
   const barHeight = (point: ChartPoint) =>
     `${Math.max(4, (Math.max(0, ...Object.values(point.values).map((value) => value ?? 0)) / maximum) * 100)}%`
 
-  const inspect = (key: string) => oninspect?.(key)
+  const inspect = (key: string) => () => oninspect?.(key)
 
   const prefix = $derived(island ? "wl-island" : "wl")
 </script>
@@ -65,13 +67,14 @@
           <tr>
             <th scope="row">
               {#if oninspect}
-                <button
+                <Button
+                  unstyled
                   type="button"
                   class={`${prefix}-chart-inspect`}
-                  onclick={() => inspect(point.key)}
+                  onclick={inspect(point.key)}
                 >
                   {point.label}
-                </button>
+                </Button>
               {:else}
                 {point.label}
               {/if}

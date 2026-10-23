@@ -3,12 +3,16 @@
   import more from "$lib/components/canvas/assets/ellipsis.svg"
   import MetricPlot from "$lib/components/metric-plot/metric-plot.svelte"
   import type { CanvasRunPin } from "$lib/islands/canvas-model.ts"
+  import Button from "$lib/primitives/button/button.svelte"
 
   type Data = CanvasRunPin & {
     open: (id: string, event: MouseEvent) => void
     changed: () => void
   }
+
   let { data, selected }: NodeProps<Node<Data>> = $props()
+
+  const openMenu = (event: MouseEvent) => data.open(data.id, event)
 </script>
 
 <NodeResizer
@@ -26,14 +30,15 @@
 >
   <header>
     <strong title={data.title}>{data.title}</strong
-    ><button
+    ><Button
+      unstyled
       type="button"
       class="nodrag nopan wl-canvas-icon"
       aria-label={`Actions for ${data.title}`}
-      onclick={(e) => data.open(data.id, e)}
+      onclick={openMenu}
     >
       <img src={more} alt="">
-    </button>
+    </Button>
   </header>
   <p class="wl-canvas-identity">{data.run_id} · {data.state}</p>
   {#if data.outcome}

@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.12.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.13.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -21,6 +21,13 @@ arrow functions and closure controllers, delegated events, consistent spacing
 and alias-based `.ts` imports. The frontend gate enforces them through AST
 checks with negative tests. Native design and artifact adoption obligations
 are unchanged.
+
+Version 1.13 strengthens that source contract with named template handlers,
+primitive composition, bounded Svelte surfaces, transitive eager ordering and
+spacing around types/imports/lifecycle groups. Actual-binary Biome plugin tests
+and AST regressions run in the existing CI gate. The
+[frontend standard](../frontend-standard.md) owns the exact files and narrow
+constructor exemptions; UI behavior and the generated SDK API stay unchanged.
 
 ## Delivery status
 
