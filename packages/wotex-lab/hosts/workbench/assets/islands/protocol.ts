@@ -1,13 +1,13 @@
-import { assertJsonValue, decodedBytes, digestPayload } from "./canonical.js"
-import { validateCanvas } from "./canvas-model.js"
-import { componentDescriptor } from "./descriptors.js"
+import { assertJsonValue, decodedBytes, digestPayload } from "$lib/islands/canonical.ts"
+import { validateCanvas } from "$lib/islands/canvas-model.ts"
+import { componentDescriptor } from "$lib/islands/descriptors.ts"
 import type {
   FullSnapshot,
   IslandEvent,
   JsonValue,
   PatchEnvelope,
   PatchOperation,
-} from "./types.js"
+} from "$lib/islands/types.ts"
 
 export const ISLAND_SCHEMA = "wotex-lab-island/v1" as const
 export const ISLAND_EVENT_SCHEMA = "wotex-lab-island-event/v1" as const
@@ -233,87 +233,80 @@ const applyOperation = (payload: Record<string, JsonValue>, operation: PatchOper
 
 export type PatchResult = "applied" | "duplicate" | "resync"
 
-export class IslandState {
-  #snapshot: FullSnapshot
-  #resyncPending = false
-  readonly #requestResync: () => void
-
-  constructor(snapshot: FullSnapshot, requestResync: () => void) {
-    this.#snapshot = snapshot
-    this.#requestResync = requestResync
+const validatePatchEnvelope = (value: unknown, snapshot: FullSnapshot): PatchEnvelope => {
+  assertJsonValue(value)
+  const patch = value as unknown as PatchEnvelope
+  identity(patch)
+  if (
+    !exactKeys(patch, [
+      "schema",
+      "component",
+      "instance_id",
+      "generation",
+      "revision",
+      "base_revision",
+      "payload_digest",
+      "operations",
+      "capabilities",
+    ])
+  ) {
+    throw new Error("invalid island patch fields")
+  }
+  if (
+    decodedBytes(value) > limits.patchBytes ||
+    !Array.isArray(patch.operations) ||
+    patch.operations.length > limits.patchOperations
+  ) {
+    throw new Error("island patch exceeds its limit")
+  }
+  if (
+    patch.component !== snapshot.component ||
+    patch.instance_id !== snapshot.instance_id ||
+    patch.generation !== snapshot.generation
+  ) {
+    throw new Error("island patch identity mismatch")
   }
 
-  get snapshot() {
-    return this.#snapshot
-  }
+  return patch
+}
 
-  async replace(value: unknown) {
+export const createIslandState = (snapshot: FullSnapshot, requestResync: () => void) => {
+  let current = snapshot
+  let resyncPending = false
+
+  const replace = async (value: unknown) => {
     const snapshot = await validateFullSnapshot(value)
-    if (
-      snapshot.component !== this.#snapshot.component ||
-      snapshot.instance_id !== this.#snapshot.instance_id
-    ) {
+    if (snapshot.component !== current.component || snapshot.instance_id !== current.instance_id) {
       throw new Error("island snapshot identity changed")
     }
     const generation = BigInt(snapshot.generation)
-    const currentGeneration = BigInt(this.#snapshot.generation)
+    const currentGeneration = BigInt(current.generation)
     if (
       generation < currentGeneration ||
       (generation === currentGeneration &&
-        (BigInt(snapshot.revision) < BigInt(this.#snapshot.revision) ||
-          (snapshot.revision === this.#snapshot.revision &&
-            snapshot.payload_digest !== this.#snapshot.payload_digest)))
+        (BigInt(snapshot.revision) < BigInt(current.revision) ||
+          (snapshot.revision === current.revision &&
+            snapshot.payload_digest !== current.payload_digest)))
     ) {
       throw new Error("island snapshot is stale or contradictory")
     }
-    this.#snapshot = snapshot
-    this.#resyncPending = false
+    current = snapshot
+    resyncPending = false
   }
 
-  async patch(value: unknown): Promise<PatchResult> {
+  const patch = async (value: unknown): Promise<PatchResult> => {
     try {
-      assertJsonValue(value)
-      const patch = value as unknown as PatchEnvelope
-      identity(patch)
-      if (
-        !exactKeys(patch, [
-          "schema",
-          "component",
-          "instance_id",
-          "generation",
-          "revision",
-          "base_revision",
-          "payload_digest",
-          "operations",
-          "capabilities",
-        ])
-      ) {
-        throw new Error("invalid island patch fields")
-      }
-      if (
-        decodedBytes(value) > limits.patchBytes ||
-        !Array.isArray(patch.operations) ||
-        patch.operations.length > limits.patchOperations
-      ) {
-        throw new Error("island patch exceeds its limit")
-      }
-      if (
-        patch.component !== this.#snapshot.component ||
-        patch.instance_id !== this.#snapshot.instance_id ||
-        patch.generation !== this.#snapshot.generation
-      ) {
-        throw new Error("island patch identity mismatch")
-      }
-      if (patch.revision === this.#snapshot.revision) {
+      const patch = validatePatchEnvelope(value, current)
+      if (patch.revision === current.revision) {
         return "duplicate"
       }
       if (
-        patch.base_revision !== this.#snapshot.revision ||
+        patch.base_revision !== current.revision ||
         BigInt(patch.revision) !== BigInt(patch.base_revision) + 1n
       ) {
         throw new Error("island patch revision mismatch")
       }
-      const base = this.#snapshot
+      const base = current
       const payload = structuredClone(base.payload)
       for (const operation of patch.operations) {
         applyOperation(payload, operation)
@@ -322,10 +315,10 @@ export class IslandState {
       if ((await digestPayload(payload)) !== patch.payload_digest) {
         throw new Error("island patch digest mismatch")
       }
-      if (this.#snapshot !== base) {
+      if (current !== base) {
         throw new Error("island patch base changed during validation")
       }
-      this.#snapshot = {
+      current = {
         schema: patch.schema,
         component: patch.component,
         instance_id: patch.instance_id,
@@ -335,16 +328,18 @@ export class IslandState {
         capabilities: patch.capabilities,
         payload,
       }
-      this.#resyncPending = false
+      resyncPending = false
       return "applied"
     } catch {
-      if (!this.#resyncPending) {
-        this.#resyncPending = true
-        this.#requestResync()
+      if (!resyncPending) {
+        resyncPending = true
+        requestResync()
       }
       return "resync"
     }
   }
+
+  return { snapshot: () => current, replace, patch }
 }
 
 export const buildEvent = (

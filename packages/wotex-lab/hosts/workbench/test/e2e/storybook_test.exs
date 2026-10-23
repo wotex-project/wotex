@@ -114,6 +114,22 @@ defmodule WotexLabWorkbenchWeb.E2E.StorybookTest do
     |> assert_has("[role='tab']:first-child:focus[aria-selected='true']")
   end
 
+  test "menus skip disabled entries and native Enter activates exactly once", %{
+    conn: conn,
+    origin: origin
+  } do
+    conn
+    |> story(origin, "overlays-menu--disabled-items")
+    |> press("[role='menuitem']:first-child", "End")
+    |> assert_has("[role='menuitem']:last-child:focus")
+    |> press(":focus", "ArrowUp")
+    |> assert_has("[role='menuitem']:first-child:focus")
+    |> press(":focus", "Enter")
+    |> assert_has("output", text: "view 1")
+    |> press(":focus", "Space")
+    |> assert_has("output", text: "view 2")
+  end
+
   defp story(conn, origin, id) do
     conn = visit(conn, "#{origin}/iframe.html?id=#{id}&viewMode=story")
 

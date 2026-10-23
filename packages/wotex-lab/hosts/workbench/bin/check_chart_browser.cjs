@@ -4,7 +4,7 @@ const assert = require("node:assert/strict")
 const { chromium } = require("playwright")
 const version = require("playwright/package.json").version
 
-async function run() {
+const run = async () => {
   const origin = new URL(process.argv[2] || "http://127.0.0.1:4000")
   assert.equal(origin.protocol, "http:")
   assert.equal(origin.hostname, "127.0.0.1", "only an explicitly local disposable host is admitted")
@@ -141,12 +141,14 @@ async function run() {
           window.liveSocket.isConnected() &&
           document.querySelector("[data-phx-main].phx-connected") !== null,
       )
+
     const reconnect = async () => {
       await page.evaluate(() => window.liveSocket.disconnect())
       await page.waitForFunction(() => !window.liveSocket.isConnected())
       await page.evaluate(() => window.liveSocket.connect())
       await connected()
     }
+
     const reportRun = (id) =>
       page.evaluate(
         async (runId) =>
@@ -155,6 +157,7 @@ async function run() {
           ),
         id,
       )
+
     const startSmartRoom = async () => {
       await page.goto(origin.href)
       await connected()
@@ -163,6 +166,7 @@ async function run() {
       await connected()
       return new URL(page.url()).pathname.split("/").pop()
     }
+
     const approval = page.locator("form[phx-submit=approve]")
 
     const approvedId = await startSmartRoom()
@@ -330,14 +334,17 @@ async function run() {
         errors.push(message.text())
       }
     })
+
     const freshConnected = () =>
       fresh.waitForFunction(
         () =>
           window.liveSocket.isConnected() &&
           document.querySelector("[data-phx-main].phx-connected") !== null,
       )
+
     const freshReport = () =>
       fresh.evaluate(async () => (await fetch("/evidence/report.json")).json())
+
     for (const [path, title] of [
       ["/things", "No room"],
       ["/metrics", "No room"],
@@ -386,6 +393,7 @@ async function run() {
       })
       return Number(await retained.textContent())
     }
+
     const firstSamples = await runThermal()
     assert.ok(firstSamples > 0)
     await fresh.locator("button[phx-click=export_dataset]").click()

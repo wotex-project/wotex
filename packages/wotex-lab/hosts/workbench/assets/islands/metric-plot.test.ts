@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { metricGeometry } from "./metric-plot.ts"
+import { metricGeometry } from "$lib/islands/metric-plot.ts"
 
 test("missing samples produce dotted bridges between actual endpoints without zero substitution", () => {
   const series = [

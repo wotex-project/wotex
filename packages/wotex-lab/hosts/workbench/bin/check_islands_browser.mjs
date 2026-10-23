@@ -2,13 +2,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { chromium } from "playwright"
 
-const workbenchOrigin = localOrigin(process.argv[2] ?? "http://127.0.0.1:4000")
-const storybookOrigin = localOrigin(process.argv[3] ?? "http://127.0.0.1:4103")
-const playwrightVersion = JSON.parse(
-  await readFile(new URL("../node_modules/playwright/package.json", import.meta.url), "utf8"),
-).version
-
-function localOrigin(value) {
+const localOrigin = (value) => {
   const origin = new URL(value)
   assert.equal(origin.protocol, "http:")
   assert.equal(origin.hostname, "127.0.0.1", "browser cohorts require a loopback host")
@@ -304,13 +298,13 @@ const checkWorkbenchFallbacks = async (browser) => {
   })
   await invalidPage.addInitScript(() => {
     const setAttribute = Element.prototype.setAttribute
-    Element.prototype.setAttribute = function (name, value) {
-      return setAttribute.call(
-        this,
-        name,
-        name === "data-wotex-island-snapshot" ? "not-a-snapshot" : value,
-      )
-    }
+    Element.prototype.setAttribute = new Proxy(setAttribute, {
+      apply: (method, element, [name, value]) =>
+        Reflect.apply(method, element, [
+          name,
+          name === "data-wotex-island-snapshot" ? "not-a-snapshot" : value,
+        ]),
+    })
     new MutationObserver(() => {
       const mount = document.querySelector("[data-wotex-island-snapshot]")
       if (mount) {
@@ -421,6 +415,12 @@ const checkStorybook = async (browser) => {
   )
   await blocked.close()
 }
+
+const workbenchOrigin = localOrigin(process.argv[2] ?? "http://127.0.0.1:4000")
+const storybookOrigin = localOrigin(process.argv[3] ?? "http://127.0.0.1:4103")
+const playwrightVersion = JSON.parse(
+  await readFile(new URL("../node_modules/playwright/package.json", import.meta.url), "utf8"),
+).version
 
 const browser = await chromium.launch({
   headless: true,

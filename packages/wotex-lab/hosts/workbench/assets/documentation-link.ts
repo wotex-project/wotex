@@ -1,12 +1,14 @@
+import { createLiveViewHook } from "$lib/live-view-hook.ts"
+
 interface DocumentationLinkHook {
   el: HTMLAnchorElement
   pushEvent: (event: string, payload: Record<string, never>) => void
   documentationClick?: (event: MouseEvent) => void
 }
 
-export const WotexDocumentationLink = {
-  mounted(this: DocumentationLinkHook) {
-    this.documentationClick = (event) => {
+export const WotexDocumentationLink = createLiveViewHook<DocumentationLinkHook>({
+  mounted: (hook) => {
+    hook.documentationClick = (event) => {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
         return
       }
@@ -15,14 +17,15 @@ export const WotexDocumentationLink = {
         cancelable: true,
       })
       if (window.dispatchEvent(capture)) {
-        this.pushEvent("open_documentation", {})
+        hook.pushEvent("open_documentation", {})
       }
     }
-    this.el.addEventListener("click", this.documentationClick)
+    hook.el.addEventListener("click", hook.documentationClick)
   },
-  destroyed(this: DocumentationLinkHook) {
-    if (this.documentationClick) {
-      this.el.removeEventListener("click", this.documentationClick)
+
+  destroyed: (hook) => {
+    if (hook.documentationClick) {
+      hook.el.removeEventListener("click", hook.documentationClick)
     }
   },
-}
+})

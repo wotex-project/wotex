@@ -3,6 +3,12 @@ import { svelte } from "@sveltejs/vite-plugin-svelte"
 import { defineConfig } from "vite"
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      $lib: resolve(import.meta.dirname, "assets"),
+      $seeds: resolve(import.meta.dirname, "priv/seeds"),
+    },
+  },
   base: "/",
   plugins: [svelte()],
   build: {

@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "paths": {
+      "$lib/*": ["./assets/*"],
+      "$seeds/*": ["./priv/seeds/*"]
+    },
     "lib": ["DOM", "ES2024"],
     "allowImportingTsExtensions": true,
     "module": "ESNext",
@@ -11,5 +15,11 @@
     "target": "ES2024",
     "types": ["node", "vite/client"]
   },
-  "include": [".storybook/**/*.ts", "assets/**/*.ts", "assets/**/*.svelte", "vite.config.ts"]
+  "include": [
+    ".storybook/**/*.ts",
+    "assets/**/*.ts",
+    "assets/**/*.svelte",
+    "vite.config.ts",
+    "bin/**/*.ts"
+  ]
 }

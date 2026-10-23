@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
-import { layoutProfileForWidth } from "./layout-profile.ts"
+import { layoutProfileForWidth } from "$lib/layout-profile.ts"
 
 describe("layoutProfileForWidth", () => {
   for (const [width, expected] of [

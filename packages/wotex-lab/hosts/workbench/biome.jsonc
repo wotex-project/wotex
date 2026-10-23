@@ -10,6 +10,7 @@
     "includes": [
       "assets/**/*.{ts,svelte,css}",
       "bin/*.mjs",
+      "bin/*.ts",
       "bin/*.cjs",
       ".storybook/**",
       "vite.config.ts",
@@ -47,6 +48,7 @@
     "enabled": true,
     "rules": {
       "complexity": {
+        "useArrowFunction": "error",
         "noExcessiveCognitiveComplexity": {
           "level": "error",
           "options": {

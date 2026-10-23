@@ -317,11 +317,103 @@ components = %{
   "tooltip" => %{"Default" => %{"text" => "Additional context"}}
 }
 
+metric_series = [%{"name" => "Room", "points" => [[0, 21.5], [1, nil], [2, 22.0]]}]
+
+metric_pin = %{
+  "id" => "pin-temperature",
+  "title" => "Room temperature",
+  "metric" => "nx_batch_rows",
+  "source" => "Room history",
+  "range" => "5m",
+  "unit" => "°C",
+  "aggregation" => "last value per step",
+  "state" => "Paused",
+  "auto_refresh" => false,
+  "end_ms" => 1_799_000_300_000,
+  "series" => metric_series,
+  "x" => 160,
+  "y" => 120,
+  "width" => 360,
+  "height" => 280
+}
+
+run_pin = %{
+  "kind" => "run",
+  "id" => "pin-run",
+  "title" => "Captured result",
+  "run_id" => "run-1",
+  "record_digest" => "sha256:" <> String.duplicate("a", 64),
+  "chart_index" => 0,
+  "source_mode" => "fixture",
+  "state" => "Captured · completed",
+  "started_at" => "2026-10-22T00:00:00Z",
+  "unit" => "°C",
+  "mark" => "area",
+  "series" => metric_series,
+  "outcome" => %{
+    "label" => "Proposed target",
+    "value" => "22.0",
+    "unit" => "°C",
+    "note" => "Inert proposal"
+  },
+  "x" => 600,
+  "y" => 120,
+  "width" => 360,
+  "height" => 280
+}
+
+components =
+  Map.merge(components, %{
+    "icon" => %{"Default" => %{"name" => "search", "label" => "Search"}},
+    "canvas-tools" => %{
+      "Connected" => %{"connected" => true},
+      "Disconnected" => %{"connected" => false},
+      "Saving" => %{"saving" => true},
+      "Saved" => %{"saved" => true},
+      "Pan" => %{"pan" => true}
+    },
+    "canvas-context-menu" => %{
+      "Thing" => %{
+        "kind" => "thing",
+        "label" => "Thing actions",
+        "operations" => ["read", "observe"]
+      },
+      "Connection" => %{"kind" => "edge", "label" => "Connection actions"},
+      "Metric" => %{"kind" => "metric", "label" => "Metric actions"},
+      "Run" => %{"kind" => "run", "label" => "Run result actions"}
+    },
+    "metric-plot" => %{
+      "Default" => %{"title" => "Room temperature", "unit" => "°C", "series" => metric_series},
+      "Empty" => %{"title" => "Room temperature", "unit" => "°C", "series" => []}
+    },
+    "canvas-node" => %{"Thing" => hd(canvas["nodes"]), "Process" => Enum.at(canvas["nodes"], 1)},
+    "canvas-metric" => %{"Paused" => metric_pin},
+    "canvas-run" => %{
+      "Captured" => run_pin,
+      "Unavailable" => %{run_pin | "outcome" => nil, "series" => []}
+    }
+  })
+
+components =
+  put_in(components, ["menu", "DisabledItems"], %{
+    "label" => "Actions",
+    "open" => true,
+    "items" => [
+      %{"id" => "view", "label" => "View"},
+      %{"id" => "unavailable", "label" => "Unavailable", "disabled" => true},
+      %{"id" => "remove", "label" => "Remove"}
+    ]
+  })
+
 %{
   "room" => room,
   "components" => components,
   "islands" => %{
-    "canvas" => %{"connected" => canvas, "empty" => %{canvas | "nodes" => [], "edges" => []}},
+    "canvas" => %{
+      "connected" => canvas,
+      "empty" => %{canvas | "nodes" => [], "edges" => []},
+      "with_pins" => Map.put(canvas, "pins", [metric_pin, run_pin])
+    },
     "chart" => %{"connected" => chart, "empty" => %{chart | "series" => [], "points" => []}},
     "data-grid" => %{"connected" => grid, "empty" => %{grid | "columns" => [], "rows" => []}},
     "tabs" => %{"connected" => tabs}

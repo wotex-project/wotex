@@ -52,8 +52,8 @@ Later source or design edits require a fresh comparison.
 
 The Lab's [DesignSystem](../../../../packages/wotex-lab/lib/wotex/lab/design_system.ex)
 owns semantic colour and geometry. Its
-[token stylesheet](../../../../packages/wotex-lab/hosts/workbench/assets/components/tokens.css)
-and [Button source](../../../../packages/wotex-lab/hosts/workbench/assets/components/button.svelte)
+[token stylesheet](../../../../packages/wotex-lab/hosts/workbench/assets/design-system/tokens.css)
+and [Button source](../../../../packages/wotex-lab/hosts/workbench/assets/primitives/button/button.svelte)
 own the browser projection. Inter appears in the host font stack; system
 fallbacks remain supported. The guide's type scale is a proposal rather than
 a claim of exact CSS parity. The Lab's

@@ -1,9 +1,13 @@
-import type { MetricSeries } from "./canvas-model.js"
+import type { MetricSeries } from "$lib/islands/canvas-model.ts"
 
 /** Missing samples stay null. Dotted bridges are visual annotations only. */
-export function metricGeometry(series: MetricSeries[], mark: "line" | "point" | "area" = "line") {
+export const metricGeometry = (
+  series: MetricSeries[],
+  mark: "line" | "point" | "area" = "line",
+) => {
   const xs = series.flatMap((s) => s.points.map((p) => p[0]))
   const ys = series.flatMap((s) => s.points.flatMap((p) => (p[1] === null ? [] : [p[1]])))
+
   const domain = (values: number[]) => {
     const lo = Math.min(...values)
     const hi = Math.max(...values)
@@ -13,11 +17,16 @@ export function metricGeometry(series: MetricSeries[], mark: "line" | "point" | 
     const pad = Math.max(Math.abs(lo) * 0.05, 1)
     return lo === hi ? [lo - pad, hi + pad] : [lo, hi]
   }
+
   const [x0, x1] = domain(xs)
   const [y0, y1] = domain(mark === "area" ? [...ys, 0] : ys)
+
   const sx = (x: number) => 42 + ((x - x0) / (x1 - x0)) * 270
+
   const sy = (y: number) => 12 + ((y1 - y) / (y1 - y0)) * 112
+
   const xy = (p: [number, number]) => `${sx(p[0]).toFixed(2)},${sy(p[1]).toFixed(2)}`
+
   return {
     available: ys.length > 0,
     missing: series.reduce((n, s) => n + s.points.filter((p) => p[1] === null).length, 0),
@@ -40,6 +49,7 @@ export function metricGeometry(series: MetricSeries[], mark: "line" | "point" | 
       let segment: [number, number][] = []
       let previous: [number, number] | null = null
       let gap = false
+
       const flush = () => {
         if (!segment.length) {
           return
@@ -48,6 +58,7 @@ export function metricGeometry(series: MetricSeries[], mark: "line" | "point" | 
         segments.push(points)
         areas.push(`${xy([segment[0][0], 0])} ${points} ${xy([segment[segment.length - 1][0], 0])}`)
       }
+
       for (const [x, y] of s.points) {
         if (y === null) {
           flush()
@@ -79,7 +90,7 @@ export function metricGeometry(series: MetricSeries[], mark: "line" | "point" | 
   }
 }
 
-export function metricLabel(value: number): string {
+export const metricLabel = (value: number): string => {
   return new Intl.NumberFormat("en", {
     maximumSignificantDigits: 3,
   }).format(value)

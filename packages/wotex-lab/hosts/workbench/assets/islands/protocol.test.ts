@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { after, test } from "node:test"
 import { createServer } from "vite"
-import type { FullSnapshot, JsonValue, PatchEnvelope } from "./types.js"
+import type { FullSnapshot, JsonValue, PatchEnvelope } from "$lib/islands/types.ts"
 
 interface Fixture {
   canonical: {
@@ -23,15 +23,16 @@ const fixture = JSON.parse(
 ) as Fixture
 const server = await createServer({
   configFile: false,
+  resolve: { alias: { $lib: new URL("../", import.meta.url).pathname } },
   server: { middlewareMode: true, watch: null, ws: false },
 })
 after(() => server.close())
-const canonical: typeof import("./canonical.js") = (await server.ssrLoadModule(
+const canonical: typeof import("$lib/islands/canonical.ts") = (await server.ssrLoadModule(
   new URL("./canonical.ts", import.meta.url).pathname,
-)) as typeof import("./canonical.js")
-const protocol: typeof import("./protocol.js") = (await server.ssrLoadModule(
+)) as typeof import("$lib/islands/canonical.ts")
+const protocol: typeof import("$lib/islands/protocol.ts") = (await server.ssrLoadModule(
   new URL("./protocol.ts", import.meta.url).pathname,
-)) as typeof import("./protocol.js")
+)) as typeof import("$lib/islands/protocol.ts")
 
 test("canonical bytes and SHA-256 digests agree with the Elixir vectors", async () => {
   for (const vector of fixture.canonical) {
@@ -52,13 +53,13 @@ test("the browser applies the exact server snapshot and patch without losing Uni
   const original = structuredClone(snapshot)
   const accepted = await protocol.validateFullSnapshot(snapshot)
   let resyncs = 0
-  const state = new protocol.IslandState(accepted, () => resyncs++)
+  const state = protocol.createIslandState(accepted, () => resyncs++)
   assert.equal(await state.patch(patch), "applied")
-  assert.deepEqual(state.snapshot.payload, expected)
+  assert.deepEqual(state.snapshot().payload, expected)
   assert.equal(await state.patch(patch), "duplicate")
   assert.equal(resyncs, 0)
-  assert.equal("operations" in state.snapshot, false)
-  assert.equal("base_revision" in state.snapshot, false)
+  assert.equal("operations" in state.snapshot(), false)
+  assert.equal("base_revision" in state.snapshot(), false)
   assert.deepEqual(snapshot, original)
 })
 
@@ -79,7 +80,7 @@ test("invalid array paths retain the base and request one full snapshot", async 
   ]
   for (const path of paths) {
     let resyncs = 0
-    const state = new protocol.IslandState(snapshot, () => resyncs++)
+    const state = protocol.createIslandState(snapshot, () => resyncs++)
     // An unchanged digest must not turn an invalid no-op remove into an accepted patch.
     const invalid = {
       ...patch,
@@ -89,7 +90,7 @@ test("invalid array paths retain the base and request one full snapshot", async 
     assert.equal(await state.patch(invalid), "resync", path)
     assert.equal(await state.patch(invalid), "resync", path)
     assert.equal(resyncs, 1, path)
-    assert.equal(state.snapshot, snapshot)
+    assert.equal(state.snapshot(), snapshot)
     await state.replace(snapshot)
     assert.equal(await state.patch(patch), "applied")
   }
@@ -113,22 +114,22 @@ test("snapshot identities are strings with no trailing line terminators", async 
 
 test("a stale full snapshot cannot rewind a validated patch or reset its generation", async () => {
   const { snapshot, patch } = fixture.transition
-  const state = new protocol.IslandState(snapshot, () => {})
+  const state = protocol.createIslandState(snapshot, () => {})
   assert.equal(await state.patch(patch), "applied")
   await assert.rejects(state.replace(snapshot), /stale or contradictory/)
-  assert.equal(state.snapshot.revision, "1")
+  assert.equal(state.snapshot().revision, "1")
   const nextGeneration = { ...snapshot, generation: "1" }
   await state.replace(nextGeneration)
   await assert.rejects(state.replace(snapshot), /stale or contradictory/)
-  assert.equal(state.snapshot, nextGeneration)
+  assert.equal(state.snapshot(), nextGeneration)
 })
 
 test("concurrent patch validation cannot overwrite a newer accepted snapshot", async () => {
   const { snapshot, patch } = fixture.transition
   let resyncs = 0
-  const state = new protocol.IslandState(snapshot, () => resyncs++)
+  const state = protocol.createIslandState(snapshot, () => resyncs++)
   const results = await Promise.all([state.patch(patch), state.patch(patch)])
   assert.deepEqual(results.sort(), ["applied", "resync"])
-  assert.equal(state.snapshot.revision, "1")
+  assert.equal(state.snapshot().revision, "1")
   assert.equal(resyncs, 1)
 })

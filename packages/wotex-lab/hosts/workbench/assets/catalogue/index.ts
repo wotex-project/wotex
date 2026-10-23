@@ -1,10 +1,10 @@
-import componentSeeds from "../../priv/seeds/components.json"
-import seedData from "../../priv/seeds/islands.json"
-import { componentDescriptors, componentDigest } from "../components/descriptors.js"
-import type { IslandTransport, JsonValue } from "../islands/types.js"
+import { componentDescriptors, componentDigest } from "$lib/design-system/descriptors.ts"
+import type { IslandTransport, JsonValue } from "$lib/islands/types.ts"
+import componentSeeds from "$seeds/components.json"
+import seedData from "$seeds/islands.json"
 
 export const islandStory = (component: keyof typeof seedData, state = "connected") => {
-  const states: Record<string, Record<string, JsonValue>> = seedData[component]
+  const states = seedData[component] as unknown as Record<string, Record<string, JsonValue>>
   const payload = states[state]
   if (!payload) {
     throw new Error(`unknown island story: ${component}/${state}`)
@@ -46,21 +46,27 @@ export const createStoryTransport = (replies: Record<string, JsonValue> = {}): S
 
   return {
     events,
+
     connected: () => connected,
+
     disconnect: () => {
       connected = false
     },
+
     reconnect: () => {
       connected = true
     },
+
     failNext: (message) => {
       failure = message
     },
+
     navigate: (_, href) => {
       if (!href.startsWith("/")) {
         throw new Error("story navigation must stay on the current origin")
       }
     },
+
     push: async (event, payload, commandId) => {
       events.push({
         event,

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { createServer } from "vite"
-import { validateCanvas } from "./canvas-model.ts"
-import type { FullSnapshot, JsonValue } from "./types.js"
+import { validateCanvas } from "$lib/islands/canvas-model.ts"
+import type { FullSnapshot, JsonValue } from "$lib/islands/types.ts"
 
 const valid = () => ({
   label: "Connected Things",
@@ -47,6 +47,7 @@ const valid = () => ({
 test("the real client event builder admits Property controls and rejects extra authority", async () => {
   const server = await createServer({
     configFile: false,
+    resolve: { alias: { $lib: new URL("../", import.meta.url).pathname } },
     server: {
       middlewareMode: true,
       watch: null,

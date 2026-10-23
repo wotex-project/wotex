@@ -88,6 +88,28 @@ exceptions identify the exact ARIA interaction; required CSS overrides carry
 local explanations. Selector-specificity ordering is exempt because component
 variants span independent DOM scopes.
 
+The frontend uses Svelte 5 runes, typed props and named arrow functions.
+Protocol transitions stay in pure helpers; each mounted island owns a closure
+controller. `createLiveViewHook` adapts LiveView's receiver to explicit callback
+arguments. Application code defines no classes or object methods. Event markup
+references a handler or delegates one call; state changes, branching and async
+work live in named functions. Functions have blank lines between them.
+
+`assets/primitives/<name>/` owns base controls; `assets/components/<name>/`
+owns composed UI and colocated stories. `assets/design-system/` owns tokens,
+icons and styles. `assets/islands/<name>/` contains thin transport adapters;
+grid, tabs and chart adapters render the shared components. Storybook-only
+wrappers live in `assets/catalogue/` and consume Mix-generated examples.
+Internal imports use `$lib/...` or `$seeds/...`, with actual `.ts` extensions.
+Vite, Storybook, TypeScript and Node unit tests resolve the same aliases.
+Node 22.15 or newer is required for the unit runner's synchronous alias hooks.
+
+The AST architecture check rejects classes, function/method declarations,
+relative application imports, `.js` source imports, compound event callbacks,
+missing function spacing and components without colocated stories. Its own
+negative tests distinguish code from strings and exercise Svelte handlers.
+`pnpm run format` also fixes function spacing; `pnpm run lint` checks it.
+
 From the repository root, run
 `pnpm --dir packages/wotex-lab/hosts/workbench run format` to format or
 `pnpm --dir packages/wotex-lab/hosts/workbench run lint` to check without writing.

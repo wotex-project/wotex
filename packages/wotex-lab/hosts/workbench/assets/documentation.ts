@@ -1,4 +1,4 @@
-function updateNavigation(root: HTMLElement, view: string) {
+const updateNavigation = (root: HTMLElement, view: string) => {
   const section = view === "article" ? (root.dataset.docSection ?? "guides") : view
   for (const link of root.querySelectorAll<HTMLAnchorElement>(".doc-primary-nav a")) {
     const selected = section === "guides" ? !link.hash : link.hash === `#doc-${section}`
@@ -10,7 +10,7 @@ function updateNavigation(root: HTMLElement, view: string) {
   }
 }
 
-function filterCatalogue(catalogue: HTMLElement, query: string) {
+const filterCatalogue = (catalogue: HTMLElement, query: string) => {
   let count = 0
   for (const item of catalogue.querySelectorAll<HTMLElement>("[data-doc-catalogue-item]")) {
     item.hidden = !(item.textContent ?? "").toLocaleLowerCase().includes(query)
@@ -37,6 +37,7 @@ const mountReader = () => {
     return
   }
   const abort = new AbortController()
+
   const theme = () => {
     const value = document.documentElement.dataset.docTheme ?? root.dataset.docTheme ?? "system"
     root.dataset.wotexTheme = value
@@ -44,6 +45,7 @@ const mountReader = () => {
       button.setAttribute("aria-pressed", String(button.dataset.docThemeValue === value))
     }
   }
+
   const observer = new MutationObserver(theme)
   observer.observe(root, {
     attributes: true,
@@ -54,6 +56,7 @@ const mountReader = () => {
     attributeFilter: ["data-doc-theme"],
   })
   theme()
+
   const catalogueView = () => {
     const requested =
       location.hash === "#doc-api"

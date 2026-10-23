@@ -1,7 +1,36 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.29.0. Contract: accepted. Implementation status:
+Specification version: 0.30.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.30 adds an executable frontend architecture contract. Base controls
+own `assets/primitives/<name>/`; composed UI owns `assets/components/<name>/`;
+both colocate stories. Tokens/styles/icons live in `assets/design-system/`.
+The grid, chart and tabs islands delegate to shared Svelte components rather
+than duplicate markup and keyboard behavior. Canvas tools and context menus
+are reusable components. The remaining island adapters own only the transport
+and their instance state.
+
+Application functions use arrow syntax and consistent blank-line separation.
+Protocol state and mounted-island controllers use explicit closure factories;
+the LiveView adapter passes its receiver to callbacks as an argument. Markup
+handlers reference a function or delegate one call. Internal source imports
+use `$lib`/`$seeds` aliases and `.ts` extensions, resolved consistently by Vite,
+Storybook, TypeScript and the Node unit runner. The runner requires Node 22.15
+or newer. AST checks and negative tests enforce these rules. All production
+Svelte components have colocated stories, including canvas nodes, pins,
+controls, menus and missing-aware plots. New example data remains Mix-owned.
+
+Menu navigation is scoped to its own enabled controls; Enter relies on native
+button activation and fires once. Tab identities are instance-local. Grid
+focus remains reachable when a refreshed table shrinks. Browser tests cover
+the refactored components, disabled menu entries and exact activation counts.
+Destroyed controllers refuse retained commands and ignore late snapshots or
+patches. Concurrent initial snapshots mount one component; destruction during
+chunk loading cannot mount a late component. Direct lifecycle tests cover
+these boundaries without a browser timing delay.
+Wire schemas, backend ownership and Action authority are unchanged. Wider
+qualification and native Figma acceptance remain separate.
 
 Version 0.29 adds the static Storybook build to the Workbench gate and its
 rendered catalogue to the Elixir browser suite. Every published story is
@@ -975,6 +1004,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-S11-15 | Deliver the separate editable WoTEx brand identity and approved asset handoff defined by WLB-C15, preserving the distinction between source values, proposals and accepted identity. |
 | WLB-S11-16 | Deliver the editable Lab page/state/profile inventory and connected task flows defined by WLB-C16, with source-aligned components, adjacent briefs and explicit approval/recovery boundaries. |
 | WLB-S11-17 | Author reference-room, component and island-story sample data in the backend Mix seed source; validate generated room input, reject stale generated outputs, and exclude Storybook sample payloads from production browser code. |
+| WLB-S11-18 | Use typed Svelte 5 runes, arrow functions and closure controllers, delegated markup events, consistent function spacing and alias-based `.ts` imports. Colocate every primitive/composed component with its stories and keep island adapters thin. Enforce the source contract in the frontend gate. |
 
 ## Executable vectors
 
@@ -997,6 +1027,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-V11-15 | Inspect the native brand file, source-exact assets/tokens, default/inverse instances and destination exports; verify accepted rules and independently restore the archived native artwork and dependencies. |
 | WLB-V11-16 | Inspect native Lab components and all required page/state/profile mappings, execute named Play journeys including back/cancel/expiry/reconnect, compare with the pinned source and independently restore the native prototype and component links. |
 | WLB-V11-17 | Repeated Mix seeding produces identical bytes without allocating browser state; check-only detects missing or stale output without writes; room admission rejects malformed, duplicate and oversized seeds; a fresh browser renders no Things, readings, Runs, pins or evidence before explicit backend operations. |
+| WLB-V11-18 | AST vectors accept arrows, aliases and delegated Svelte calls and reject classes, function/method declarations, `.js`/relative imports, compound handlers and missing spacing. Every production component has colocated rendered stories; callback-context isolation, enabled-menu navigation and single native activation pass unit/browser regressions. |
 
 ## Completion boundary
 

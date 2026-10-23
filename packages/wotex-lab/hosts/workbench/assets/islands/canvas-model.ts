@@ -1,4 +1,4 @@
-import type { JsonValue } from "./types.js"
+import type { JsonValue } from "$lib/islands/types.ts"
 
 export interface CanvasNode extends Record<string, unknown> {
   id: string
@@ -106,16 +106,20 @@ const textLimits = {
 
 const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
+
 const exact = (value: Record<string, unknown>, keys: string[]) =>
   Object.keys(value).length === keys.length && keys.every((key) => key in value)
+
 const text = (value: unknown, limit: number): value is string =>
   typeof value === "string" && new TextEncoder().encode(value).length <= limit
+
 const identifier = (value: unknown): value is string =>
   text(value, 128) && /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(value)
+
 const coordinate = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 20000
 
-export function validateCanvas(payload: Record<string, JsonValue>): void {
+export const validateCanvas = (payload: Record<string, JsonValue>): void => {
   const { nodes, edges } = payload
   if (!Array.isArray(nodes) || nodes.length > 32 || !Array.isArray(edges) || edges.length > 64) {
     throw new Error("invalid canvas limits")
@@ -176,7 +180,7 @@ export function validateCanvas(payload: Record<string, JsonValue>): void {
   validateViewport(payload)
 }
 
-function validatePins(pins: JsonValue, ids: Set<string>): void {
+const validatePins = (pins: JsonValue, ids: Set<string>): void => {
   if (!Array.isArray(pins) || pins.length > 16) {
     throw new Error("invalid canvas pins")
   }
@@ -247,7 +251,7 @@ function validatePins(pins: JsonValue, ids: Set<string>): void {
   }
 }
 
-function validatePinSeries(entries: unknown[], run: boolean): number {
+const validatePinSeries = (entries: unknown[], run: boolean): number => {
   const names = new Set<string>()
   let pointCount = 0
   for (const series of entries) {
@@ -274,7 +278,7 @@ function validatePinSeries(entries: unknown[], run: boolean): number {
   return pointCount
 }
 
-function validateViewport(payload: Record<string, JsonValue>): void {
+const validateViewport = (payload: Record<string, JsonValue>): void => {
   const view = payload.view ?? []
   if (
     !Array.isArray(view) ||
@@ -299,7 +303,7 @@ function validateViewport(payload: Record<string, JsonValue>): void {
   }
 }
 
-function metricIdentity(pin: Record<string, unknown>): boolean {
+const metricIdentity = (pin: Record<string, unknown>): boolean => {
   return (
     identifier(pin.metric) &&
     text(pin.source, 64) &&
@@ -310,7 +314,7 @@ function metricIdentity(pin: Record<string, unknown>): boolean {
   )
 }
 
-function runIdentity(pin: Record<string, unknown>): boolean {
+const runIdentity = (pin: Record<string, unknown>): boolean => {
   const o = pin.outcome
   return (
     identifier(pin.run_id) &&
@@ -332,7 +336,7 @@ function runIdentity(pin: Record<string, unknown>): boolean {
   )
 }
 
-function utcTimestamp(value: string): boolean {
+const utcTimestamp = (value: string): boolean => {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?Z$/.exec(value)
   if (!match) {
     return false

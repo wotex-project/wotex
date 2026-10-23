@@ -1,5 +1,5 @@
-import "./islands/design-system.css"
-import { WotexLabSvelteIsland } from "./islands/hook.js"
+import "$lib/islands/design-system.css"
+import { WotexLabSvelteIsland } from "$lib/islands/hook.ts"
 
 interface StorybookRegistry {
   Hooks?: Record<string, unknown>

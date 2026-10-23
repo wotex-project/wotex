@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.11.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.12.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -14,6 +14,13 @@ rendered light/dark accessibility scans in the Elixir browser suite. The
 current Lab CI lane explicitly runs browser journeys and the Testcontainers
 device suite. Production APIs, ordinary test startup and device authority are
 unchanged. WLB.04 and WLB.11 own these checks.
+
+Version 1.12 adds WLB.11's frontend structure and functional-style checks:
+shared primitives/components with colocated stories, thin island adapters,
+arrow functions and closure controllers, delegated events, consistent spacing
+and alias-based `.ts` imports. The frontend gate enforces them through AST
+checks with negative tests. Native design and artifact adoption obligations
+are unchanged.
 
 ## Delivery status
 

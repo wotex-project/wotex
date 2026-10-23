@@ -5,7 +5,7 @@ export const layoutProfileThresholds = {
 
 export type LayoutProfile = "compact" | "medium" | "expanded"
 
-export function layoutProfileForWidth(width: number): LayoutProfile {
+export const layoutProfileForWidth = (width: number): LayoutProfile => {
   if (width < layoutProfileThresholds.compactUpperBound) {
     return "compact"
   }
@@ -15,7 +15,7 @@ export function layoutProfileForWidth(width: number): LayoutProfile {
   return "expanded"
 }
 
-export function observeLayoutProfile(content: HTMLElement): () => void {
+export const observeLayoutProfile = (content: HTMLElement): (() => void) => {
   const shell = content.closest<HTMLElement>(".wotex-lab")
   const observer = new ResizeObserver(([entry]) => {
     if (!entry) {
@@ -33,8 +33,9 @@ export function observeLayoutProfile(content: HTMLElement): () => void {
   return () => observer.disconnect()
 }
 
-export function observeLayoutProfileWithin(root: ParentNode): () => void {
+export const observeLayoutProfileWithin = (root: ParentNode): (() => void) => {
   let content: HTMLElement | null = null
+
   let stopObservingContent = () => {}
 
   const bindCurrentContent = () => {
@@ -69,7 +70,7 @@ export function observeLayoutProfileWithin(root: ParentNode): () => void {
   }
 }
 
-export function preserveShellFocusAcrossProfiles(shell: HTMLElement): () => void {
+export const preserveShellFocusAcrossProfiles = (shell: HTMLElement): (() => void) => {
   let compact = shell.getBoundingClientRect().width < layoutProfileThresholds.mediumUpperBound
   let focusedToggle = false
 
@@ -107,8 +108,9 @@ export function preserveShellFocusAcrossProfiles(shell: HTMLElement): () => void
   }
 }
 
-export function preserveShellFocusWithin(root: ParentNode): () => void {
+export const preserveShellFocusWithin = (root: ParentNode): (() => void) => {
   let shell: HTMLElement | null = null
+
   let stopPreservingFocus = () => {}
 
   const bindCurrentShell = () => {

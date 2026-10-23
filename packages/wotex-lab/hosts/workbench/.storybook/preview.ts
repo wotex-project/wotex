@@ -1,6 +1,6 @@
 import type { Preview } from "@storybook/svelte-vite"
-import "../assets/components/design-system.css"
-import "../assets/islands/design-system.css"
+import "$lib/design-system/design-system.css"
+import "$lib/islands/design-system.css"
 
 document.documentElement.setAttribute("data-wotex-design-system", "")
 document.documentElement.setAttribute("data-wotex-theme", "light")

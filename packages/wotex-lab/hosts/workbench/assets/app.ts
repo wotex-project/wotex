@@ -1,7 +1,8 @@
-import "./islands/design-system.css"
-import { WotexDocumentationLink } from "./documentation-link.js"
-import { WotexLabSvelteIsland } from "./islands/hook.js"
-import { observeLayoutProfileWithin, preserveShellFocusWithin } from "./layout-profile.js"
+import { createLiveViewHook } from "$lib/live-view-hook.ts"
+import "$lib/islands/design-system.css"
+import { WotexDocumentationLink } from "$lib/documentation-link.ts"
+import { WotexLabSvelteIsland } from "$lib/islands/hook.ts"
+import { observeLayoutProfileWithin, preserveShellFocusWithin } from "$lib/layout-profile.ts"
 
 interface PhoenixSocketConstructor {
   new (path: string, options?: Record<string, unknown>): unknown
@@ -39,28 +40,30 @@ interface BoardSearchHook {
   hadFocus?: boolean
 }
 
-const WotexBoardSearch = {
-  mounted(this: BoardSearchHook) {
-    const target = this.el.dataset.focusTarget
+const WotexBoardSearch = createLiveViewHook<BoardSearchHook>({
+  mounted: (hook) => {
+    const target = hook.el.dataset.focusTarget
     if (target) {
-      this.el.querySelector<HTMLElement>(target)?.focus({
+      hook.el.querySelector<HTMLElement>(target)?.focus({
         preventScroll: true,
       })
     }
   },
-  beforeUpdate(this: BoardSearchHook) {
-    this.hadFocus = this.el.contains(document.activeElement)
-  },
-  updated(this: BoardSearchHook) {
-    if (this.hadFocus && document.activeElement === document.body) {
-      this.el.querySelector<HTMLElement>("#wl-board-search-query")?.focus({
-        preventScroll: true,
-      })
-    }
-  },
-}
 
-function boardSearchResultIndex(key: string, current: number, count: number, inQuery: boolean) {
+  beforeUpdate: (hook) => {
+    hook.hadFocus = hook.el.contains(document.activeElement)
+  },
+
+  updated: (hook) => {
+    if (hook.hadFocus && document.activeElement === document.body) {
+      hook.el.querySelector<HTMLElement>("#wl-board-search-query")?.focus({
+        preventScroll: true,
+      })
+    }
+  },
+})
+
+const boardSearchResultIndex = (key: string, current: number, count: number, inQuery: boolean) => {
   if (key === "Home") {
     return 0
   }
@@ -74,7 +77,7 @@ function boardSearchResultIndex(key: string, current: number, count: number, inQ
   return (current + (forward ? 1 : count - 1)) % count
 }
 
-function moveBoardSearchFocus(event: KeyboardEvent) {
+const moveBoardSearchFocus = (event: KeyboardEvent) => {
   const target = event.target
   if (!(target instanceof HTMLElement) || !target.closest("#wl-board-search-content")) {
     return
@@ -101,6 +104,7 @@ function moveBoardSearchFocus(event: KeyboardEvent) {
 if (document.body) {
   const stopObservingLayout = observeLayoutProfileWithin(document.body)
   const stopPreservingFocus = preserveShellFocusWithin(document.body)
+
   const searchKeys = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.isComposing || event.altKey) {
       return
@@ -125,7 +129,9 @@ if (document.body) {
     }
     moveBoardSearchFocus(event)
   }
+
   window.addEventListener("keydown", searchKeys)
+
   const clearBoardSearch = () => {
     const input = document.querySelector<HTMLInputElement>(
       "#wl-board-search-panel #wl-board-search-query",
@@ -137,6 +143,7 @@ if (document.body) {
       })
     }
   }
+
   window.addEventListener("wotex:clear-board-search", clearBoardSearch)
   window.addEventListener(
     "pagehide",

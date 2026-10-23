@@ -1,4 +1,6 @@
+import { resolve } from "node:path"
 import type { StorybookConfig } from "@storybook/svelte-vite"
+import { mergeConfig } from "vite"
 
 const base = process.env.WOTEX_LAB_STORYBOOK_BASE ?? "/"
 
@@ -18,10 +20,16 @@ const config: StorybookConfig = {
   core: {
     disableTelemetry: true,
   },
-  viteFinal: async (viteConfig) => ({
-    ...viteConfig,
-    base,
-  }),
+  viteFinal: async (viteConfig) =>
+    mergeConfig(viteConfig, {
+      base,
+      resolve: {
+        alias: {
+          $lib: resolve(import.meta.dirname, "../assets"),
+          $seeds: resolve(import.meta.dirname, "../priv/seeds"),
+        },
+      },
+    }),
 }
 
 export default config

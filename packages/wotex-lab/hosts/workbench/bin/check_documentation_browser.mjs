@@ -8,92 +8,19 @@ import { fileURLToPath } from "node:url"
 import { chromium } from "playwright"
 
 const workbench = dirname(fileURLToPath(new URL("../package.json", import.meta.url)))
-const phoenixAssets = await candidate("PHOENIX_ASSETS_CANDIDATE", "../../../../../phoenix-assets")
-const docShell = await candidate("DOC_SHELL_CANDIDATE", "../../../../../doc_shell")
-const pagefind = join(phoenixAssets, "npm/doc-shell/node_modules/.bin/pagefind")
-const livePort = port(process.argv[2] ?? "4104")
-const staticPort = port(process.argv[3] ?? "4105")
-const started = performance.now()
-const temporary = await mkdtemp(join(tmpdir(), "wotex-documentation-browser-"))
-const staticRoot = join(temporary, "site")
-const liveOrigin = new URL(`http://127.0.0.1:${livePort}`)
-const staticOrigin = new URL(`http://127.0.0.1:${staticPort}`)
-const child = startFixture()
-let staticServer
 
-try {
-  const fixture = await fixtureReady(child)
-  assert.equal(fixture.static, staticRoot)
-  staticServer = await serveStatic(staticRoot, staticPort)
-
-  const browser = await chromium.launch()
-  try {
-    const live = await checkSurface(browser, liveOrigin, "live")
-    const built = await checkSurface(browser, staticOrigin, "static")
-    assert.deepEqual(built.content, live.content)
-    assert.deepEqual(built.design, live.design)
-    await checkNoScript(browser, liveOrigin)
-    await checkNoScript(browser, staticOrigin)
-
-    const playwright = JSON.parse(
-      await readFile(new URL("../node_modules/playwright/package.json", import.meta.url), "utf8"),
-    ).version
-
-    process.stdout.write(
-      `${JSON.stringify({
-        schema: "wotex-documentation-browser-cohort/v1",
-        kind: "local_source_browser_cohort",
-        node: process.version,
-        playwright,
-        chromium: browser.version(),
-        cohort_digest: fixture.cohort_digest,
-        surfaces: ["live", "static"],
-        checks: [
-          "shared-page-model",
-          "lazy-pagefind",
-          "fixed-search-corpus",
-          "all-search-filters",
-          "keyboard-search-navigation",
-          "320px-reflow",
-          "400-percent-zoom",
-          "themes-high-contrast-reduced-motion",
-          "ltr-rtl",
-          "javascript-disabled",
-          "404-shell",
-          "loopback-only-runtime",
-        ],
-        artifact_adoption: false,
-        wcag_certification: false,
-        duration_ms: Math.round(performance.now() - started),
-        status: "passed",
-      })}\n`,
-    )
-  } finally {
-    await browser.close()
-  }
-} finally {
-  if (staticServer) {
-    await new Promise((resolveClose) => staticServer.close(resolveClose))
-  }
-  await stopFixture(child)
-  await rm(temporary, {
-    recursive: true,
-    force: true,
-  })
-}
-
-async function candidate(environment, fallback) {
+const candidate = async (environment, fallback) => {
   const path = resolve(workbench, process.env[environment] ?? fallback)
   return realpath(path)
 }
 
-function port(value) {
+const port = (value) => {
   const parsed = Number.parseInt(value, 10)
   assert.ok(Number.isInteger(parsed) && parsed >= 1024 && parsed <= 65_535)
   return parsed
 }
 
-function startFixture() {
+const startFixture = () => {
   return spawn(
     "mix",
     [
@@ -121,7 +48,7 @@ function startFixture() {
   )
 }
 
-function fixtureReady(process) {
+const fixtureReady = (process) => {
   return new Promise((resolveReady, rejectReady) => {
     let stdout = ""
     let stderr = ""
@@ -148,7 +75,7 @@ function fixtureReady(process) {
   })
 }
 
-async function stopFixture(process) {
+const stopFixture = async (process) => {
   if (process.exitCode !== null) {
     return
   }
@@ -162,7 +89,7 @@ async function stopFixture(process) {
   }
 }
 
-async function serveStatic(root, listenPort) {
+const serveStatic = async (root, listenPort) => {
   const server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? "/", `http://127.0.0.1:${listenPort}`)
@@ -203,7 +130,7 @@ async function serveStatic(root, listenPort) {
   return server
 }
 
-function mediaType(path) {
+const mediaType = (path) => {
   if (path.includes("/wasm.") && path.endsWith(".pagefind")) {
     return "application/wasm"
   }
@@ -219,7 +146,7 @@ function mediaType(path) {
   )
 }
 
-async function checkSurface(browser, origin, kind) {
+const checkSurface = async (browser, origin, kind) => {
   const context = await browser.newContext({
     viewport: {
       width: 1_280,
@@ -410,7 +337,7 @@ async function checkSurface(browser, origin, kind) {
   }
 }
 
-async function search(page, query, expectedTitle) {
+const search = async (page, query, expectedTitle) => {
   const input = page.locator("[data-doc-search-input]")
   await input.fill(query)
   await page.waitForFunction((title) => {
@@ -421,13 +348,13 @@ async function search(page, query, expectedTitle) {
   }, expectedTitle)
 }
 
-async function clearFilters(page) {
+const clearFilters = async (page) => {
   for (const filter of await page.locator("[data-doc-search-filter]").all()) {
     await filter.selectOption("")
   }
 }
 
-function durationMilliseconds(value) {
+const durationMilliseconds = (value) => {
   const amount = Number.parseFloat(value)
   if (!Number.isFinite(amount)) {
     return 0
@@ -435,7 +362,7 @@ function durationMilliseconds(value) {
   return value.endsWith("ms") ? amount : amount * 1_000
 }
 
-async function checkNoScript(browser, origin) {
+const checkNoScript = async (browser, origin) => {
   const context = await browser.newContext({
     javaScriptEnabled: false,
   })
@@ -452,4 +379,78 @@ async function checkNoScript(browser, origin) {
   )
   assert.equal((await page.locator("noscript a").count()) > 0, true)
   await context.close()
+}
+
+const phoenixAssets = await candidate("PHOENIX_ASSETS_CANDIDATE", "../../../../../phoenix-assets")
+const docShell = await candidate("DOC_SHELL_CANDIDATE", "../../../../../doc_shell")
+const pagefind = join(phoenixAssets, "npm/doc-shell/node_modules/.bin/pagefind")
+const livePort = port(process.argv[2] ?? "4104")
+const staticPort = port(process.argv[3] ?? "4105")
+const started = performance.now()
+const temporary = await mkdtemp(join(tmpdir(), "wotex-documentation-browser-"))
+const staticRoot = join(temporary, "site")
+const liveOrigin = new URL(`http://127.0.0.1:${livePort}`)
+const staticOrigin = new URL(`http://127.0.0.1:${staticPort}`)
+const child = startFixture()
+let staticServer
+
+try {
+  const fixture = await fixtureReady(child)
+  assert.equal(fixture.static, staticRoot)
+  staticServer = await serveStatic(staticRoot, staticPort)
+
+  const browser = await chromium.launch()
+  try {
+    const live = await checkSurface(browser, liveOrigin, "live")
+    const built = await checkSurface(browser, staticOrigin, "static")
+    assert.deepEqual(built.content, live.content)
+    assert.deepEqual(built.design, live.design)
+    await checkNoScript(browser, liveOrigin)
+    await checkNoScript(browser, staticOrigin)
+
+    const playwright = JSON.parse(
+      await readFile(new URL("../node_modules/playwright/package.json", import.meta.url), "utf8"),
+    ).version
+
+    process.stdout.write(
+      `${JSON.stringify({
+        schema: "wotex-documentation-browser-cohort/v1",
+        kind: "local_source_browser_cohort",
+        node: process.version,
+        playwright,
+        chromium: browser.version(),
+        cohort_digest: fixture.cohort_digest,
+        surfaces: ["live", "static"],
+        checks: [
+          "shared-page-model",
+          "lazy-pagefind",
+          "fixed-search-corpus",
+          "all-search-filters",
+          "keyboard-search-navigation",
+          "320px-reflow",
+          "400-percent-zoom",
+          "themes-high-contrast-reduced-motion",
+          "ltr-rtl",
+          "javascript-disabled",
+          "404-shell",
+          "loopback-only-runtime",
+        ],
+        artifact_adoption: false,
+        wcag_certification: false,
+        duration_ms: Math.round(performance.now() - started),
+        status: "passed",
+      })}\n`,
+    )
+  } finally {
+    await browser.close()
+  }
+} finally {
+  if (staticServer) {
+    await new Promise((resolveClose) => staticServer.close(resolveClose))
+  }
+  await stopFixture(child)
+  await rm(temporary, {
+    recursive: true,
+    force: true,
+  })
 }

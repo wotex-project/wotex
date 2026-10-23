@@ -1,4 +1,4 @@
-import type { JsonValue } from "./types.js"
+import type { JsonValue } from "$lib/islands/types.ts"
 
 const encoder = new TextEncoder()
 const forbiddenKeys =
