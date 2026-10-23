@@ -166,7 +166,6 @@ defmodule WotexLabWorkbench.Investigation.CodexRunner do
           "mcp_servers={}",
           "plugins={}",
           "web_search=\"disabled\"",
-          "tools.view_image=false",
           "project_doc_max_bytes=0"
         ],
         &["-c", &1]
