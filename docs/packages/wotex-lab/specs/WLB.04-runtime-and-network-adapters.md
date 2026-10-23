@@ -1,11 +1,24 @@
 # WLB.04: Runtime and real reference transports
 
-Specification version: 1.4.1. Contract: accepted. Source status: implemented.
+Specification version: 1.4.2. Contract: accepted. Source status: implemented.
 The loopback transport, simulated Thing host, NoSec and StaticRef credential
 adapters, bounded Req/SSE client, hosted destination policy and EMQTT client
 are exercised over real sockets. The network cohort includes verified local
 TLS fixtures and a disposable MQTT broker with TLS, ACL, Last Will, abrupt
 power-loss, session-expiry and inflight evidence.
+
+Version 1.4.2 records the additional test-only independent Modbus peer. It uses
+the public draft `wotex_modbus` profile and Runtime transport; Lab adds no
+production adapter or Workbench device connector. Elixir Testcontainers owns
+the pinned PyModbus zone controller, explicit register image, readiness and
+teardown. `modbus_simulator_test.exs` covers four read and four write functions,
+typed Property/Action interactions, exception recovery, table bounds and
+rejected-write atomicity, device isolation, client reconnect persistence,
+fresh-device reset and owner cleanup. Ordinary tests start no Docker peer.
+The current Lab CI lane explicitly runs this suite. This strengthens software
+device evidence without changing a public API, claiming physical effects or
+replacing the protocol package's independent peer qualification. See the
+[simulator catalogue](../labs/simulators.md).
 
 ## Public seams and chosen implementations
 

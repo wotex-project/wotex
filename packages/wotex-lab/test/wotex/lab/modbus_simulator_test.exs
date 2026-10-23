@@ -71,6 +71,41 @@ defmodule Wotex.Lab.ModbusSimulatorTest do
     assert {:ok, [0x41A8, 0]} = Modbus.read_holding_registers(session, 0, 2)
   end
 
+  test "the last register is usable but an exchange crossing the table fails atomically", %{
+    session: session
+  } do
+    assert :ok = Modbus.write_holding_register(session, 15, 123)
+    assert {:ok, [123]} = Modbus.read_holding_registers(session, 15, 1)
+
+    assert {:error, %Error{code: :remote_exception, effect: :none}} =
+             Modbus.read_holding_registers(session, 15, 2)
+
+    assert {:error, %Error{code: :remote_exception}} =
+             Modbus.write_holding_registers(session, 15, [456, 789])
+
+    assert {:ok, [123]} = Modbus.read_holding_registers(session, 15, 1)
+  end
+
+  test "device state survives a client reconnect while a fresh device restores the model", %{
+    image: image,
+    peer: peer,
+    session: session
+  } do
+    assert :ok = Modbus.write_holding_register(session, 8, 321)
+    assert :ok = Modbus.disconnect(session)
+    refute Process.alive?(session.pid)
+
+    reconnected = ModbusSimulator.connect(peer)
+    assert {:ok, [321]} = Modbus.read_holding_registers(reconnected, 8, 1)
+
+    fresh =
+      image
+      |> ModbusSimulator.start()
+      |> ModbusSimulator.connect()
+
+    assert {:ok, [0]} = Modbus.read_holding_registers(fresh, 8, 1)
+  end
+
   test "two simulated devices retain independent command state", %{image: image, session: first} do
     second_peer = ModbusSimulator.start(image)
     second = ModbusSimulator.connect(second_peer)

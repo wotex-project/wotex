@@ -94,7 +94,7 @@ specifications:
       - "test/wotex/lab/wlb03_evidence_manifest_test.exs"
     compatibility_classification: Documentation aligns the unchanged numerical seam with owning WNX.01 1.2.0. Room experiment 2.0.0 fixes future-input identity and replaces raw native-resource terms with Nx-serialized parameters; prior artifacts must be regenerated. All six required local lanes now have a fixed-seed content-bound evidence record. Optional profiles and inert outputs remain; artifact adoption is separate.
   - id: WLB.04
-    version: "1.4.1"
+    version: "1.4.2"
     path: docs/specs/WLB.04-runtime-and-network-adapters.md
     implementation_status: implemented
     evidence_status: complete
@@ -137,8 +137,9 @@ specifications:
       - "test/wotex/lab/mqtt_test.exs"
       - "test/wotex/lab/mqtt_broker_test.exs"
       - "test/wotex/lab/mqtt_sample_admission_test.exs"
+      - "test/wotex/lab/modbus_simulator_test.exs"
       - "test/wotex/lab/evidence_manifest_test.exs"
-    compatibility_classification: WLB.04 is implemented through explicit local/hosted profiles, verified TLS, pinned hosted peers and bounded MQTT lifecycle policy; artifact adoption remains a separate axis.
+    compatibility_classification: Version 1.4.2 adds an independent test-only PyModbus zone controller, owned by Elixir Testcontainers and explicitly selected in the current CI lane. Register bounds, reconnect/reset, isolation, real Runtime Property/Action exchanges and cleanup strengthen simulator evidence. No production adapter, Workbench connector or physical-effect claim is added. WLB.04 is implemented through explicit local/hosted profiles, verified TLS, pinned hosted peers and bounded MQTT lifecycle policy; artifact adoption remains a separate axis.
   - id: WLB.05
     version: "1.6.0"
     path: docs/specs/WLB.05-directory-continuum-and-smart-room.md

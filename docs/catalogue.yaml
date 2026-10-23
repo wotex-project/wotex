@@ -208,7 +208,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.03-nx-experiments.md"
       - id: "WLB.04"
-        version: "1.4.1"
+        version: "1.4.2"
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.04-runtime-and-network-adapters.md"
       - id: "WLB.05"

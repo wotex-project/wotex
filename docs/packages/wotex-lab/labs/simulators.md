@@ -25,19 +25,25 @@ image explicitly; the peer uses no wall clock or uncontrolled randomness.
 
 Consumers use the public `Wotex.Modbus` API and
 `Wotex.Runtime.ConsumedThing`, with a Thing Description, the package's draft Modbus profile
-and an explicit local `nosec` credential port. The six integration tests cover:
+and an explicit local `nosec` credential port. The eight integration tests cover:
 
 - all four read functions and all four write functions;
 - IEEE-754 temperature and power conversion through Runtime;
 - Property writes and an explicit setpoint Action through the same consumed Thing;
 - setpoint readback without treating an acknowledgement as a changed measurement;
 - a real exception response followed by a successful exchange;
+- table boundaries and rejected writes that leave existing registers intact;
+- reconnect persistence and deterministic reset in a fresh device;
 - isolation between two independent devices;
 - peer shutdown and connection-owner cleanup.
 
 This is a deterministic device/register peer. Thermal dynamics remain in
 `Wotex.Lab.Simulators.Thermal`; its explicit model inputs and synthetic
 observations are separate from protocol results.
+
+The controller is a test-only peer, not a selectable Workbench device. Browser
+journeys exercise the Workbench's backend-owned loopback room. Passing either
+suite does not establish the other transport path.
 
 From the repository root:
 
@@ -50,6 +56,7 @@ with a hash-verified PyModbus wheel, then starts fresh containers on dynamic
 ports. Readiness requires the server's listening marker. Testcontainers stops
 each peer after its test and provides its resource reaper for interrupted runs.
 Normal `mix test` excludes `:simulator` and starts no Docker peer or reaper.
+The current Lab CI lane explicitly enables this suite after the source gate.
 
 ## Source and dependency choices
 
