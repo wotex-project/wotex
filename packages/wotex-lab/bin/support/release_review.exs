@@ -3,7 +3,7 @@ defmodule Wotex.Lab.Check.ReleaseReview do
 
   @direct ~w(wotex_lab wotex wotex_nx wotex_runtime wotex_directory wotex_continuum
              wotex_binding_http wotex_binding_mqtt ex_maude nx explorer telemetry
-             telemetry_metrics prom_ex beamlens phoenix phoenix_html phoenix_live_view
+             telemetry_metrics prom_ex beamlens phoenix phoenix_assets doc_shell phoenix_html phoenix_live_view
              phoenix_pubsub bandit jason req)
 
   @spec bom!(Path.t(), [map()], [map()]) :: map()

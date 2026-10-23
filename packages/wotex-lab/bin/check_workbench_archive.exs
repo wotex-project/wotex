@@ -65,9 +65,8 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     admitted = local ++ public
     native = admit_native_artifacts(work, host_source)
     documentation = build_documentation_fixture!(work, host_source, candidates)
-    source_archive = build_source_archive(work, host_source, documentation)
+    source_archive = build_source_archive(work, host_source, documentation, local)
     consumer = extract_source_archive(work, source_archive)
-    prepare_candidate_lock(consumer)
     registry = ArchiveRepository.build_registry!(work, tarballs)
     {httpd, port} = ArchiveRepository.serve!(work, registry)
 
@@ -168,7 +167,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     destination
   end
 
-  defp build_source_archive(work, host_source, documentation) do
+  defp build_source_archive(work, host_source, documentation, candidates) do
     archive = Path.join(work, "wotex-lab-workbench-source.tar")
     stage = Path.join(work, "workbench-source")
     File.mkdir!(stage)
@@ -191,6 +190,8 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
       {:ok, _} -> :ok
       {:error, reason, path} -> abort("copying #{path} into the release failed: #{reason}")
     end
+
+    prepare_candidate_dependencies(stage, candidates)
 
     {output, status} =
       System.cmd("tar", ["-cf", archive, "-C", stage, "."],
@@ -230,7 +231,37 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     consumer
   end
 
-  defp prepare_candidate_lock(consumer) do
+  defp prepare_candidate_dependencies(consumer, candidates) do
+    versions =
+      candidates
+      |> Enum.filter(&(&1.name in ["doc_shell", "phoenix_assets"]))
+      |> Map.new(&{&1.name, &1.version})
+
+    project = Path.join(consumer, "mix.exs")
+    quoted = Code.string_to_quoted!(File.read!(project))
+
+    {quoted, changed} =
+      Macro.prewalk(quoted, MapSet.new(), fn
+        {name, requirement}, changed
+        when name in [:doc_shell, :phoenix_assets] and is_binary(requirement) ->
+          version = Map.fetch!(versions, Atom.to_string(name))
+          {{name, "== " <> version}, MapSet.put(changed, name)}
+
+        node, changed ->
+          {node, changed}
+      end)
+
+    changed == MapSet.new([:doc_shell, :phoenix_assets]) ||
+      abort("Workbench candidate source omitted its renderer requirements")
+
+    source =
+      quoted
+      |> Macro.to_string()
+      |> Code.format_string!()
+      |> IO.iodata_to_binary()
+
+    File.write!(project, source)
+
     path = Path.join(consumer, "mix.lock")
 
     lock =
@@ -351,7 +382,21 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     File.regular?(release) || abort("Workbench release launcher is absent")
 
     script = ~S'''
+    {:ok, _} = Application.ensure_all_started(:wotex_lab_workbench)
+    {:ok, {_, port}} = WotexLabWorkbenchWeb.Endpoint.server_info(:http)
+    {:ok, socket} = :gen_tcp.connect(~c"127.0.0.1", port, [:binary, active: false, packet: :line], 1_000)
+    :ok = :gen_tcp.send(socket, "GET /docs/start/ HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+    response = :gen_tcp.recv(socket, 0, 5_000)
+    :gen_tcp.close(socket)
     documentation = WotexLabWorkbench.Documentation.site()
+    search_segments =
+      case documentation do
+        {:ok, %{metadata: %{"search_contract" => %{"path" => "/docs-search/" <> path}}}} ->
+          String.split(path, "/", trim: true)
+
+        _ ->
+          []
+      end
 
     checks = %{
       git_absent: System.find_executable("git") == nil,
@@ -365,13 +410,15 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
       continuum: Code.ensure_loaded?(WotexContinuum),
       explorer: Code.ensure_loaded?(Explorer.DataFrame),
       beamlens: Code.ensure_loaded?(Beamlens),
+      documentation_http: match?({:ok, "HTTP/1.1 200" <> _}, response),
+      documentation_inert: WotexLabWorkbench.Sessions.count() == 0,
       documentation:
         match?({:ok, %{schema_version: "doc-shell-site/v1"}}, documentation) and
           match?({:ok, _, _, _}, WotexLabWorkbench.Documentation.fetch_route("/docs/start/")),
       documentation_search:
         match?(
           {:ok, "text/javascript", _, "sha256:" <> _},
-          WotexLabWorkbench.Documentation.search_asset(["pagefind", "pagefind.js"])
+          WotexLabWorkbench.Documentation.search_asset(search_segments)
         )
     }
 
@@ -383,7 +430,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
         [
           {"SECRET_KEY_BASE", String.duplicate("a", 64)},
           {"PHX_HOST", "localhost"},
-          {"PORT", "4199"}
+          {"PORT", "0"}
         ]
 
     {output, status} =
