@@ -165,7 +165,7 @@ defmodule Wotex.Lab.MetricsDurableQueryTest do
       refute inspect(error) =~ "secret receiver detail"
     end
 
-    assert {:ok, %{series_matched: 2}} =
+    assert {:error, %Error{code: :durable_invalid_response}} =
              DurableQuery.query(query(:nx_queue_depth, :sum), fn _ -> {:ok, two} end)
 
     small = query(:nx_queue_depth, :sum, limits: %{points: 13})

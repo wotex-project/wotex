@@ -33,9 +33,13 @@ defmodule Wotex.Lab.Metrics.DurableQuery do
 
   `query/3` sends the request through a host executor and admits the matrix
   answer. A `:last` answer with several series is refused as ambiguous, like
-  local history. `NaN` and infinite values are omitted and marked
-  `nonfinite`. The descriptor's point and output limits apply to the admitted
-  answer; the executor must bound the response body it reads. Receiver error
+  local history. The other fixed templates admit at most one aggregate series.
+  Evaluation timestamps must be strictly increasing points on the requested
+  grid; duplicates, out-of-range and off-grid points refuse the whole answer.
+  Timestamp admission precedes conversion, and every sample, including a
+  quality marker, consumes the point budget. `NaN` and infinite values are
+  omitted and marked `nonfinite`. The descriptor's point and output limits apply
+  to the admitted answer; the executor must bound the response body it reads. Receiver error
   text is never returned. Responses carry the source, instance, unit, interval
   with window, freshness, points, markers, matched series and both the query
   and template digests. This module performs no network access; database
@@ -90,7 +94,9 @@ defmodule Wotex.Lab.Metrics.DurableQuery do
   @doc """
   Answers the descriptor through `executor`, a function of the template.
 
-  The executor returns `{:ok, decoded_json}` or `{:error, reason}`.
+  The executor returns `{:ok, decoded_json}` or `{:error, reason}`. Exceptions,
+  exits, throws and malformed returns become redacted `:durable_unavailable`
+  errors. The executor still owns response-body and execution bounds.
   """
   @spec query(Query.t(), (template() -> {:ok, term()} | {:error, term()}), keyword()) ::
           {:ok, map()} | {:error, Error.t()}
@@ -214,9 +220,15 @@ defmodule Wotex.Lab.Metrics.DurableQuery do
   defp execute(executor, template) do
     case executor.(template) do
       {:ok, body} -> {:ok, body}
-      _ -> {:error, error(:durable_unavailable, "durable receiver is unavailable")}
+      _ -> unavailable()
     end
+  rescue
+    _ -> unavailable()
+  catch
+    _, _ -> unavailable()
   end
+
+  defp unavailable, do: {:error, error(:durable_unavailable, "durable receiver is unavailable")}
 
   defp matrix(%{"status" => "success", "data" => %{"resultType" => "matrix", "result" => result}})
        when is_list(result) do
@@ -239,38 +251,61 @@ defmodule Wotex.Lab.Metrics.DurableQuery do
 
   defp series?(_), do: false
 
-  defp ambiguity(series, query) do
-    if length(series) > 1 and query.aggregation == :last,
-      do:
-        {:error,
-         error(:unsupported_query, "aggregation needs one series; add filters or use sum",
-           details: %{series_matched: length(series)}
-         )},
-      else: :ok
+  defp ambiguity([], _), do: :ok
+  defp ambiguity([_], _), do: :ok
+
+  defp ambiguity(series, %{aggregation: :last}) do
+    {:error,
+     error(:unsupported_query, "aggregation needs one series; add filters or use sum",
+       details: %{series_matched: length(series)}
+     )}
   end
 
-  defp points(series, query) do
-    samples =
-      series
-      |> Enum.flat_map(& &1["values"])
-      |> Enum.map(fn [t, v] -> {round(t * 1_000), v} end)
-      |> Enum.sort_by(&elem(&1, 0))
+  defp ambiguity(_, _), do: invalid_response()
 
+  defp points([], _), do: {:ok, [], []}
+
+  defp points([%{"values" => samples}], query) do
     if length(samples) > query.limits.points do
       {:error, error(:query_too_large, "durable answer exceeds the point limit")}
     else
-      {points, markers} =
-        Enum.reduce(samples, {[], []}, fn {t, value}, {points, markers} ->
-          case number(value) do
-            {:ok, number} -> {[%{t: t, value: number} | points], markers}
-            :nonfinite -> {points, [%{t: t, kind: :nonfinite} | markers]}
-            :invalid -> {points, [%{t: t, kind: :invalid} | markers]}
-          end
-        end)
+      grid = %{
+        start: DateTime.to_unix(query.start_at),
+        finish: DateTime.to_unix(query.end_at),
+        step: div(query.step_ms, 1_000)
+      }
 
-      {:ok, Enum.reverse(points), Enum.reverse(markers)}
+      admit_samples(samples, grid, nil, [], [])
     end
   end
+
+  defp admit_samples([], _, _, points, markers),
+    do: {:ok, Enum.reverse(points), Enum.reverse(markers)}
+
+  defp admit_samples([[seconds, value] | rest], grid, previous, points, markers) do
+    with {:ok, t} <- timestamp(seconds, grid, previous) do
+      case number(value) do
+        {:ok, number} -> admit_samples(rest, grid, t, [%{t: t, value: number} | points], markers)
+        kind -> admit_samples(rest, grid, t, points, [%{t: t, kind: kind} | markers])
+      end
+    end
+  end
+
+  defp timestamp(seconds, %{start: first, finish: last, step: step}, previous)
+       when seconds >= first and seconds <= last do
+    whole = trunc(seconds)
+    t = whole * 1_000
+
+    if seconds == whole and rem(whole - first, step) == 0 and
+         (is_nil(previous) or t > previous),
+       do: {:ok, t},
+       else: invalid_response()
+  end
+
+  defp timestamp(_, _, _), do: invalid_response()
+
+  defp invalid_response,
+    do: {:error, error(:durable_invalid_response, "durable answer is not an admitted matrix")}
 
   defp number(value) when value in @nonfinite, do: :nonfinite
 

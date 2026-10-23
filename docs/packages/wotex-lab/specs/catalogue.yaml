@@ -358,7 +358,7 @@ specifications:
       - "test/wotex/lab/wlb09_evidence_manifest_test.exs"
     compatibility_classification: WLB.09 is implemented as an optional, digest-pinned Maude profile with closed serialization, finite-state exhaustion evidence, counterexample replay and process-tree cleanup; results remain inert and model-scoped.
   - id: WLB.10
-    version: "0.32.0"
+    version: "0.32.1"
     path: docs/specs/WLB.10-metrics-storage-and-ai-inspection.md
     implementation_status: implemented
     evidence_status: partial
@@ -477,6 +477,7 @@ specifications:
       - "test/wotex/lab/greptime_bridge_test.exs"
       - "test/wotex/lab/metrics_retention_test.exs"
       - "test/wotex/lab/metrics_durable_query_test.exs"
+      - "test/wotex/lab/metrics_durable_admission_test.exs"
       - "test/wotex/lab/greptime_durable_query_test.exs"
       - "test/wotex/lab/otlp_encoder_test.exs"
       - "test/wotex/lab/otlp_exporter_test.exs"
@@ -511,6 +512,12 @@ specifications:
       - "test/wotex/lab/hosted_artifact_test.exs"
       - "priv/conformance/native/tests/hosted_investigation_runner.rs"
     compatibility_classification: >-
+      Version 0.32.1 refuses duplicate, reversed, off-grid and out-of-range
+      durable timestamps before conversion, counts quality markers against
+      point limits, requires one aggregate output series and redacts executor
+      failures. Public response shapes, missing-value semantics and query
+      templates are unchanged. Source gateway and HTTP-route checks do not
+      renew pinned receiver or archive qualification.
       Version 0.32.0 binds browser metric callbacks to the admitted room and
       retains their exact executed charts behind bounded measured summaries.
       Completion transfers at most eight results / 64 KiB to the verified owner;

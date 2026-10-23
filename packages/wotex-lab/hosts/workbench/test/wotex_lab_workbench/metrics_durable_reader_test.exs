@@ -232,6 +232,9 @@ defmodule WotexLabWorkbench.MetricsDurableReaderTest do
           {400, ~s({"status":"error","error":"receiver-secret"}), "durable_refused"},
           {200, ~s({"status":"success","data":{"resultType":"vector","result":[]}}),
            "durable_invalid_response"},
+          {200, matrix([[1_767_225_605, "1"], [1_767_225_605, "NaN"]]), "durable_invalid_response"},
+          {200, matrix([[1_767_225_615, "1"]]), "durable_invalid_response"},
+          {200, matrix([[1.0e308, "1"]]), "durable_invalid_response"},
           {503, "{}", "durable_unavailable"}
         ] do
       task = Task.async(fn -> call("/durable/query", body) end)

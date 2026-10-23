@@ -1,6 +1,6 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.32.0. Contract: accepted. Source status: implemented.
+Specification version: 0.32.1. Contract: accepted. Source status: implemented.
 
 The base library owns the metric catalogue, bounded collection and ETS history,
 read-only query contract, immutable dataset export, Prometheus exposition,
@@ -523,13 +523,27 @@ exact per-step deltas of local history. Steps must be whole seconds and
 `start_at` a whole multiple of the step in Unix time. On GreptimeDB 1.1.4 an
 unaligned grid whose window equals the step can omit a value although a stored
 sample lies inside that window, so such descriptors are refused as
-`unsupported_query`. A multi-series `last` answer is
-ambiguous. `NaN` and infinite values are omitted and marked, and point and
-output limits apply to the admitted answer. Receiver error text is never
-returned, and each response carries the query and template digests. The module
+`unsupported_query`. A multi-series `last` answer is ambiguous; the other
+fixed templates require at most one aggregate output series and refuse several
+as `durable_invalid_response`. Samples must have strictly increasing timestamps
+on the requested evaluation grid, including its endpoints when present. Duplicate,
+reversed, off-grid or out-of-range timestamps refuse the whole answer before
+any result is published. Timestamp bounds are checked before numeric conversion;
+timestamps are never rounded onto a different evaluation point. Every sample,
+including a quality marker, consumes the point budget before conversion.
+`NaN` and infinite values are omitted and marked, and output limits apply to
+the admitted answer. Executor exceptions, exits, throws and malformed returns
+become `durable_unavailable` without receiver text. Each response carries the
+query and template digests. The module
 performs no network access; database, credentials, endpoint and body bounds
 belong to the host executor. `metrics_durable_query_test.exs` covers every
-template, window rule, refusal, answer shape and limit. With
+template, window rule, refusal, answer shape and limit.
+`metrics_durable_admission_test.exs` additionally covers timeline, aggregate,
+point-budget and executor-failure admission through the public API and the
+owner-bound gateway. The Workbench's `metrics_durable_reader_test.exs` checks
+malformed receiver timelines through a real HTTP receiver and the operator
+query route. These source checks do not renew the pinned receiver or archive
+qualification. With
 `WOTEX_LAB_GREPTIME=1`, `greptime_durable_query_test.exs` writes seven
 captures, with one deliberately absent, to the pinned server. Durable `last`
 and `sum` answers then equal local history for the same captures, including
