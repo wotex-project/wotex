@@ -12,4 +12,11 @@ treatments and application layouts are design proposals. Their source nodes,
 file hashes, dimensions and export checks are recorded in exports/README.md.
 No font binary is redistributed with these artwork files.
 
+The supplied/ directory preserves three unique Carbon fold SVG treatments from
+the maintainer-provided Wotex/Logo asset set, including both neutral grayscale
+gradient variants. The Default source also appeared as master.svg and
+logo-dark.svg with identical bytes. Source aliases, hashes and vector checks
+are recorded in supplied/README.md. These additional source assets do not
+replace the previously selected original or establish native Figma adoption.
+
 The earlier artwork under draft/ remains historical and carries its own notice.

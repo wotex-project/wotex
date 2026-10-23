@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.10.0. Contract: accepted. Design status: under revision.
+Plan version: 1.11.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -25,7 +25,9 @@ icons, compact rows and at most two persistent workbench menu surfaces. Sections
 and controls share 4-pixel corners; single-line buttons and fields are 28 pixels
 high. Subtle shadows separate floating canvas elements, while documentation
 stays flat. The board switcher is 38 pixels high with content-sized width and
-four pixels after its arrow. The graph-paper background has reduced contrast.
+equal 12-pixel side padding. Primary numeric readings, including their units,
+share a 24/28-pixel medium text role and baseline in Thing cards, Property
+inspectors, Run results and captured pins. The graph-paper background has reduced contrast.
 Dark surfaces use a subdued `#444B5A` decorative border; focus and selection
 retain their separate, stronger role.
 

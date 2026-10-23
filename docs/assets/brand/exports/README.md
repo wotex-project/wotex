@@ -10,6 +10,10 @@ its SHA-256 is
 The SVG exports below are native Figma representations, not byte copies of that
 source. Keep the [asset notice](../NOTICE) with them.
 
+The additional [supplied Carbon fold variants](../supplied/README.md) preserve
+the maintainer's neutral light/dark gradients. Their native Figma adoption
+remains open; the exports below retain their original source frames.
+
 The [native identity Spec](https://www.figma.com/design/R5PCVQOfoJV6rrsJ6ZTSv0/WoTEx-Brand?node-id=20-219)
 owns usage, clear space, sizes, color, typography, voice and imagery. The
 [brand design plan](../../../packages/wotex-lab/plans/brand-and-lab-design.md)
