@@ -1,0 +1,183 @@
+{
+  "canonical": [
+    {
+      "canonical": "{\"a\":3,\"😀\":2,\"\":1}",
+      "digest": "84495633024b0992798250783e7ccb01ab2875649ab22f353f14c0d6a8389fc2",
+      "id": "unicode-order",
+      "value": {
+        "a": 3,
+        "": 1,
+        "😀": 2
+      }
+    },
+    {
+      "canonical": "{\"fraction\":1.25,\"integer\":9007199254740991,\"tiny\":1e-7,\"zero\":0}",
+      "digest": "b0fba245535b49bccc354d89ce9d6c1d0bf84c1199f20ab06f78869d8d2c8aba",
+      "id": "numeric-forms",
+      "value": {
+        "fraction": 1.25,
+        "integer": 9007199254740991,
+        "tiny": 1e-07,
+        "zero": 0
+      }
+    },
+    {
+      "canonical": "{\"text\":\"\\u0000\\n\\t\\\"\\\\ / café 😀\"}",
+      "digest": "3fcf77daf180ab847384f6a5bec459f13c31720e2321a4e6111a84ff0fba8936",
+      "id": "escaped-string",
+      "value": {
+        "text": "\u0000\n\t\"\\ / café 😀"
+      }
+    },
+    {
+      "canonical": "[null,true,false,{\"a\":1,\"b\":2}]",
+      "digest": "c203156c5c23fa1eccbde30d5f888fec40ca000c6aa236cab6b7a9bf8a171911",
+      "id": "array-order",
+      "value": [
+        null,
+        true,
+        false,
+        {
+          "a": 1,
+          "b": 2
+        }
+      ]
+    }
+  ],
+  "transition": {
+    "component": "data-grid",
+    "instance_id": "session-fixture--grid",
+    "next_payload": {
+      "columns": [
+        {
+          "key": "name",
+          "label": "Thing"
+        }
+      ],
+      "label": "Readings",
+      "rows": [
+        {
+          "key": "row-0",
+          "values": {
+            "a/b": {
+              "~key": "new"
+            },
+            "": "bmp",
+            "😀": "astral"
+          }
+        },
+        {
+          "key": "row-1",
+          "values": {
+            "name": "Meter"
+          }
+        }
+      ]
+    },
+    "operations": [
+      {
+        "op": "replace",
+        "path": "/rows/0/values/a~1b/~0key",
+        "value": "new"
+      },
+      {
+        "op": "remove",
+        "path": "/rows/0/values/a~1b/"
+      },
+      {
+        "op": "add",
+        "path": "/rows/-",
+        "value": {
+          "key": "row-1",
+          "values": {
+            "name": "Meter"
+          }
+        }
+      }
+    ],
+    "patch": {
+      "base_revision": "0",
+      "capabilities": [],
+      "component": "data-grid",
+      "generation": "0",
+      "instance_id": "session-fixture--grid",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/rows/0/values/a~1b/~0key",
+          "value": "new"
+        },
+        {
+          "op": "remove",
+          "path": "/rows/0/values/a~1b/"
+        },
+        {
+          "op": "add",
+          "path": "/rows/-",
+          "value": {
+            "key": "row-1",
+            "values": {
+              "name": "Meter"
+            }
+          }
+        }
+      ],
+      "payload_digest": "2940ef33b74f7bb7aa5e9cb80e4d7d36f83872d79c3ced4f37dad3525e12ca18",
+      "revision": "1",
+      "schema": "wotex-lab-island/v1"
+    },
+    "payload": {
+      "columns": [
+        {
+          "key": "name",
+          "label": "Thing"
+        }
+      ],
+      "label": "Readings",
+      "rows": [
+        {
+          "key": "row-0",
+          "values": {
+            "a/b": {
+              "": "keep",
+              "~key": "old"
+            },
+            "": "bmp",
+            "😀": "astral"
+          }
+        }
+      ]
+    },
+    "snapshot": {
+      "capabilities": [],
+      "component": "data-grid",
+      "generation": "0",
+      "instance_id": "session-fixture--grid",
+      "payload": {
+        "columns": [
+          {
+            "key": "name",
+            "label": "Thing"
+          }
+        ],
+        "label": "Readings",
+        "rows": [
+          {
+            "key": "row-0",
+            "values": {
+              "a/b": {
+                "": "keep",
+                "~key": "old"
+              },
+              "": "bmp",
+              "😀": "astral"
+            }
+          }
+        ]
+      },
+      "payload_digest": "8fe68a576938e75ec3f8c08e727d3a51676aa7fe122f84e05ce0e0855c5cb37e",
+      "revision": "0",
+      "schema": "wotex-lab-island/v1"
+    }
+  }
+}

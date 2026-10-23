@@ -13,6 +13,9 @@ defmodule WotexLabStorybookWeb.IslandLive do
       socket
       |> assign(assigns)
       |> assign_new(:revision, fn -> 1 end)
+      |> assign_new(:generation, fn ->
+        to_string(System.unique_integer([:positive, :monotonic]))
+      end)
       |> assign_new(:commands, fn -> [] end)
       |> assign(:contract, DesignContract.current())
       |> assign(:props, props(assigns.fixture_id))
@@ -64,7 +67,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
         id={"storybook--#{@fixture_id}"}
         component={component(@fixture_id)}
         props={@props}
-        generation="0"
+        generation={@generation}
         revision={to_string(@revision)}
         capabilities={capabilities(@fixture_id)}
         target={@myself}
@@ -183,7 +186,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
         component(socket.assigns.fixture_id),
         instance_id,
         socket.assigns.props,
-        generation: "0",
+        generation: socket.assigns.generation,
         revision: to_string(socket.assigns.revision),
         capabilities: capabilities(socket.assigns.fixture_id)
       )

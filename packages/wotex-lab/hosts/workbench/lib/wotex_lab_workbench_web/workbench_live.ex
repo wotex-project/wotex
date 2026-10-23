@@ -111,6 +111,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:evidence_selected, false)
       |> assign(:answer, nil)
       |> assign(:island_revision, 0)
+      |> assign(:island_generation, to_string(System.unique_integer([:positive, :monotonic])))
       |> assign(:island_commands, [])
       |> assign(:investigation, investigation_state())
       |> assign(:investigation_room, nil)
@@ -909,6 +910,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             active_pins={@active_pins}
             session_id={@scope.session_id}
             island_revision={@island_revision}
+            island_generation={@island_generation}
             empty={
               is_nil(@scope.room) && @live_action in [:workbench, :things] &&
                 @canvas_selection != "import" && !@connections_open && !@board_search_open
@@ -1082,6 +1084,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                     dashboard_panels={@dashboard_panels}
                     session_id={@scope.session_id}
                     island_revision={@island_revision}
+                    island_generation={@island_generation}
                   />
                 </details>
               </.tool_panel>
@@ -1133,6 +1136,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:connections, :map, required: true)
   attr(:session_id, :string, required: true)
   attr(:island_revision, :integer, required: true)
+  attr(:island_generation, :string, required: true)
   attr(:empty, :boolean, required: true)
   attr(:board, :map, required: true)
   attr(:active_pins, :any, required: true)
@@ -1155,6 +1159,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       id={Islands.id(@session_id, "connected-things")}
       props={@props}
       revision={@island_revision}
+      generation={@island_generation}
     >
       <:fallback>
         <ul aria-label="Connected Things">
@@ -1779,6 +1784,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   attr(:history_range, :string, required: true)
   attr(:session_id, :string, required: true)
   attr(:island_revision, :integer, required: true)
+  attr(:island_generation, :string, required: true)
 
   defp metrics_view(assigns) do
     latest = assigns.metrics && List.last(assigns.metrics.samples)
@@ -1849,6 +1855,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         columns={@grid_columns}
         rows={@grid_rows}
         revision={@island_revision}
+        generation={@island_generation}
       >
         <:fallback>
           <.data_table
@@ -2363,7 +2370,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp resync_island(socket, instance_id) do
     with {:ok, scope} <- Scope.verify(socket),
          {:ok, descriptor} <- island_descriptor(socket, scope.session_id, instance_id),
-         {:ok, snapshot} <- Islands.snapshot(descriptor, socket.assigns.island_revision) do
+         {:ok, snapshot} <-
+           Islands.snapshot(
+             descriptor,
+             socket.assigns.island_revision,
+             socket.assigns.island_generation
+           ) do
       {:noreply,
        socket
        |> assign(:scope, scope)

@@ -55,21 +55,24 @@ defmodule Wotex.Lab.Island.CanonicalJSON do
   defp validate(_, _), do: {:error, :invalid_island_json}
 
   defp validate_many(values, depth) do
-    Enum.reduce_while(values, :ok, fn value, :ok ->
-      case validate(value, depth) do
-        :ok -> {:cont, :ok}
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
+    case values do
+      [] -> :ok
+      [head | tail] -> with :ok <- validate(head, depth), do: validate_many(tail, depth)
+      _ -> {:error, :invalid_island_json}
+    end
   end
 
   defp string_pairs(map) do
-    pairs = Enum.map(map, fn {key, value} -> {to_string(key), value} end)
-    keys = Enum.map(pairs, &elem(&1, 0))
+    if Enum.all?(Map.keys(map), &(is_binary(&1) or is_atom(&1))) do
+      pairs = Enum.map(map, fn {key, value} -> {to_string(key), value} end)
+      keys = Enum.map(pairs, &elem(&1, 0))
 
-    if length(keys) == MapSet.size(MapSet.new(keys)),
-      do: {:ok, pairs},
-      else: {:error, :duplicate_island_json_key}
+      if length(keys) == MapSet.size(MapSet.new(keys)),
+        do: {:ok, pairs},
+        else: {:error, :duplicate_island_json_key}
+    else
+      {:error, :invalid_island_json_key}
+    end
   end
 
   defp validate_keys(pairs) do
@@ -96,7 +99,7 @@ defmodule Wotex.Lab.Island.CanonicalJSON do
       value
       |> string_pairs()
       |> elem(1)
-      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.sort_by(fn {key, _} -> :unicode.characters_to_binary(key, :utf8, {:utf16, :big}) end)
 
     encoded = Enum.map(pairs, fn {key, item} -> [JSON.encode!(key), ":", canonical(item)] end)
     ["{", Enum.intersperse(encoded, ","), "}"]

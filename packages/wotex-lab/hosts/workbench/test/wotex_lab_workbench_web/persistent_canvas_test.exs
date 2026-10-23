@@ -6,6 +6,30 @@ defmodule WotexLabWorkbenchWeb.PersistentCanvasTest do
   alias WotexLabWorkbench.{Room, Sessions}
   alias WotexLabWorkbenchWeb.Plugs.SessionToken
 
+  test "a new LiveView advances generation and resync retains its declared capabilities", %{
+    conn: conn
+  } do
+    conn = get(conn, "/") |> track_session()
+    {:ok, first, _} = live(recycle(conn), "/")
+    before = canvas(first)
+    render_patch(first, "/experiments")
+    assert canvas(first)["generation"] == before["generation"]
+
+    {:ok, second, _} = live(recycle(conn), "/")
+    after_mount = canvas(second)
+    assert after_mount["instance_id"] == before["instance_id"]
+    assert String.to_integer(after_mount["generation"]) > String.to_integer(before["generation"])
+
+    event = "wotex:island:#{after_mount["instance_id"]}:resync"
+    render_hook(second, event, %{})
+
+    snapshot_event = "wotex:island:#{after_mount["instance_id"]}:snapshot"
+    assert_push_event(second, ^snapshot_event, snapshot)
+    assert snapshot.generation == after_mount["generation"]
+    assert snapshot.capabilities == after_mount["capabilities"]
+    assert {:ok, %{room: nil}} = Sessions.verify(get_session(conn, SessionToken.key()))
+  end
+
   test "opening tools and restoring drafts performs no room or experiment command", %{conn: conn} do
     conn = get(conn, "/") |> track_session()
     token = get_session(conn, SessionToken.key())

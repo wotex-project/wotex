@@ -14,11 +14,20 @@ defmodule WotexLabWorkbenchWeb.Islands do
   alias Wotex.Lab.Island.{Event, Snapshot}
   alias WotexLabWorkbench.Chart
 
+  @capabilities %{
+    "canvas" =>
+      ~w(inspect inspect_connection propose_connection open read observe pause statistics sources save_layout open_documentation pin_refresh pin_pause pin_resume pin_remove pin_open_run),
+    "chart" => ~w(inspect),
+    "data-grid" => ~w(select activate),
+    "tabs" => ~w(select)
+  }
+
   @type descriptor :: %{component: String.t(), id: String.t(), props: map()}
 
   attr(:id, :string, required: true)
   attr(:props, :map, required: true)
   attr(:revision, :integer, required: true)
+  attr(:generation, :string, default: "0")
   slot(:fallback, required: true)
 
   @doc "Enhances a bounded Thing graph while retaining its semantic inspection fallback."
@@ -29,11 +38,9 @@ defmodule WotexLabWorkbenchWeb.Islands do
       id={@id}
       component="canvas"
       props={@props}
-      generation="0"
+      generation={@generation}
       revision={to_string(@revision)}
-      capabilities={
-        ~w(inspect inspect_connection propose_connection open read observe pause statistics sources save_layout open_documentation pin_refresh pin_pause pin_resume pin_remove pin_open_run)
-      }
+      capabilities={capabilities("canvas")}
     >
       <:fallback>{render_slot(@fallback)}</:fallback>
     </.island_boundary>
@@ -43,6 +50,7 @@ defmodule WotexLabWorkbenchWeb.Islands do
   attr(:id, :string, required: true)
   attr(:chart, :any, required: true)
   attr(:revision, :integer, required: true)
+  attr(:generation, :string, default: "0")
   slot(:fallback, required: true)
 
   @doc "Enhances one admitted chart while retaining its native SVG and table fallback."
@@ -55,9 +63,9 @@ defmodule WotexLabWorkbenchWeb.Islands do
       id={@id}
       component="chart"
       props={@props}
-      generation="0"
+      generation={@generation}
       revision={to_string(@revision)}
-      capabilities={["inspect"]}
+      capabilities={capabilities("chart")}
     >
       <:fallback>{render_slot(@fallback)}</:fallback>
     </.island_boundary>
@@ -69,6 +77,7 @@ defmodule WotexLabWorkbenchWeb.Islands do
   attr(:columns, :list, required: true)
   attr(:rows, :list, required: true)
   attr(:revision, :integer, required: true)
+  attr(:generation, :string, default: "0")
   slot(:fallback, required: true)
 
   @doc "Enhances one bounded table with the registered keyboard data grid."
@@ -81,9 +90,9 @@ defmodule WotexLabWorkbenchWeb.Islands do
       id={@id}
       component="data-grid"
       props={@props}
-      generation="0"
+      generation={@generation}
       revision={to_string(@revision)}
-      capabilities={["select", "activate"]}
+      capabilities={capabilities("data-grid")}
     >
       <:fallback>{render_slot(@fallback)}</:fallback>
     </.island_boundary>
@@ -95,6 +104,7 @@ defmodule WotexLabWorkbenchWeb.Islands do
   attr(:tabs, :list, required: true)
   attr(:selected, :string, required: true)
   attr(:revision, :integer, required: true)
+  attr(:generation, :string, default: "0")
   slot(:fallback, required: true)
 
   @doc "Enhances a small local information switcher with registered tabs."
@@ -107,9 +117,9 @@ defmodule WotexLabWorkbenchWeb.Islands do
       id={@id}
       component="tabs"
       props={@props}
-      generation="0"
+      generation={@generation}
       revision={to_string(@revision)}
-      capabilities={["select"]}
+      capabilities={capabilities("tabs")}
     >
       <:fallback>{render_slot(@fallback)}</:fallback>
     </.island_boundary>
@@ -233,9 +243,13 @@ defmodule WotexLabWorkbenchWeb.Islands do
   end
 
   @doc "Builds a full-state protocol envelope for reconnect or explicit resynchronization."
-  @spec snapshot(descriptor(), non_neg_integer()) :: {:ok, map()} | {:error, term()}
-  def snapshot(%{component: component, id: id, props: props}, revision) do
-    case Snapshot.new(component, id, props, generation: "0", revision: to_string(revision)) do
+  @spec snapshot(descriptor(), non_neg_integer(), String.t()) :: {:ok, map()} | {:error, term()}
+  def snapshot(%{component: component, id: id, props: props}, revision, generation \\ "0") do
+    case Snapshot.new(component, id, props,
+           generation: generation,
+           revision: to_string(revision),
+           capabilities: capabilities(component)
+         ) do
       {:ok, snapshot} -> {:ok, Map.from_struct(snapshot)}
       {:error, _} = error -> error
     end
@@ -248,4 +262,6 @@ defmodule WotexLabWorkbenchWeb.Islands do
 
   defp stringify_item(item) when is_map(item),
     do: Map.new(item, fn {key, value} -> {to_string(key), value} end)
+
+  defp capabilities(component), do: Map.get(@capabilities, component, [])
 end

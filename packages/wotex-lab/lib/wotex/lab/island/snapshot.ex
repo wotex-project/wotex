@@ -1,7 +1,7 @@
 defmodule Wotex.Lab.Island.Snapshot do
   @moduledoc "A bounded full-state envelope for one Wotex Lab island."
 
-  alias Wotex.Lab.Island.{CanonicalJSON, Component, Encoder}
+  alias Wotex.Lab.Island.{CanonicalJSON, Component, Encoder, Patch}
 
   @schema "wotex-lab-island/v1"
   @max_snapshot_bytes 512 * 1_024
@@ -36,11 +36,10 @@ defmodule Wotex.Lab.Island.Snapshot do
   @doc "Builds and sizes a full snapshot for one admitted component."
   @spec new(String.t(), String.t(), map() | keyword(), keyword()) :: {:ok, t()} | {:error, term()}
   def new(component, instance_id, props, opts \\ []) do
-    generation = Keyword.get(opts, :generation, "0")
-    revision = Keyword.get(opts, :revision, "0")
-    capabilities = Keyword.get(opts, :capabilities, [])
-
     with :ok <- validate_options(opts),
+         generation = Keyword.get(opts, :generation, "0"),
+         revision = Keyword.get(opts, :revision, "0"),
+         capabilities = Keyword.get(opts, :capabilities, []),
          true <- valid_id?(instance_id),
          true <- decimal?(generation) and decimal?(revision),
          true <- valid_capabilities?(capabilities),
@@ -90,12 +89,19 @@ defmodule Wotex.Lab.Island.Snapshot do
 
   def encode_inline(_), do: {:error, :invalid_island_snapshot}
 
-  @doc "Builds a closed add/remove/replace patch for an admitted next payload."
+  @doc """
+  Builds a closed add/remove/replace patch for the immediate next revision.
+
+  Operations must transform the validated base payload into exactly the admitted
+  next payload. Invalid paths, unknown operation fields and contradictory next
+  props are rejected before an envelope is returned.
+  """
   @spec patch(t(), map() | keyword(), String.t(), [map()]) :: {:ok, map()} | {:error, term()}
   def patch(%__MODULE__{} = snapshot, next_props, revision, operations) do
-    with true <- decimal?(revision),
-         true <- is_list(operations) and length(operations) <= @max_patch_operations,
-         :ok <- validate_operations(operations, snapshot.component),
+    with true <- decimal?(revision) and decimal?(snapshot.revision),
+         true <- String.to_integer(revision) == String.to_integer(snapshot.revision) + 1,
+         true <- bounded_operations?(operations),
+         {:ok, base} <- validate_base(snapshot),
          {:ok, payload} <- Encoder.encode(snapshot.component, next_props),
          {:ok, digest} <- CanonicalJSON.digest(payload),
          patch = %{
@@ -110,7 +116,11 @@ defmodule Wotex.Lab.Island.Snapshot do
            "capabilities" => snapshot.capabilities
          },
          {:ok, bytes} <- CanonicalJSON.encode(patch),
-         true <- byte_size(bytes) <= @max_patch_bytes do
+         true <- byte_size(bytes) <= @max_patch_bytes,
+         {:ok, descriptor} <- Component.fetch(snapshot.component),
+         {:ok, patched} <- Patch.apply(base, operations, Map.keys(descriptor["props"])),
+         {:ok, patched_digest} <- CanonicalJSON.digest(patched),
+         true <- patched_digest == digest do
       {:ok, patch}
     else
       false -> {:error, :invalid_island_patch}
@@ -120,12 +130,20 @@ defmodule Wotex.Lab.Island.Snapshot do
 
   def patch(_, _, _, _), do: {:error, :invalid_island_patch}
 
-  defp validate_options(opts) do
+  defp validate_options(opts) when is_list(opts) do
     if Keyword.keyword?(opts) and
          Keyword.keys(opts) -- [:generation, :revision, :capabilities] == [],
        do: :ok,
        else: {:error, :invalid_island_snapshot_options}
   end
+
+  defp validate_options(_), do: {:error, :invalid_island_snapshot_options}
+
+  defp bounded_operations?(operations)
+       when is_list(operations) and length(operations) <= @max_patch_operations,
+       do: true
+
+  defp bounded_operations?(_), do: false
 
   defp valid_id?(value),
     do: is_binary(value) and Regex.match?(~r/\A[a-zA-Z0-9][a-zA-Z0-9._:-]*\z/, value)
@@ -137,24 +155,19 @@ defmodule Wotex.Lab.Island.Snapshot do
 
   defp stringify_keys(map), do: Map.new(map, fn {key, value} -> {to_string(key), value} end)
 
-  defp validate_operations(operations, component) do
-    with {:ok, descriptor} <- Component.fetch(component) do
-      allowed = Map.keys(descriptor["props"])
-
-      if Enum.all?(operations, &valid_operation?(&1, allowed)),
-        do: :ok,
-        else: {:error, :invalid_island_patch_operation}
+  defp validate_base(snapshot) do
+    with {:ok, admitted} <-
+           new(snapshot.component, snapshot.instance_id, snapshot.payload,
+             generation: snapshot.generation,
+             revision: snapshot.revision,
+             capabilities: snapshot.capabilities
+           ),
+         true <-
+           snapshot.schema == admitted.schema and snapshot.payload_digest == admitted.payload_digest,
+         {:ok, bytes} <- CanonicalJSON.encode(admitted.payload) do
+      {:ok, JSON.decode!(bytes)}
+    else
+      _ -> {:error, :invalid_island_patch_base}
     end
   end
-
-  defp valid_operation?(%{"op" => operation, "path" => "/" <> path} = value, allowed)
-       when operation in ["add", "remove", "replace"] do
-    [field | segments] = String.split(path, "/")
-
-    field in allowed and
-      Enum.all?([field | segments], &(&1 not in ["", "__proto__", "prototype", "constructor"])) and
-      (operation == "remove" or Map.has_key?(value, "value"))
-  end
-
-  defp valid_operation?(_, _), do: false
 end

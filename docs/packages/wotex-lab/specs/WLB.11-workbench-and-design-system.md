@@ -1,7 +1,28 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.25.0. Contract: accepted. Implementation status:
+Specification version: 0.26.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.26 tightens the existing island protocol without adding fields or
+commands. Canonical object keys sort by UTF-16 code units on both sides;
+invalid UTF-8, unpaired browser surrogates and non-string/non-atom server keys
+are refused. Mixed supplementary/BMP key sets therefore have corrected digests
+and require a fresh snapshot from the matching server/browser build.
+
+A server patch must advance exactly one revision, use closed add/remove/replace
+operations and reproduce the declared next payload from its validated base.
+Paths decode `~0` and `~1`; array indices are unsigned decimal without leading
+zeros, and `-` is accepted only for a final append. Missing targets and unsafe
+prototype segments are refused. The browser preserves its last valid state on
+rejection, requests one full snapshot, rejects stale or contradictory full
+snapshots and cannot commit a patch whose base changed during asynchronous
+validation. Each Workbench LiveView mount and live catalogue component owns a
+fresh, monotonically increasing decimal generation within its host VM. Normal
+patches and resync retain it and the same declared capabilities; a remounted
+view can reset revision only with its newer generation. A VM restart loses the
+old in-memory session, so it cannot resume that instance identity. Shared
+Elixir/browser vectors cover exact bytes, digests and escaped-path transitions. These checks do not close the remaining native-design,
+complete accessibility or archive-adoption obligations.
 
 Version 0.25 aligns compact reading typography and board spacing. The 38-pixel
 board control uses equal 12-pixel side padding. A numeric reading and its unit

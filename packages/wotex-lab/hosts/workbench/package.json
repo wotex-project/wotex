@@ -11,7 +11,7 @@
     "check:browser:documentation": "node bin/check_documentation_browser.mjs",
     "check:browser:islands": "node bin/check_islands_browser.mjs",
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test:layout && pnpm run build && node bin/check_assets.mjs",
-    "test:layout": "node --experimental-strip-types --test assets/layout-profile.test.ts assets/islands/canvas-model.test.ts assets/islands/metric-plot.test.ts",
+    "test:layout": "node --experimental-strip-types --test assets/layout-profile.test.ts assets/islands/canvas-model.test.ts assets/islands/metric-plot.test.ts assets/islands/protocol.test.ts",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "format": "biome format --write .",
     "lint": "biome check --error-on-warnings .",

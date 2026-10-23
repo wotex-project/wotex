@@ -22,6 +22,8 @@ export const limits = {
 const unsignedDecimal = /^(?:0|[1-9][0-9]*)$/
 const boundedIdentifier = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/
 
+const exactMatch = (pattern: RegExp, value: string) => pattern.exec(value)?.[0] === value
+
 const exactKeys = (value: object, required: string[], optional: string[] = []) => {
   const admitted = new Set([...required, ...optional])
   const keys = Object.keys(value)
@@ -31,14 +33,18 @@ const exactKeys = (value: object, required: string[], optional: string[] = []) =
 const identity = (value: FullSnapshot | PatchEnvelope) => {
   if (
     value.schema !== ISLAND_SCHEMA ||
+    typeof value.component !== "string" ||
     !componentDescriptor(value.component) ||
-    !boundedIdentifier.test(value.instance_id) ||
-    !unsignedDecimal.test(value.generation) ||
-    !unsignedDecimal.test(value.revision) ||
+    typeof value.instance_id !== "string" ||
+    !exactMatch(boundedIdentifier, value.instance_id) ||
+    typeof value.generation !== "string" ||
+    !exactMatch(unsignedDecimal, value.generation) ||
+    typeof value.revision !== "string" ||
+    !exactMatch(unsignedDecimal, value.revision) ||
     !Array.isArray(value.capabilities) ||
     value.capabilities.length !== new Set(value.capabilities).size ||
     !value.capabilities.every(
-      (capability) => typeof capability === "string" && boundedIdentifier.test(capability),
+      (capability) => typeof capability === "string" && exactMatch(boundedIdentifier, capability),
     )
   ) {
     throw new Error("invalid island identity")
@@ -65,6 +71,9 @@ export const validatePayload = (component: string, payload: Record<string, JsonV
     throw new Error("unregistered island component")
   }
   assertJsonValue(payload)
+  if (!payload || Array.isArray(payload) || typeof payload !== "object") {
+    throw new Error("island payload must be an object")
+  }
   const schemas = descriptor.props as Record<string, Record<string, unknown>>
   for (const key of Object.keys(payload)) {
     const schema = schemas[key]
@@ -154,8 +163,8 @@ const patchParent = (payload: Record<string, JsonValue>, segments: string[]) => 
 
   for (const segment of segments.slice(0, -1)) {
     if (Array.isArray(parent)) {
-      parent = parent[Number(segment)] as JsonValue
-    } else if (parent && typeof parent === "object") {
+      parent = parent[arrayIndex(segment, parent.length, false)] as JsonValue
+    } else if (parent && typeof parent === "object" && Object.hasOwn(parent, segment)) {
       parent = parent[segment] as JsonValue
     } else {
       throw new Error("island patch path does not exist")
@@ -165,11 +174,23 @@ const patchParent = (payload: Record<string, JsonValue>, segments: string[]) => 
   return parent
 }
 
-const applyArrayOperation = (parent: JsonValue[], key: string, operation: PatchOperation) => {
-  const index = key === "-" ? parent.length : Number(key)
-  if (!Number.isInteger(index) || index < 0 || index > parent.length) {
+const arrayIndex = (key: string, length: number, append: boolean): number => {
+  if (append && key === "-") {
+    return length
+  }
+  const index = Number(key)
+  if (
+    !exactMatch(unsignedDecimal, key) ||
+    !Number.isSafeInteger(index) ||
+    index >= length + (append ? 1 : 0)
+  ) {
     throw new Error("invalid island array index")
   }
+  return index
+}
+
+const applyArrayOperation = (parent: JsonValue[], key: string, operation: PatchOperation) => {
+  const index = arrayIndex(key, parent.length, operation.op === "add")
   if (operation.op === "remove") {
     parent.splice(index, 1)
   } else if (operation.op === "add") {
@@ -186,7 +207,7 @@ const applyObjectOperation = (
   key: string,
   operation: PatchOperation,
 ) => {
-  if (operation.op !== "add" && !(key in parent)) {
+  if (operation.op !== "add" && !Object.hasOwn(parent, key)) {
     throw new Error("island patch path does not exist")
   }
   if (operation.op === "remove") {
@@ -233,6 +254,17 @@ export class IslandState {
       snapshot.instance_id !== this.#snapshot.instance_id
     ) {
       throw new Error("island snapshot identity changed")
+    }
+    const generation = BigInt(snapshot.generation)
+    const currentGeneration = BigInt(this.#snapshot.generation)
+    if (
+      generation < currentGeneration ||
+      (generation === currentGeneration &&
+        (BigInt(snapshot.revision) < BigInt(this.#snapshot.revision) ||
+          (snapshot.revision === this.#snapshot.revision &&
+            snapshot.payload_digest !== this.#snapshot.payload_digest)))
+    ) {
+      throw new Error("island snapshot is stale or contradictory")
     }
     this.#snapshot = snapshot
     this.#resyncPending = false
@@ -281,7 +313,8 @@ export class IslandState {
       ) {
         throw new Error("island patch revision mismatch")
       }
-      const payload = structuredClone(this.#snapshot.payload)
+      const base = this.#snapshot
+      const payload = structuredClone(base.payload)
       for (const operation of patch.operations) {
         applyOperation(payload, operation)
       }
@@ -289,8 +322,17 @@ export class IslandState {
       if ((await digestPayload(payload)) !== patch.payload_digest) {
         throw new Error("island patch digest mismatch")
       }
+      if (this.#snapshot !== base) {
+        throw new Error("island patch base changed during validation")
+      }
       this.#snapshot = {
-        ...patch,
+        schema: patch.schema,
+        component: patch.component,
+        instance_id: patch.instance_id,
+        generation: patch.generation,
+        revision: patch.revision,
+        payload_digest: patch.payload_digest,
+        capabilities: patch.capabilities,
         payload,
       }
       this.#resyncPending = false
@@ -342,7 +384,7 @@ export const buildEvent = (
         }
       : {}),
   }
-  if (commandId && (!boundedIdentifier.test(commandId) || commandId.length > 512)) {
+  if (commandId && (!exactMatch(boundedIdentifier, commandId) || commandId.length > 512)) {
     throw new Error("invalid island command id")
   }
   if (eventDescriptor.effectful && !commandId) {

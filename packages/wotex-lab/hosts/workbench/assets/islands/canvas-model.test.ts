@@ -50,6 +50,7 @@ test("the real client event builder admits Property controls and rejects extra a
     server: {
       middlewareMode: true,
       watch: null,
+      ws: false,
     },
   })
 
@@ -321,7 +322,7 @@ test("Run captures retain their mark, outcome and exact bounded series as a sepa
   }
 
   const full = payload()
-  const [pin] = full.pins as Record<string, JsonValue
+  const [pin] = full.pins as Record<string, JsonValue>[]
 
   pin.series = [
     {

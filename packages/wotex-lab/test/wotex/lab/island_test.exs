@@ -5,6 +5,112 @@ defmodule Wotex.Lab.IslandTest do
 
   alias Wotex.Lab.Island.{CanonicalJSON, Component, Encoder, Event, Snapshot}
 
+  @fixture Path.expand("../../../hosts/workbench/test/support/island_protocol.json", __DIR__)
+
+  test "canonical bytes and digests match the shared browser vectors" do
+    for vector <- JSON.decode!(File.read!(@fixture))["canonical"] do
+      assert {:ok, bytes} = CanonicalJSON.encode(vector["value"])
+      assert bytes == vector["canonical"], vector["id"]
+      assert CanonicalJSON.digest(vector["value"]) == {:ok, vector["digest"]}
+    end
+
+    for key <- [123, {"tuple"}, ["list"], %{}] do
+      assert {:error, :invalid_island_json_key} = CanonicalJSON.encode(%{key => 1})
+    end
+
+    assert {:error, :invalid_island_json} = CanonicalJSON.encode([1 | :improper])
+
+    assert {:error, {:island_limit, :string_bytes, 3, 8192}} =
+             CanonicalJSON.encode(<<0xED, 0xA0, 0x80>>)
+  end
+
+  test "patches apply escaped pointers and array edits before committing the next digest" do
+    fixture = JSON.decode!(File.read!(@fixture))["transition"]
+
+    assert {:ok, base} =
+             Snapshot.new(fixture["component"], fixture["instance_id"], fixture["payload"])
+
+    assert {:ok, patch} = Snapshot.patch(base, fixture["next_payload"], "1", fixture["operations"])
+    assert {:ok, encoded} = Snapshot.encode(base)
+    assert JSON.decode!(encoded) == fixture["snapshot"]
+    assert patch == fixture["patch"]
+    assert {:ok, digest} = CanonicalJSON.digest(fixture["next_payload"])
+    assert patch["payload_digest"] == digest
+    assert patch["base_revision"] == "0"
+
+    row = %{"key" => "row-1", "values" => %{}}
+    next = put_in(base.payload, ["rows"], [row])
+
+    assert {:ok, _} =
+             Snapshot.patch(base, next, "1", [
+               %{"op" => "replace", "path" => "/rows/0", "value" => row}
+             ])
+
+    empty = put_in(base.payload, ["rows"], [])
+    assert {:ok, _} = Snapshot.patch(base, empty, "1", [%{"op" => "remove", "path" => "/rows/0"}])
+    assert {:ok, _} = Snapshot.patch(base, base.payload, "1", [])
+    assert {:error, :invalid_island_patch} = Snapshot.patch(base, next, "1", [])
+    assert {:error, :invalid_island_patch} = Snapshot.patch(base, next, "0", fixture["operations"])
+    assert {:error, :invalid_island_patch} = Snapshot.patch(base, next, "2", fixture["operations"])
+
+    assert {:error, :invalid_island_patch_base} =
+             Snapshot.patch(%{base | payload_digest: "invalid"}, next, "1", [])
+
+    assert {:error, :invalid_island_snapshot_options} = Snapshot.new("tabs", "tabs", %{}, :invalid)
+    assert {:error, :invalid_island_snapshot_options} = Snapshot.new("tabs", "tabs", %{}, [1])
+  end
+
+  test "patches reject malformed, nonexistent and ambiguous paths without changing the base" do
+    fixture = JSON.decode!(File.read!(@fixture))["transition"]
+
+    assert {:ok, base} =
+             Snapshot.new(fixture["component"], fixture["instance_id"], fixture["payload"])
+
+    paths = [
+      "/rows/01",
+      "/rows/1e0",
+      "/rows/+0",
+      "/rows/-1",
+      "/rows/0.0",
+      "/rows/0x0",
+      "/rows/1",
+      "/rows/-",
+      "/rows/99/values",
+      "/rows/01/values",
+      "/rows/0/missing/child",
+      "/rows/0/key/child",
+      "/rows/0/values/missing",
+      "/rows/0/values/~2",
+      "/rows/0/values/~",
+      "/rows/0/constructor",
+      "/rows/0/__proto__",
+      "/rows/0/prototype",
+      "/unknown",
+      "/",
+      ""
+    ]
+
+    operations =
+      Enum.map(paths, &%{"op" => "remove", "path" => &1}) ++
+        [
+          %{"op" => "add", "path" => "/rows/2", "value" => %{}},
+          %{"op" => "replace", "path" => "/rows/1", "value" => %{}},
+          %{"op" => "remove", "path" => "/rows/0", "value" => nil},
+          %{"op" => "add", "path" => "/rows/0"},
+          %{"op" => "replace", "path" => "/label", "value" => "Readings", "extra" => true},
+          %{"op" => "move", "path" => "/rows/0"},
+          nil
+        ]
+
+    for operation <- operations do
+      assert {:error, :invalid_island_patch_operation} =
+               Snapshot.patch(base, base.payload, "1", [operation]),
+             inspect(operation)
+    end
+
+    assert base.payload == fixture["payload"]
+  end
+
   test "canonical JSON covers numeric forms and rejects ambiguous or unsafe input" do
     assert {:ok, ~s({"decimal":1.25,"large":10000000000,"negative":-2.5,"tiny":1e-7,"zero":0})} =
              CanonicalJSON.encode(%{
