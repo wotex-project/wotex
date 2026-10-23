@@ -6,7 +6,9 @@ const meta: Meta = {
   id: "navigation-list",
   title: "Navigation/List",
   component: Navigation,
-  parameters: { fixture: storyFixture("navigation") },
+  parameters: {
+    fixture: storyFixture("navigation"),
+  },
 }
 export default meta
 type Story = StoryObj
@@ -15,8 +17,16 @@ export const CurrentPage: Story = {
     label: "Documentation",
     current: "/guide",
     items: [
-      { id: "home", title: "Home", path: "/" },
-      { id: "guide", title: "Guide", path: "/guide" },
+      {
+        id: "home",
+        title: "Home",
+        path: "/",
+      },
+      {
+        id: "guide",
+        title: "Guide",
+        path: "/guide",
+      },
     ],
   },
 }

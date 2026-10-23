@@ -72,9 +72,14 @@ try {
     await browser.close()
   }
 } finally {
-  if (staticServer) await new Promise((resolveClose) => staticServer.close(resolveClose))
+  if (staticServer) {
+    await new Promise((resolveClose) => staticServer.close(resolveClose))
+  }
   await stopFixture(child)
-  await rm(temporary, { recursive: true, force: true })
+  await rm(temporary, {
+    recursive: true,
+    force: true,
+  })
 }
 
 async function candidate(environment, fallback) {
@@ -127,7 +132,9 @@ function fixtureReady(process) {
       const line = stdout
         .split("\n")
         .find((entry) => entry.startsWith("WOTEX_DOCUMENTATION_FIXTURE "))
-      if (!line) return
+      if (!line) {
+        return
+      }
       clearTimeout(timeout)
       resolveReady(JSON.parse(line.slice("WOTEX_DOCUMENTATION_FIXTURE ".length)))
     })
@@ -142,13 +149,17 @@ function fixtureReady(process) {
 }
 
 async function stopFixture(process) {
-  if (process.exitCode !== null) return
+  if (process.exitCode !== null) {
+    return
+  }
   process.kill("SIGTERM")
   await Promise.race([
     new Promise((resolveExit) => process.once("exit", resolveExit)),
     new Promise((resolveTimeout) => setTimeout(resolveTimeout, 5_000)),
   ])
-  if (process.exitCode === null) process.kill("SIGKILL")
+  if (process.exitCode === null) {
+    process.kill("SIGKILL")
+  }
 }
 
 async function serveStatic(root, listenPort) {
@@ -162,10 +173,14 @@ async function serveStatic(root, listenPort) {
       if (resolvedRelative === ".." || resolvedRelative.startsWith(`..${sep}`)) {
         throw new Error("path outside static root")
       }
-      if (path === root) path = join(path, "index.html")
+      if (path === root) {
+        path = join(path, "index.html")
+      }
 
       try {
-        if ((await stat(path)).isDirectory()) path = join(path, "index.html")
+        if ((await stat(path)).isDirectory()) {
+          path = join(path, "index.html")
+        }
       } catch {
         path = join(root, "404.html")
         response.statusCode = 404
@@ -189,7 +204,9 @@ async function serveStatic(root, listenPort) {
 }
 
 function mediaType(path) {
-  if (path.includes("/wasm.") && path.endsWith(".pagefind")) return "application/wasm"
+  if (path.includes("/wasm.") && path.endsWith(".pagefind")) {
+    return "application/wasm"
+  }
   return (
     {
       ".css": "text/css",
@@ -203,7 +220,12 @@ function mediaType(path) {
 }
 
 async function checkSurface(browser, origin, kind) {
-  const context = await browser.newContext({ viewport: { width: 1_280, height: 900 } })
+  const context = await browser.newContext({
+    viewport: {
+      width: 1_280,
+      height: 900,
+    },
+  })
   const page = await context.newPage()
   page.setDefaultTimeout(20_000)
   const errors = []
@@ -214,16 +236,21 @@ async function checkSurface(browser, origin, kind) {
   page.on("console", (message) => {
     const location = message.location().url
     const expectedNotFound = location !== "" && new URL(location).pathname === "/docs/not-present/"
-    if (message.type() === "error" && !expectedNotFound) errors.push(message.text())
+    if (message.type() === "error" && !expectedNotFound) {
+      errors.push(message.text())
+    }
   })
   page.on("request", (request) => {
     const requested = new URL(request.url())
-    if (requested.pathname.includes("pagefind")) pagefindRequests.push(requested.pathname)
+    if (requested.pathname.includes("pagefind")) {
+      pagefindRequests.push(requested.pathname)
+    }
   })
   await context.route("**/*", async (route) => {
     const requested = new URL(route.request().url())
-    if (requested.hostname === "127.0.0.1") await route.continue()
-    else {
+    if (requested.hostname === "127.0.0.1") {
+      await route.continue()
+    } else {
       remote.push(requested.href)
       await route.abort("blockedbyclient")
     }
@@ -249,7 +276,9 @@ async function checkSurface(browser, origin, kind) {
     ["notebook tensor", "Tensor notebook"],
     ["API operation widget flight", "Widget API"],
   ]
-  for (const [query, title] of queries) await search(page, query, title)
+  for (const [query, title] of queries) {
+    await search(page, query, title)
+  }
   assert.ok(pagefindRequests.some((path) => path.endsWith("/pagefind.js")))
   assert.ok(pagefindRequests.some((path) => path.includes(".pf_")))
 
@@ -269,9 +298,16 @@ async function checkSurface(browser, origin, kind) {
   }
 
   await page.locator("[data-doc-search-close]").click()
-  await page.setViewportSize({ width: 320, height: 900 })
+  await page.setViewportSize({
+    width: 320,
+    height: 900,
+  })
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
-  await page.getByRole("button", { name: "Browse documentation" }).click()
+  await page
+    .getByRole("button", {
+      name: "Browse documentation",
+    })
+    .click()
   assert.equal(await page.locator("[data-doc-nav]").getAttribute("data-doc-nav-state"), "open")
 
   const session = await context.newCDPSession(page)
@@ -289,14 +325,25 @@ async function checkSurface(browser, origin, kind) {
       width: innerWidth,
       reflows: document.documentElement.scrollWidth <= innerWidth,
     })),
-    { ratio: 4, width: 320, reflows: true },
+    {
+      ratio: 4,
+      width: 320,
+      reflows: true,
+    },
   )
   await session.send("Emulation.clearDeviceMetricsOverride")
 
   for (const theme of ["Light", "Dark", "High contrast", "System"]) {
-    await page.getByRole("button", { name: theme }).click()
+    await page
+      .getByRole("button", {
+        name: theme,
+      })
+      .click()
   }
-  await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "active" })
+  await page.emulateMedia({
+    reducedMotion: "reduce",
+    forcedColors: "active",
+  })
   const durations = await page.locator(".doc-shell *").evaluateAll((elements) =>
     elements.flatMap((element) => {
       const style = getComputedStyle(element)
@@ -314,9 +361,27 @@ async function checkSurface(browser, origin, kind) {
 
   const missing = await page.goto(new URL("/docs/not-present/", origin).href)
   assert.equal(missing?.status(), kind === "static" ? 404 : 200)
-  await page.getByRole("heading", { name: "Page not found" }).waitFor()
-  assert.equal(await page.getByRole("navigation", { name: "Documentation" }).count(), 1)
-  assert.equal(await page.getByRole("button", { name: "Search documentation" }).count(), 1)
+  await page
+    .getByRole("heading", {
+      name: "Page not found",
+    })
+    .waitFor()
+  assert.equal(
+    await page
+      .getByRole("navigation", {
+        name: "Documentation",
+      })
+      .count(),
+    1,
+  )
+  assert.equal(
+    await page
+      .getByRole("button", {
+        name: "Search documentation",
+      })
+      .count(),
+    1,
+  )
 
   await page.goto(new URL("/docs/start/", origin).href)
   const content = await page.evaluate(() => ({
@@ -339,7 +404,10 @@ async function checkSurface(browser, origin, kind) {
   assert.deepEqual(errors, [])
   assert.deepEqual(remote, [])
   await context.close()
-  return { content, design }
+  return {
+    content,
+    design,
+  }
 }
 
 async function search(page, query, expectedTitle) {
@@ -361,16 +429,27 @@ async function clearFilters(page) {
 
 function durationMilliseconds(value) {
   const amount = Number.parseFloat(value)
-  if (!Number.isFinite(amount)) return 0
+  if (!Number.isFinite(amount)) {
+    return 0
+  }
   return value.endsWith("ms") ? amount : amount * 1_000
 }
 
 async function checkNoScript(browser, origin) {
-  const context = await browser.newContext({ javaScriptEnabled: false })
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+  })
   const page = await context.newPage()
   await page.goto(new URL("/docs/start/", origin).href)
   assert.equal(await page.locator("article").count(), 1)
-  assert.equal(await page.getByRole("navigation", { name: "Documentation" }).count(), 1)
+  assert.equal(
+    await page
+      .getByRole("navigation", {
+        name: "Documentation",
+      })
+      .count(),
+    1,
+  )
   assert.equal((await page.locator("noscript a").count()) > 0, true)
   await context.close()
 }

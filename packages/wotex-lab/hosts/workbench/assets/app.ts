@@ -1,10 +1,7 @@
 import "./islands/design-system.css"
 import { WotexDocumentationLink } from "./documentation-link.js"
 import { WotexLabSvelteIsland } from "./islands/hook.js"
-import {
-  observeLayoutProfileWithin,
-  preserveShellFocusWithin,
-} from "./layout-profile.js"
+import { observeLayoutProfileWithin, preserveShellFocusWithin } from "./layout-profile.js"
 
 interface PhoenixSocketConstructor {
   new (path: string, options?: Record<string, unknown>): unknown
@@ -26,60 +23,118 @@ interface LiveSocketConstructor {
 
 declare global {
   interface Window {
-    LiveView?: { LiveSocket: LiveSocketConstructor }
-    Phoenix?: { Socket: PhoenixSocketConstructor }
+    LiveView?: {
+      LiveSocket: LiveSocketConstructor
+    }
+    Phoenix?: {
+      Socket: PhoenixSocketConstructor
+    }
     liveSocket?: LiveSocketInstance
   }
 }
 
 const csrf = document.querySelector<HTMLMetaElement>("meta[name='csrf-token']")?.content
-interface BoardSearchHook { el: HTMLElement; hadFocus?: boolean }
+interface BoardSearchHook {
+  el: HTMLElement
+  hadFocus?: boolean
+}
+
 const WotexBoardSearch = {
   mounted(this: BoardSearchHook) {
     const target = this.el.dataset.focusTarget
-    if (target) this.el.querySelector<HTMLElement>(target)?.focus({ preventScroll: true })
+    if (target) {
+      this.el.querySelector<HTMLElement>(target)?.focus({
+        preventScroll: true,
+      })
+    }
   },
   beforeUpdate(this: BoardSearchHook) {
     this.hadFocus = this.el.contains(document.activeElement)
   },
   updated(this: BoardSearchHook) {
-    if (this.hadFocus && document.activeElement === document.body)
-      this.el.querySelector<HTMLElement>("#wl-board-search-query")?.focus({ preventScroll: true })
+    if (this.hadFocus && document.activeElement === document.body) {
+      this.el.querySelector<HTMLElement>("#wl-board-search-query")?.focus({
+        preventScroll: true,
+      })
+    }
   },
 }
+
+function boardSearchResultIndex(key: string, current: number, count: number, inQuery: boolean) {
+  if (key === "Home") {
+    return 0
+  }
+  if (key === "End") {
+    return count - 1
+  }
+  const forward = key === "ArrowDown"
+  if (inQuery) {
+    return forward ? 0 : count - 1
+  }
+  return (current + (forward ? 1 : count - 1)) % count
+}
+
+function moveBoardSearchFocus(event: KeyboardEvent) {
+  const target = event.target
+  if (!(target instanceof HTMLElement) || !target.closest("#wl-board-search-content")) {
+    return
+  }
+  const inQuery = target.matches("#wl-board-search-query")
+  if (
+    !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key) ||
+    (inQuery && ["Home", "End"].includes(event.key))
+  ) {
+    return
+  }
+  const results = [
+    ...document.querySelectorAll<HTMLButtonElement>("#wl-board-search-results button"),
+  ]
+  if (results.length === 0) {
+    return
+  }
+  event.preventDefault()
+  const current = target instanceof HTMLButtonElement ? results.indexOf(target) : -1
+  const next = boardSearchResultIndex(event.key, current, results.length, inQuery)
+  results[next]?.focus()
+}
+
 if (document.body) {
   const stopObservingLayout = observeLayoutProfileWithin(document.body)
   const stopPreservingFocus = preserveShellFocusWithin(document.body)
   const searchKeys = (event: KeyboardEvent) => {
-    if (event.defaultPrevented || event.isComposing || event.altKey) return
-    const trigger = document.querySelector<HTMLButtonElement>(".wl-shell-canvas #wl-board-search")
-    if (trigger && !event.shiftKey && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-      event.preventDefault()
-      const input = document.querySelector<HTMLInputElement>("#wl-board-search-query")
-      if (input) input.focus({ preventScroll: true })
-      else trigger.click()
+    if (event.defaultPrevented || event.isComposing || event.altKey) {
       return
     }
-    const target = event.target
-    if (!(target instanceof HTMLElement) || !target.closest("#wl-board-search-content")) return
-    const input = target.matches("#wl-board-search-query")
-    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key) ||
-        (input && ["Home", "End"].includes(event.key))) return
-    const results = [...document.querySelectorAll<HTMLButtonElement>("#wl-board-search-results button")]
-    if (results.length === 0) return
-    event.preventDefault()
-    const current = results.indexOf(target as HTMLButtonElement)
-    const next = event.key === "Home" ? 0 : event.key === "End" ? results.length - 1 :
-      input ? (event.key === "ArrowDown" ? 0 : results.length - 1) :
-        (current + (event.key === "ArrowDown" ? 1 : results.length - 1)) % results.length
-    results[next]?.focus()
+    const trigger = document.querySelector<HTMLButtonElement>(".wl-shell-canvas #wl-board-search")
+    if (
+      trigger &&
+      !event.shiftKey &&
+      (event.metaKey || event.ctrlKey) &&
+      event.key.toLowerCase() === "k"
+    ) {
+      event.preventDefault()
+      const input = document.querySelector<HTMLInputElement>("#wl-board-search-query")
+      if (input) {
+        input.focus({
+          preventScroll: true,
+        })
+      } else {
+        trigger.click()
+      }
+      return
+    }
+    moveBoardSearchFocus(event)
   }
   window.addEventListener("keydown", searchKeys)
   const clearBoardSearch = () => {
-    const input = document.querySelector<HTMLInputElement>("#wl-board-search-panel #wl-board-search-query")
+    const input = document.querySelector<HTMLInputElement>(
+      "#wl-board-search-panel #wl-board-search-query",
+    )
     if (input) {
       input.value = ""
-      input.focus({ preventScroll: true })
+      input.focus({
+        preventScroll: true,
+      })
     }
   }
   window.addEventListener("wotex:clear-board-search", clearBoardSearch)
@@ -91,14 +146,22 @@ if (document.body) {
       window.removeEventListener("keydown", searchKeys)
       window.removeEventListener("wotex:clear-board-search", clearBoardSearch)
     },
-    { once: true },
+    {
+      once: true,
+    },
   )
 }
 
 if (window.Phoenix && window.LiveView && csrf) {
   const liveSocket = new window.LiveView.LiveSocket("/live", window.Phoenix.Socket, {
-    hooks: { WotexLabSvelteIsland, WotexDocumentationLink, WotexBoardSearch },
-    params: { _csrf_token: csrf },
+    hooks: {
+      WotexLabSvelteIsland,
+      WotexDocumentationLink,
+      WotexBoardSearch,
+    },
+    params: {
+      _csrf_token: csrf,
+    },
   })
 
   liveSocket.connect()

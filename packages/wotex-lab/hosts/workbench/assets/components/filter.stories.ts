@@ -6,7 +6,9 @@ const meta: Meta = {
   id: "reporting-filter",
   title: "Reporting/Filter",
   component: Filter,
-  parameters: { fixture: storyFixture("filter") },
+  parameters: {
+    fixture: storyFixture("filter"),
+  },
 }
 export default meta
 type Story = StoryObj
@@ -14,13 +16,22 @@ export const Default: Story = {
   args: {
     legend: "Filter results",
     fields: [
-      { name: "query", label: "Contains" },
+      {
+        name: "query",
+        label: "Contains",
+      },
       {
         name: "state",
         label: "State",
         options: [
-          { label: "Any", value: "" },
-          { label: "Ready", value: "ready" },
+          {
+            label: "Any",
+            value: "",
+          },
+          {
+            label: "Ready",
+            value: "ready",
+          },
         ],
       },
     ],

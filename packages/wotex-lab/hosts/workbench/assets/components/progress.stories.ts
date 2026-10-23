@@ -6,9 +6,20 @@ const meta: Meta = {
   id: "feedback-progress",
   title: "Feedback/Progress",
   component: Progress,
-  parameters: { fixture: storyFixture("progress") },
+  parameters: {
+    fixture: storyFixture("progress"),
+  },
 }
 export default meta
 type Story = StoryObj
-export const Determinate: Story = { args: { label: "Upload progress", value: 64 } }
-export const Indeterminate: Story = { args: { label: "Working" } }
+export const Determinate: Story = {
+  args: {
+    label: "Upload progress",
+    value: 64,
+  },
+}
+export const Indeterminate: Story = {
+  args: {
+    label: "Working",
+  },
+}

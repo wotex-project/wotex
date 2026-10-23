@@ -53,6 +53,20 @@ projections; semantic HEEx/SVG fallbacks remain available if an island fails.
 Assets are built locally with the pinned pnpm/Vite toolchain. The running
 Elixir release starts no Node process and loads no remote browser runtime.
 
+Biome owns frontend formatting and linting, including Svelte scripts and markup.
+The pinned configuration uses two-space indentation, a 100-column line width,
+semicolon-free JavaScript/TypeScript, braces on control flow, sorted imports and
+explicit type imports. Unused code, explicit `any`, non-null assertions and
+functions above a cognitive complexity of 20 fail the check. Accessibility
+exceptions identify the exact ARIA interaction; required CSS overrides carry
+local explanations. Selector-specificity ordering is exempt because component
+variants span independent DOM scopes.
+
+From the repository root, run
+`pnpm --dir packages/wotex-lab/hosts/workbench run format` to format or
+`pnpm --dir packages/wotex-lab/hosts/workbench run lint` to check without writing.
+`pnpm run check` and the host gate both enforce Biome before building assets.
+
 The local completion gate is:
 
 ```sh

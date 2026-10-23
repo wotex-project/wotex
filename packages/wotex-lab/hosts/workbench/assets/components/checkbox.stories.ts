@@ -6,10 +6,17 @@ const meta: Meta = {
   id: "forms-checkbox",
   title: "Forms/Checkbox",
   component: Checkbox,
-  parameters: { fixture: storyFixture("checkbox") },
+  parameters: {
+    fixture: storyFixture("checkbox"),
+  },
 }
 export default meta
 type Story = StoryObj
 export const Checked: Story = {
-  args: { id: "alerts", name: "alerts", label: "Send alerts", checked: true },
+  args: {
+    id: "alerts",
+    name: "alerts",
+    label: "Send alerts",
+    checked: true,
+  },
 }

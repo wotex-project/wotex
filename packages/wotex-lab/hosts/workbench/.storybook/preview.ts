@@ -7,9 +7,15 @@ document.documentElement.setAttribute("data-wotex-theme", "light")
 
 const preview: Preview = {
   parameters: {
-    a11y: { test: "error" },
-    backgrounds: { disable: true },
-    controls: { expanded: true },
+    a11y: {
+      test: "error",
+    },
+    backgrounds: {
+      disable: true,
+    },
+    controls: {
+      expanded: true,
+    },
     layout: "padded",
   },
 }

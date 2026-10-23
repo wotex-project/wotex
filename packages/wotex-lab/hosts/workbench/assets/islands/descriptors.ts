@@ -1,59 +1,182 @@
 export const componentDescriptors = {
   canvas: {
     props: {
-      label: { type: "string", required: true, max_bytes: 256 },
-      nodes: { type: "item_list", required: true, max_items: 32 },
-      edges: { type: "item_list", required: true, max_items: 64 },
-      pins: { type: "item_list", max_items: 16 },
-      view: { type: "item_list", max_items: 1 },
-      layout_revision: { type: "string", max_bytes: 32 },
-      selection: { type: "string", max_bytes: 128 },
+      label: {
+        type: "string",
+        required: true,
+        max_bytes: 256,
+      },
+      nodes: {
+        type: "item_list",
+        required: true,
+        max_items: 32,
+      },
+      edges: {
+        type: "item_list",
+        required: true,
+        max_items: 64,
+      },
+      pins: {
+        type: "item_list",
+        max_items: 16,
+      },
+      view: {
+        type: "item_list",
+        max_items: 1,
+      },
+      layout_revision: {
+        type: "string",
+        max_bytes: 32,
+      },
+      selection: {
+        type: "string",
+        max_bytes: 128,
+      },
     },
     events: {
-      inspect: { payload: "id", effectful: false },
-      inspect_connection: { payload: "id", effectful: false },
-      propose_connection: { payload: "connection", effectful: false },
-      open: { payload: "id", effectful: false },
-      read: { payload: "id", effectful: false },
-      observe: { payload: "id", effectful: false },
-      pause: { payload: "id", effectful: false },
-      statistics: { payload: "id", effectful: false },
-      sources: { payload: "id", effectful: false },
-      save_layout: { payload: "layout", effectful: false },
-      open_documentation: { payload: "view", effectful: false },
-      pin_refresh: { payload: "id", effectful: false },
-      pin_pause: { payload: "id", effectful: false },
-      pin_resume: { payload: "id", effectful: false },
-      pin_open_run: { payload: "id", effectful: false },
-      pin_remove: { payload: "id", effectful: false },
+      inspect: {
+        payload: "id",
+        effectful: false,
+      },
+      inspect_connection: {
+        payload: "id",
+        effectful: false,
+      },
+      propose_connection: {
+        payload: "connection",
+        effectful: false,
+      },
+      open: {
+        payload: "id",
+        effectful: false,
+      },
+      read: {
+        payload: "id",
+        effectful: false,
+      },
+      observe: {
+        payload: "id",
+        effectful: false,
+      },
+      pause: {
+        payload: "id",
+        effectful: false,
+      },
+      statistics: {
+        payload: "id",
+        effectful: false,
+      },
+      sources: {
+        payload: "id",
+        effectful: false,
+      },
+      save_layout: {
+        payload: "layout",
+        effectful: false,
+      },
+      open_documentation: {
+        payload: "view",
+        effectful: false,
+      },
+      pin_refresh: {
+        payload: "id",
+        effectful: false,
+      },
+      pin_pause: {
+        payload: "id",
+        effectful: false,
+      },
+      pin_resume: {
+        payload: "id",
+        effectful: false,
+      },
+      pin_open_run: {
+        payload: "id",
+        effectful: false,
+      },
+      pin_remove: {
+        payload: "id",
+        effectful: false,
+      },
     },
   },
   chart: {
     props: {
-      title: { type: "string", required: true, max_bytes: 256 },
-      series: { type: "item_list", required: true, max_items: 8 },
-      points: { type: "item_list", required: true, max_items: 2000 },
+      title: {
+        type: "string",
+        required: true,
+        max_bytes: 256,
+      },
+      series: {
+        type: "item_list",
+        required: true,
+        max_items: 8,
+      },
+      points: {
+        type: "item_list",
+        required: true,
+        max_items: 2000,
+      },
     },
-    events: { inspect: { payload: "key", effectful: false } },
+    events: {
+      inspect: {
+        payload: "key",
+        effectful: false,
+      },
+    },
   },
   "data-grid": {
     props: {
-      label: { type: "string", required: true, max_bytes: 256 },
-      columns: { type: "item_list", required: true, max_items: 64 },
-      rows: { type: "item_list", required: true, max_items: 2000 },
+      label: {
+        type: "string",
+        required: true,
+        max_bytes: 256,
+      },
+      columns: {
+        type: "item_list",
+        required: true,
+        max_items: 64,
+      },
+      rows: {
+        type: "item_list",
+        required: true,
+        max_items: 2000,
+      },
     },
     events: {
-      select: { payload: "key", effectful: false },
-      activate: { payload: "key", effectful: true },
+      select: {
+        payload: "key",
+        effectful: false,
+      },
+      activate: {
+        payload: "key",
+        effectful: true,
+      },
     },
   },
   tabs: {
     props: {
-      label: { type: "string", required: true, max_bytes: 256 },
-      tabs: { type: "item_list", required: true, max_items: 32 },
-      selected: { type: "string", max_bytes: 256 },
+      label: {
+        type: "string",
+        required: true,
+        max_bytes: 256,
+      },
+      tabs: {
+        type: "item_list",
+        required: true,
+        max_items: 32,
+      },
+      selected: {
+        type: "string",
+        max_bytes: 256,
+      },
     },
-    events: { select: { payload: "id", effectful: false } },
+    events: {
+      select: {
+        payload: "id",
+        effectful: false,
+      },
+    },
   },
 } as const
 

@@ -1,6 +1,6 @@
 import { assertJsonValue, decodedBytes, digestPayload } from "./canonical.js"
-import { componentDescriptor } from "./descriptors.js"
 import { validateCanvas } from "./canvas-model.js"
+import { componentDescriptor } from "./descriptors.js"
 import type {
   FullSnapshot,
   IslandEvent,
@@ -61,7 +61,9 @@ const validateProp = (schema: Record<string, unknown>, value: JsonValue) => {
 
 export const validatePayload = (component: string, payload: Record<string, JsonValue>) => {
   const descriptor = componentDescriptor(component)
-  if (!descriptor) throw new Error("unregistered island component")
+  if (!descriptor) {
+    throw new Error("unregistered island component")
+  }
   assertJsonValue(payload)
   const schemas = descriptor.props as Record<string, Record<string, unknown>>
   for (const key of Object.keys(payload)) {
@@ -71,9 +73,13 @@ export const validatePayload = (component: string, payload: Record<string, JsonV
     }
   }
   for (const [key, schema] of Object.entries(schemas)) {
-    if (schema.required === true && !(key in payload)) throw new Error(`missing island field ${key}`)
+    if (schema.required === true && !(key in payload)) {
+      throw new Error(`missing island field ${key}`)
+    }
   }
-  if (component === "canvas") validateCanvas(payload)
+  if (component === "canvas") {
+    validateCanvas(payload)
+  }
 }
 
 export const validateFullSnapshot = async (value: unknown): Promise<FullSnapshot> => {
@@ -96,18 +102,29 @@ export const validateFullSnapshot = async (value: unknown): Promise<FullSnapshot
   ) {
     throw new Error("invalid island snapshot fields")
   }
+
   identity(snapshot)
-  if (decodedBytes(value) > limits.snapshotBytes) throw new Error("island snapshot exceeds 512 KiB")
+  if (decodedBytes(value) > limits.snapshotBytes) {
+    throw new Error("island snapshot exceeds 512 KiB")
+  }
+
   validatePayload(snapshot.component, snapshot.payload)
   if ((await digestPayload(snapshot.payload)) !== snapshot.payload_digest) {
     throw new Error("island payload digest mismatch")
   }
+
   return snapshot
 }
 
 const pointerSegments = (path: string): string[] => {
-  if (!path.startsWith("/") || path === "/") throw new Error("invalid island patch path")
-  if (/~(?:[^01]|$)/.test(path)) throw new Error("invalid island patch escape")
+  if (!path.startsWith("/") || path === "/") {
+    throw new Error("invalid island patch path")
+  }
+
+  if (/~(?:[^01]|$)/.test(path)) {
+    throw new Error("invalid island patch escape")
+  }
+
   const segments = path
     .slice(1)
     .split("/")
@@ -115,39 +132,79 @@ const pointerSegments = (path: string): string[] => {
   if (segments.some((segment) => ["__proto__", "prototype", "constructor"].includes(segment))) {
     throw new Error("unsafe island patch path")
   }
+
   return segments
 }
 
-const applyOperation = (payload: Record<string, JsonValue>, operation: PatchOperation) => {
-  if (!["add", "remove", "replace"].includes(operation.op))
+const validateOperation = (operation: PatchOperation) => {
+  if (!["add", "remove", "replace"].includes(operation.op)) {
     throw new Error("unsupported island patch operation")
+  }
+
   if (
     !exactKeys(operation, ["op", "path"], operation.op === "remove" ? [] : ["value"]) ||
     (operation.op !== "remove" && !("value" in operation))
   ) {
     throw new Error("invalid island patch operation fields")
   }
-  const segments = pointerSegments(operation.path)
+}
+
+const patchParent = (payload: Record<string, JsonValue>, segments: string[]) => {
   let parent: JsonValue = payload
+
   for (const segment of segments.slice(0, -1)) {
-    if (Array.isArray(parent)) parent = parent[Number(segment)] as JsonValue
-    else if (parent && typeof parent === "object") parent = parent[segment] as JsonValue
-    else throw new Error("island patch path does not exist")
+    if (Array.isArray(parent)) {
+      parent = parent[Number(segment)] as JsonValue
+    } else if (parent && typeof parent === "object") {
+      parent = parent[segment] as JsonValue
+    } else {
+      throw new Error("island patch path does not exist")
+    }
   }
+
+  return parent
+}
+
+const applyArrayOperation = (parent: JsonValue[], key: string, operation: PatchOperation) => {
+  const index = key === "-" ? parent.length : Number(key)
+  if (!Number.isInteger(index) || index < 0 || index > parent.length) {
+    throw new Error("invalid island array index")
+  }
+  if (operation.op === "remove") {
+    parent.splice(index, 1)
+  } else if (operation.op === "add") {
+    parent.splice(index, 0, operation.value as JsonValue)
+  } else if (index < parent.length) {
+    parent[index] = operation.value as JsonValue
+  } else {
+    throw new Error("island replace path does not exist")
+  }
+}
+
+const applyObjectOperation = (
+  parent: Record<string, JsonValue>,
+  key: string,
+  operation: PatchOperation,
+) => {
+  if (operation.op !== "add" && !(key in parent)) {
+    throw new Error("island patch path does not exist")
+  }
+  if (operation.op === "remove") {
+    delete parent[key]
+  } else {
+    parent[key] = operation.value as JsonValue
+  }
+}
+
+const applyOperation = (payload: Record<string, JsonValue>, operation: PatchOperation) => {
+  validateOperation(operation)
+  const segments = pointerSegments(operation.path)
+  const parent = patchParent(payload, segments)
   const key = segments.at(-1) as string
   if (Array.isArray(parent)) {
-    const index = key === "-" ? parent.length : Number(key)
-    if (!Number.isInteger(index) || index < 0 || index > parent.length)
-      throw new Error("invalid island array index")
-    if (operation.op === "remove") parent.splice(index, 1)
-    else if (operation.op === "add") parent.splice(index, 0, operation.value as JsonValue)
-    else if (index < parent.length) parent[index] = operation.value as JsonValue
-    else throw new Error("island replace path does not exist")
+    applyArrayOperation(parent, key, operation)
   } else if (parent && typeof parent === "object") {
-    if (operation.op !== "add" && !(key in parent))
-      throw new Error("island patch path does not exist")
-    if (operation.op === "remove") delete parent[key]
-    else parent[key] = operation.value as JsonValue
+    applyObjectOperation(parent, key, operation)
   } else {
     throw new Error("island patch parent does not exist")
   }
@@ -215,7 +272,9 @@ export class IslandState {
       ) {
         throw new Error("island patch identity mismatch")
       }
-      if (patch.revision === this.#snapshot.revision) return "duplicate"
+      if (patch.revision === this.#snapshot.revision) {
+        return "duplicate"
+      }
       if (
         patch.base_revision !== this.#snapshot.revision ||
         BigInt(patch.revision) !== BigInt(patch.base_revision) + 1n
@@ -223,11 +282,17 @@ export class IslandState {
         throw new Error("island patch revision mismatch")
       }
       const payload = structuredClone(this.#snapshot.payload)
-      for (const operation of patch.operations) applyOperation(payload, operation)
+      for (const operation of patch.operations) {
+        applyOperation(payload, operation)
+      }
       validatePayload(patch.component, payload)
-      if ((await digestPayload(payload)) !== patch.payload_digest)
+      if ((await digestPayload(payload)) !== patch.payload_digest) {
         throw new Error("island patch digest mismatch")
-      this.#snapshot = { ...patch, payload }
+      }
+      this.#snapshot = {
+        ...patch,
+        payload,
+      }
       this.#resyncPending = false
       return "applied"
     } catch {
@@ -248,13 +313,19 @@ export const buildEvent = (
 ): IslandEvent => {
   const descriptor = componentDescriptor(snapshot.component)
   const eventDescriptor = descriptor?.events[event as keyof typeof descriptor.events] as
-    | { effectful?: boolean; payload?: string }
+    | {
+        effectful?: boolean
+        payload?: string
+      }
     | undefined
-  if (!eventDescriptor) throw new Error("unknown island event")
+  if (!eventDescriptor) {
+    throw new Error("unknown island event")
+  }
   assertJsonValue(payload)
   const payloadField = eventDescriptor.payload
-  if (payloadField === "empty" && Object.keys(payload).length !== 0)
+  if (payloadField === "empty" && Object.keys(payload).length !== 0) {
     throw new Error("island event payload must be empty")
+  }
   if (payloadField && payloadField !== "empty" && !exactKeys(payload, [payloadField])) {
     throw new Error(`island event payload requires ${payloadField}`)
   }
@@ -265,14 +336,20 @@ export const buildEvent = (
     client_revision: snapshot.revision,
     event,
     payload,
-    ...(commandId ? { command_id: commandId } : {}),
+    ...(commandId
+      ? {
+          command_id: commandId,
+        }
+      : {}),
   }
   if (commandId && (!boundedIdentifier.test(commandId) || commandId.length > 512)) {
     throw new Error("invalid island command id")
   }
-  if (eventDescriptor.effectful && !commandId)
+  if (eventDescriptor.effectful && !commandId) {
     throw new Error("effectful island event requires a command id")
-  if (decodedBytes(envelope as unknown as JsonValue) > limits.eventBytes)
+  }
+  if (decodedBytes(envelope as unknown as JsonValue) > limits.eventBytes) {
     throw new Error("island event exceeds 32 KiB")
+  }
   return envelope
 }

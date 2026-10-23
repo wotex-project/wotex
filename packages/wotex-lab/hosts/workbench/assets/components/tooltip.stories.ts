@@ -6,8 +6,14 @@ const meta: Meta = {
   id: "overlays-tooltip",
   title: "Overlays/Tooltip",
   component: Tooltip,
-  parameters: { fixture: storyFixture("tooltip") },
+  parameters: {
+    fixture: storyFixture("tooltip"),
+  },
 }
 export default meta
 type Story = StoryObj
-export const Default: Story = { args: { text: "Additional context" } }
+export const Default: Story = {
+  args: {
+    text: "Additional context",
+  },
+}

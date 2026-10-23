@@ -1,7 +1,12 @@
 import type { Component } from "svelte"
 
 export type JsonScalar = null | boolean | number | string
-export type JsonValue = JsonScalar | JsonValue[] | { [key: string]: JsonValue }
+export type JsonValue =
+  | JsonScalar
+  | JsonValue[]
+  | {
+      [key: string]: JsonValue
+    }
 
 export interface IslandIdentity {
   schema: "wotex-lab-island/v1"
@@ -55,7 +60,10 @@ export interface IslandInstance {
 }
 
 export type IslandComponent = Component<
-  { payload: Record<string, JsonValue>; transport: IslandTransport },
+  {
+    payload: Record<string, JsonValue>
+    transport: IslandTransport
+  },
   IslandInstance
 >
 

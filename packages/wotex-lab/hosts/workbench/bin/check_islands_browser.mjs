@@ -24,7 +24,9 @@ const watchErrors = (page) => {
   const errors = []
   page.on("pageerror", (error) => errors.push(error.message))
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text())
+    if (message.type() === "error") {
+      errors.push(message.text())
+    }
   })
   page.on("dialog", async (dialog) => {
     errors.push(`dialog: ${dialog.message()}`)
@@ -35,7 +37,8 @@ const watchErrors = (page) => {
 
 const waitForLiveView = (page) =>
   page.waitForFunction(
-    () => window.liveSocket?.isConnected() && document.querySelector("[data-phx-main].phx-connected"),
+    () =>
+      window.liveSocket?.isConnected() && document.querySelector("[data-phx-main].phx-connected"),
   )
 
 const waitForIslandState = (page, state, count) =>
@@ -47,7 +50,10 @@ const waitForIslandState = (page, state, count) =>
         islands.every((island) => island.getAttribute("data-wotex-island-state") === expectedState)
       )
     },
-    { expectedState: state, expectedCount: count },
+    {
+      expectedState: state,
+      expectedCount: count,
+    },
   )
 
 const assertFallbackHandoff = async (page, visible) => {
@@ -72,14 +78,19 @@ const assertFallbackHandoff = async (page, visible) => {
 const assertUniqueInstances = async (page) => {
   const identities = await page
     .locator("[data-wotex-island-mount]")
-    .evaluateAll((mounts) => mounts.map((mount) => mount.getAttribute("data-wotex-island-instance")))
+    .evaluateAll((mounts) =>
+      mounts.map((mount) => mount.getAttribute("data-wotex-island-instance")),
+    )
   assert.equal(new Set(identities).size, identities.length)
   assert.ok(identities.every((identity) => typeof identity === "string" && identity.length > 0))
   return identities
 }
 
 const assertReflow = async (page, width) => {
-  await page.setViewportSize({ width, height: 900 })
+  await page.setViewportSize({
+    width,
+    height: 900,
+  })
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     true,
@@ -102,7 +113,11 @@ const assertFourHundredPercentZoom = async (context, page) => {
       viewport: window.innerWidth,
       reflows: document.documentElement.scrollWidth <= window.innerWidth,
     })),
-    { pixelRatio: 4, viewport: 320, reflows: true },
+    {
+      pixelRatio: 4,
+      viewport: 320,
+      reflows: true,
+    },
   )
   await session.send("Emulation.clearDeviceMetricsOverride")
 }
@@ -110,7 +125,9 @@ const assertFourHundredPercentZoom = async (context, page) => {
 const assertThemesAndMotion = async (page) => {
   for (const theme of ["light", "dark", "system"]) {
     const selector = page.locator("#wl-theme")
-    if ((await selector.count()) === 1) await selector.selectOption(theme)
+    if ((await selector.count()) === 1) {
+      await selector.selectOption(theme)
+    }
     assert.ok((await page.locator("[data-wotex-island]").count()) > 0)
   }
 
@@ -127,7 +144,9 @@ const assertThemesAndMotion = async (page) => {
   })
   assert.notDeepEqual(contrast, normal)
 
-  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.emulateMedia({
+    reducedMotion: "reduce",
+  })
   const durations = await page.locator("[data-wotex-island] *").evaluateAll((elements) =>
     elements.flatMap((element) => {
       const style = getComputedStyle(element)
@@ -143,7 +162,12 @@ const assertThemesAndMotion = async (page) => {
 }
 
 const checkWorkbench = async (browser) => {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const context = await browser.newContext({
+    viewport: {
+      width: 1280,
+      height: 900,
+    },
+  })
   const page = await context.newPage()
   const errors = watchErrors(page)
   page.setDefaultTimeout(15_000)
@@ -166,13 +190,19 @@ const checkWorkbench = async (browser) => {
   await assertReflow(page, 320)
   await assertFourHundredPercentZoom(context, page)
 
-  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.setViewportSize({
+    width: 1280,
+    height: 900,
+  })
   await page.locator("button[phx-click='start_room']").click()
   await page.locator("#run-thermal button[type='submit']").click()
   await page.waitForURL("**/runs/**")
   await waitForIslandState(page, "mounted", 1)
   assert.equal(await page.locator("[data-wotex-island='chart'] .wl-island-table").count(), 1)
-  assert.equal(await page.locator("[data-wotex-island='chart'] [data-wotex-island-mount] figcaption").count(), 1)
+  assert.equal(
+    await page.locator("[data-wotex-island='chart'] [data-wotex-island-mount] figcaption").count(),
+    1,
+  )
   assert.ok((await page.locator("[data-wotex-island-fallback] tbody tr").count()) <= 100)
 
   const runsBeforeReconnect = await page.evaluate(async () => {
@@ -205,14 +235,18 @@ const checkWorkbench = async (browser) => {
   )
   await page.keyboard.press("Enter")
 
-  for (let iteration = 0; iteration < 3; iteration += 1) {
+  for (const iteration of [1, 2, 3]) {
     await page.goto(url(workbenchOrigin, "/things"))
     await waitForLiveView(page)
     assert.equal(await page.locator("[data-wotex-island]").count(), 0)
     await page.goto(workbenchOrigin.href)
     await waitForLiveView(page)
     await waitForIslandState(page, "mounted", 1)
-    assert.deepEqual(await assertUniqueInstances(page), [overviewIdentity])
+    assert.deepEqual(
+      await assertUniqueInstances(page),
+      [overviewIdentity],
+      `navigation ${iteration} must restore the original island instance`,
+    )
   }
 
   const isolated = await browser.newContext()
@@ -229,14 +263,20 @@ const checkWorkbench = async (browser) => {
 }
 
 const checkWorkbenchFallbacks = async (browser) => {
-  const noScript = await browser.newContext({ javaScriptEnabled: false })
+  const noScript = await browser.newContext({
+    javaScriptEnabled: false,
+  })
   const noScriptPage = await noScript.newPage()
   await noScriptPage.goto(workbenchOrigin.href)
   assert.equal(await noScriptPage.locator("main#main").count(), 1)
   assert.equal(await noScriptPage.locator("nav[aria-label='Workbench']").count(), 1)
   assert.equal(await noScriptPage.locator("[data-wotex-island-fallback]").isVisible(), true)
   assert.equal(await noScriptPage.locator("[data-wotex-island-mount] > *").count(), 0)
-  await noScriptPage.getByRole("link", { name: "Things" }).click()
+  await noScriptPage
+    .getByRole("link", {
+      name: "Things",
+    })
+    .click()
   assert.equal(new URL(noScriptPage.url()).pathname, "/things")
   await noScript.close()
 
@@ -258,7 +298,9 @@ const checkWorkbenchFallbacks = async (browser) => {
   await invalidPage.route(/\/assets\/workbench-[^/]+\.js$/, async (route) => {
     const response = await route.fetch()
     await new Promise((resolve) => setTimeout(resolve, 50))
-    await route.fulfill({ response })
+    await route.fulfill({
+      response,
+    })
   })
   await invalidPage.addInitScript(() => {
     const setAttribute = Element.prototype.setAttribute
@@ -271,8 +313,13 @@ const checkWorkbenchFallbacks = async (browser) => {
     }
     new MutationObserver(() => {
       const mount = document.querySelector("[data-wotex-island-snapshot]")
-      if (mount) mount.setAttribute("data-wotex-island-snapshot", "not-a-snapshot")
-    }).observe(document, { childList: true, subtree: true })
+      if (mount) {
+        mount.setAttribute("data-wotex-island-snapshot", "not-a-snapshot")
+      }
+    }).observe(document, {
+      childList: true,
+      subtree: true,
+    })
   })
   await invalidPage.goto(workbenchOrigin.href)
   await waitForLiveView(invalidPage)
@@ -284,7 +331,12 @@ const checkWorkbenchFallbacks = async (browser) => {
 }
 
 const checkStorybook = async (browser) => {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const context = await browser.newContext({
+    viewport: {
+      width: 1280,
+      height: 900,
+    },
+  })
   const page = await context.newPage()
   const errors = watchErrors(page)
   page.setDefaultTimeout(15_000)
@@ -314,14 +366,16 @@ const checkStorybook = async (browser) => {
   await page.keyboard.press("ArrowRight")
   const focusedTab = tabs.locator("[role='tab']:focus")
   const focusedTabId = await focusedTab.getAttribute("id")
-  await tabs.locator("button", { hasText: "Advance server revision" }).evaluate((button) =>
-    button.click(),
-  )
+  await tabs
+    .locator("button", {
+      hasText: "Advance server revision",
+    })
+    .evaluate((button) => button.click())
   await page.waitForFunction(
     () =>
-      document.querySelector("[data-fixture-id='navigation-tabs']")?.getAttribute(
-        "data-server-revision",
-      ) === "2",
+      document
+        .querySelector("[data-fixture-id='navigation-tabs']")
+        ?.getAttribute("data-server-revision") === "2",
   )
   assert.equal(await tabs.locator("[role='tab']:focus").getAttribute("id"), focusedTabId)
 
@@ -355,9 +409,9 @@ const checkStorybook = async (browser) => {
     .click()
   await blockedPage.waitForFunction(
     () =>
-      document.querySelector("[data-fixture-id='navigation-tabs']")?.getAttribute(
-        "data-server-revision",
-      ) === "2",
+      document
+        .querySelector("[data-fixture-id='navigation-tabs']")
+        ?.getAttribute("data-server-revision") === "2",
   )
   assert.equal(
     await blockedPage
@@ -368,7 +422,9 @@ const checkStorybook = async (browser) => {
   await blocked.close()
 }
 
-const browser = await chromium.launch({ headless: true })
+const browser = await chromium.launch({
+  headless: true,
+})
 try {
   await checkWorkbench(browser)
   await checkWorkbenchFallbacks(browser)

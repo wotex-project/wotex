@@ -6,7 +6,9 @@ const meta: Meta = {
   id: "forms-radio-group",
   title: "Forms/Radio group",
   component: RadioGroup,
-  parameters: { fixture: storyFixture("radio-group") },
+  parameters: {
+    fixture: storyFixture("radio-group"),
+  },
 }
 export default meta
 type Story = StoryObj
@@ -16,8 +18,14 @@ export const Default: Story = {
     legend: "Density",
     value: "comfortable",
     options: [
-      { label: "Comfortable", value: "comfortable" },
-      { label: "Compact", value: "compact" },
+      {
+        label: "Comfortable",
+        value: "comfortable",
+      },
+      {
+        label: "Compact",
+        value: "compact",
+      },
     ],
   },
 }

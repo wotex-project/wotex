@@ -6,7 +6,9 @@ const meta: Meta = {
   id: "reporting-inspector",
   title: "Reporting/Inspector",
   component: Inspector,
-  parameters: { fixture: storyFixture("inspector") },
+  parameters: {
+    fixture: storyFixture("inspector"),
+  },
 }
 export default meta
 type Story = StoryObj
@@ -15,8 +17,14 @@ export const Open: Story = {
     title: "Record details",
     open: true,
     fields: [
-      { label: "State", value: "Ready" },
-      { label: "Owner", value: "Example" },
+      {
+        label: "State",
+        value: "Ready",
+      },
+      {
+        label: "Owner",
+        value: "Example",
+      },
     ],
   },
 }

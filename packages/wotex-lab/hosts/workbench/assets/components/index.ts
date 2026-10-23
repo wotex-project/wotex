@@ -2,14 +2,14 @@ export { default as Button } from "./button.svelte"
 export { default as Callout } from "./callout.svelte"
 export { default as Chart } from "./chart.svelte"
 export { default as Checkbox } from "./checkbox.svelte"
+export { default as DataGrid } from "./data-grid.svelte"
+export { default as DataTable } from "./data-table.svelte"
 export {
   componentDescriptor,
   componentDescriptors,
   componentDigest,
   isComponentId,
 } from "./descriptors.js"
-export { default as DataGrid } from "./data-grid.svelte"
-export { default as DataTable } from "./data-table.svelte"
 export { default as Dialog } from "./dialog.svelte"
 export { default as Disclosure } from "./disclosure.svelte"
 export { default as Field } from "./field.svelte"

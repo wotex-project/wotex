@@ -6,7 +6,9 @@ const meta: Meta = {
   id: "data-table",
   title: "Data/Table",
   component: DataTable,
-  parameters: { fixture: storyFixture("table") },
+  parameters: {
+    fixture: storyFixture("table"),
+  },
 }
 export default meta
 type Story = StoryObj
@@ -14,10 +16,30 @@ export const Populated: Story = {
   args: {
     caption: "Example records",
     columns: [
-      { key: "name", label: "Name" },
-      { key: "state", label: "State" },
+      {
+        key: "name",
+        label: "Name",
+      },
+      {
+        key: "state",
+        label: "State",
+      },
     ],
-    rows: [{ key: "one", values: { name: "First", state: "Ready" } }],
+    rows: [
+      {
+        key: "one",
+        values: {
+          name: "First",
+          state: "Ready",
+        },
+      },
+    ],
   },
 }
-export const Empty: Story = { args: { caption: "Example records", columns: [], rows: [] } }
+export const Empty: Story = {
+  args: {
+    caption: "Example records",
+    columns: [],
+    rows: [],
+  },
+}

@@ -15,7 +15,9 @@ export interface IslandHookContext {
   ) => unknown
   handleEvent: (event: string, callback: (payload: unknown) => void) => unknown
   removeHandleEvent?: (reference: unknown) => void
-  liveSocket?: { execJS?: (element: Element, command: string) => void }
+  liveSocket?: {
+    execJS?: (element: Element, command: string) => void
+  }
 }
 
 export interface IslandRuntime {
@@ -25,10 +27,19 @@ export interface IslandRuntime {
   tick: typeof tick
 }
 
-const defaultRuntime: IslandRuntime = { load: islandLoader, mount, unmount, tick }
+const defaultRuntime: IslandRuntime = {
+  load: islandLoader,
+  mount,
+  unmount,
+  tick,
+}
 
 export const createIslandHook = (runtime: IslandRuntime = defaultRuntime) => ({
-  async mounted(this: IslandHookContext & { wotexIsland?: HookState }) {
+  async mounted(
+    this: IslandHookContext & {
+      wotexIsland?: HookState
+    },
+  ) {
     if (this.wotexIsland) {
       await this.wotexIsland.refresh()
       return
@@ -36,16 +47,32 @@ export const createIslandHook = (runtime: IslandRuntime = defaultRuntime) => ({
     this.wotexIsland = new HookState(this, runtime)
     await this.wotexIsland.start()
   },
-  async updated(this: IslandHookContext & { wotexIsland?: HookState }) {
+  async updated(
+    this: IslandHookContext & {
+      wotexIsland?: HookState
+    },
+  ) {
     await this.wotexIsland?.refresh()
   },
-  disconnected(this: IslandHookContext & { wotexIsland?: HookState }) {
+  disconnected(
+    this: IslandHookContext & {
+      wotexIsland?: HookState
+    },
+  ) {
     this.wotexIsland?.connection(false)
   },
-  reconnected(this: IslandHookContext & { wotexIsland?: HookState }) {
+  reconnected(
+    this: IslandHookContext & {
+      wotexIsland?: HookState
+    },
+  ) {
     this.wotexIsland?.connection(true)
   },
-  async destroyed(this: IslandHookContext & { wotexIsland?: HookState }) {
+  async destroyed(
+    this: IslandHookContext & {
+      wotexIsland?: HookState
+    },
+  ) {
     await this.wotexIsland?.destroy()
     this.wotexIsland = undefined
   },
@@ -69,7 +96,9 @@ class HookState {
     this.#runtime = runtime
     this.#mountRoot = hook.el
     const boundary = hook.el.closest<HTMLElement>("[data-wotex-island]")
-    if (!boundary) throw new Error("island mount is outside its boundary")
+    if (!boundary) {
+      throw new Error("island mount is outside its boundary")
+    }
     this.#boundary = boundary
   }
 
@@ -78,8 +107,9 @@ class HookState {
     try {
       const encoded = this.#mountRoot.dataset.wotexIslandSnapshot
       if (encoded) {
-        if (Math.floor((encoded.length * 3) / 4) > limits.inlineSnapshotBytes)
+        if (Math.floor((encoded.length * 3) / 4) > limits.inlineSnapshotBytes) {
           throw new Error("inline island snapshot is too large")
+        }
         this.#lastInline = encoded
         await this.mountSnapshot(decodeBase64Url(encoded))
       } else {
@@ -92,7 +122,9 @@ class HookState {
   }
 
   async refresh() {
-    if (this.#destroyed) return
+    if (this.#destroyed) {
+      return
+    }
     const encoded = this.#mountRoot.dataset.wotexIslandSnapshot
     if (encoded && encoded !== this.#lastInline) {
       this.#lastInline = encoded
@@ -101,30 +133,41 @@ class HookState {
   }
 
   connection(connected: boolean) {
-    if (this.#destroyed || connected === this.#connected) return
+    if (this.#destroyed || connected === this.#connected) {
+      return
+    }
     this.#connected = connected
     this.#ready = false
     this.#instance?.setConnected?.(false)
-    if (!connected) this.#boundary.dataset.wotexIslandState = "disconnected"
-    else {
+    if (!connected) {
+      this.#boundary.dataset.wotexIslandState = "disconnected"
+    } else {
       this.#boundary.dataset.wotexIslandState = "loading"
       this.requestResync()
     }
   }
 
   async destroy() {
-    if (this.#destroyed) return
+    if (this.#destroyed) {
+      return
+    }
     this.#destroyed = true
-    for (const reference of this.#eventReferences) this.#hook.removeHandleEvent?.(reference)
+    for (const reference of this.#eventReferences) {
+      this.#hook.removeHandleEvent?.(reference)
+    }
     this.#eventReferences = []
-    if (this.#instance) await this.#runtime.unmount(this.#instance)
+    if (this.#instance) {
+      await this.#runtime.unmount(this.#instance)
+    }
     this.#instance = undefined
     this.#boundary.dataset.wotexIslandState = "destroyed"
   }
 
   private subscribe() {
     const instance = this.#mountRoot.dataset.wotexIslandInstance
-    if (!instance || this.#eventReferences.length > 0) return
+    if (!instance || this.#eventReferences.length > 0) {
+      return
+    }
     this.#eventReferences.push(
       this.#hook.handleEvent(
         `wotex:island:${instance}:snapshot`,
@@ -139,17 +182,24 @@ class HookState {
 
   private requestResync = () => {
     const instance = this.#mountRoot.dataset.wotexIslandInstance
-    if (this.#connected && instance) this.pushHookEvent(`wotex:island:${instance}:resync`, {})
+    if (this.#connected && instance) {
+      this.pushHookEvent(`wotex:island:${instance}:resync`, {})
+    }
   }
 
   private async mountSnapshot(value: unknown) {
     const snapshot = await validateFullSnapshot(value)
-    if (snapshot.instance_id !== this.#mountRoot.dataset.wotexIslandInstance)
+    if (snapshot.instance_id !== this.#mountRoot.dataset.wotexIslandInstance) {
       throw new Error("wrong island instance")
+    }
     const loader = this.#runtime.load(snapshot.component)
-    if (!loader) throw new Error("unregistered island component")
+    if (!loader) {
+      throw new Error("unregistered island component")
+    }
     const module = await loader()
-    if (this.#destroyed) return
+    if (this.#destroyed) {
+      return
+    }
     const transport: IslandTransport = {
       connected: () => this.#connected && this.#ready,
       navigate: (kind, href) => this.navigate(kind, href),
@@ -159,17 +209,23 @@ class HookState {
     this.#ready = this.#connected
     this.#instance = this.#runtime.mount(module.default, {
       target: this.#mountRoot,
-      props: { payload: snapshot.payload, transport },
+      props: {
+        payload: snapshot.payload,
+        transport,
+      },
     }) as IslandInstance
     this.subscribe()
     await this.#runtime.tick()
-    if (!this.#destroyed) this.#boundary.dataset.wotexIslandState = "mounted"
+    if (!this.#destroyed) {
+      this.#boundary.dataset.wotexIslandState = "mounted"
+    }
   }
 
   private async receiveFull(value: unknown) {
     try {
-      if (!this.#state) await this.mountSnapshot(value)
-      else {
+      if (!this.#state) {
+        await this.mountSnapshot(value)
+      } else {
         await this.#state.replace(value)
         this.#instance?.update?.(this.#state.snapshot.payload)
         this.#ready = this.#connected
@@ -183,12 +239,15 @@ class HookState {
 
   private async receivePatch(value: unknown) {
     const result = await this.#state?.patch(value)
-    if (result === "applied" && this.#state) this.#instance?.update?.(this.#state.snapshot.payload)
+    if (result === "applied" && this.#state) {
+      this.#instance?.update?.(this.#state.snapshot.payload)
+    }
   }
 
   private push(event: string, payload: Record<string, JsonValue>, commandId?: string) {
-    if (!this.#connected || !this.#ready || !this.#state)
+    if (!this.#connected || !this.#ready || !this.#state) {
       return Promise.reject(new Error("island is disconnected"))
+    }
     const envelope = buildEvent(this.#state.snapshot, event, payload, commandId)
     return new Promise<JsonValue>((resolve) => {
       this.pushHookEvent(`wotex:island:${envelope.instance_id}:event`, envelope, resolve)
@@ -198,16 +257,30 @@ class HookState {
   private pushHookEvent(event: string, payload: unknown, reply?: (value: JsonValue) => void) {
     const target = this.#mountRoot.dataset.wotexIslandTarget
     if (target && this.#hook.pushEventTo) {
-      if (reply) this.#hook.pushEventTo(target, event, payload, reply)
-      else this.#hook.pushEventTo(target, event, payload)
-    } else if (reply) this.#hook.pushEvent(event, payload, reply)
-    else this.#hook.pushEvent(event, payload)
+      if (reply) {
+        this.#hook.pushEventTo(target, event, payload, reply)
+      } else {
+        this.#hook.pushEventTo(target, event, payload)
+      }
+    } else if (reply) {
+      this.#hook.pushEvent(event, payload, reply)
+    } else {
+      this.#hook.pushEvent(event, payload)
+    }
   }
 
   private navigate(kind: "navigate" | "patch", href: string) {
-    if (!href.startsWith("/") || href.startsWith("//"))
+    if (!href.startsWith("/") || href.startsWith("//")) {
       throw new Error("island navigation must stay on the current origin")
-    const command = JSON.stringify([[kind === "patch" ? "patch" : "navigate", { href }]])
+    }
+    const command = JSON.stringify([
+      [
+        kind === "patch" ? "patch" : "navigate",
+        {
+          href,
+        },
+      ],
+    ])
     this.#hook.liveSocket?.execJS?.(this.#mountRoot, command)
   }
 }

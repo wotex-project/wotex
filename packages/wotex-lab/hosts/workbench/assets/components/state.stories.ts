@@ -6,17 +6,25 @@ const meta: Meta = {
   id: "feedback-state",
   title: "Feedback/State",
   component: State,
-  parameters: { fixture: storyFixture("state") },
+  parameters: {
+    fixture: storyFixture("state"),
+  },
 }
 export default meta
 type Story = StoryObj
 export const Disconnected: Story = {
-  args: { title: "Disconnected", message: "Reconnect to resume.", state: "disconnected" },
+  args: {
+    title: "Disconnected",
+    message: "Reconnect to resume.",
+    state: "disconnected",
+  },
 }
-export const Error: Story = {
+const ErrorState: Story = {
   args: {
     title: "Could not load",
     message: "The last valid content remains available.",
     state: "error",
   },
 }
+
+export { ErrorState as Error }

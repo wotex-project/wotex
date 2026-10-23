@@ -6,18 +6,43 @@ const meta: Meta = {
   id: "reporting-chart",
   title: "Reporting/Chart",
   component: Chart,
-  parameters: { fixture: storyFixture("chart") },
+  parameters: {
+    fixture: storyFixture("chart"),
+  },
 }
 export default meta
 type Story = StoryObj
 export const Populated: Story = {
   args: {
     title: "Throughput",
-    series: [{ id: "requests", label: "Requests" }],
+    series: [
+      {
+        id: "requests",
+        label: "Requests",
+      },
+    ],
     points: [
-      { key: "one", label: "09:00", values: { requests: 20 } },
-      { key: "two", label: "10:00", values: { requests: 48 } },
+      {
+        key: "one",
+        label: "09:00",
+        values: {
+          requests: 20,
+        },
+      },
+      {
+        key: "two",
+        label: "10:00",
+        values: {
+          requests: 48,
+        },
+      },
     ],
   },
 }
-export const Empty: Story = { args: { title: "Throughput", series: [], points: [] } }
+export const Empty: Story = {
+  args: {
+    title: "Throughput",
+    series: [],
+    points: [],
+  },
+}

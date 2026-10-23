@@ -6,8 +6,15 @@ const meta: Meta = {
   id: "navigation-disclosure",
   title: "Navigation/Disclosure",
   component: Disclosure,
-  parameters: { fixture: storyFixture("disclosure") },
+  parameters: {
+    fixture: storyFixture("disclosure"),
+  },
 }
 export default meta
 type Story = StoryObj
-export const Open: Story = { args: { summary: "More information", open: true } }
+export const Open: Story = {
+  args: {
+    summary: "More information",
+    open: true,
+  },
+}

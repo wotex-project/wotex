@@ -6,9 +6,23 @@ const meta: Meta = {
   id: "feedback-toast",
   title: "Feedback/Toast",
   component: Toast,
-  parameters: { fixture: storyFixture("toast") },
+  parameters: {
+    fixture: storyFixture("toast"),
+  },
 }
 export default meta
 type Story = StoryObj
-export const Success: Story = { args: { message: "Changes saved", kind: "success" } }
-export const Error: Story = { args: { message: "Changes were not saved", kind: "danger" } }
+export const Success: Story = {
+  args: {
+    message: "Changes saved",
+    kind: "success",
+  },
+}
+const ErrorState: Story = {
+  args: {
+    message: "Changes were not saved",
+    kind: "danger",
+  },
+}
+
+export { ErrorState as Error }

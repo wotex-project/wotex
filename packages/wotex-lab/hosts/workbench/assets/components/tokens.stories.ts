@@ -2,7 +2,10 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
 import TokenReference from "./token-reference.svelte"
 
-const meta: Meta = { title: "Design system/Tokens", component: TokenReference }
+const meta: Meta = {
+  title: "Design system/Tokens",
+  component: TokenReference,
+}
 export default meta
 type Story = StoryObj
 export const SemanticRoles: Story = {}

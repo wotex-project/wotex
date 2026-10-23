@@ -6,11 +6,32 @@ const meta: Meta = {
   id: "primitives-button",
   title: "Primitives/Button",
   component: Button,
-  parameters: { fixture: storyFixture("button") },
+  parameters: {
+    fixture: storyFixture("button"),
+  },
 }
 export default meta
 type Story = StoryObj
-export const Primary: Story = { args: { label: "Primary action" } }
-export const Loading: Story = { args: { label: "Loading", loading: true } }
-export const Disabled: Story = { args: { label: "Unavailable", disabled: true } }
-export const Danger: Story = { args: { label: "Delete", variant: "danger" } }
+export const Primary: Story = {
+  args: {
+    label: "Primary action",
+  },
+}
+export const Loading: Story = {
+  args: {
+    label: "Loading",
+    loading: true,
+  },
+}
+export const Disabled: Story = {
+  args: {
+    label: "Unavailable",
+    disabled: true,
+  },
+}
+export const Danger: Story = {
+  args: {
+    label: "Delete",
+    variant: "danger",
+  },
+}

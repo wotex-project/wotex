@@ -1,7 +1,15 @@
 <script lang="ts">
-import { type IconName, icons } from "./icons.js"
+  import { type IconName, icons } from "./icons.js"
 
-let { name, label, size = 20 }: { name: IconName; label?: string; size?: number } = $props()
+  let {
+    name,
+    label,
+    size = 20,
+  }: {
+    name: IconName
+    label?: string
+    size?: number
+  } = $props()
 </script>
 
 <svg

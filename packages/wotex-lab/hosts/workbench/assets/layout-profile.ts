@@ -6,19 +6,27 @@ export const layoutProfileThresholds = {
 export type LayoutProfile = "compact" | "medium" | "expanded"
 
 export function layoutProfileForWidth(width: number): LayoutProfile {
-  if (width < layoutProfileThresholds.compactUpperBound) return "compact"
-  if (width < layoutProfileThresholds.mediumUpperBound) return "medium"
+  if (width < layoutProfileThresholds.compactUpperBound) {
+    return "compact"
+  }
+  if (width < layoutProfileThresholds.mediumUpperBound) {
+    return "medium"
+  }
   return "expanded"
 }
 
 export function observeLayoutProfile(content: HTMLElement): () => void {
   const shell = content.closest<HTMLElement>(".wotex-lab")
   const observer = new ResizeObserver(([entry]) => {
-    if (!entry) return
+    if (!entry) {
+      return
+    }
 
     const profile = layoutProfileForWidth(entry.contentRect.width)
     content.dataset.layoutProfile = profile
-    if (shell) shell.dataset.layoutProfile = profile
+    if (shell) {
+      shell.dataset.layoutProfile = profile
+    }
   })
 
   observer.observe(content)
@@ -33,7 +41,9 @@ export function observeLayoutProfileWithin(root: ParentNode): () => void {
     const nextContent = root.querySelector<HTMLElement>(".wotex-lab .wl-main")
     const profile = nextContent?.dataset.layoutProfile
     const shellProfile = nextContent?.closest<HTMLElement>(".wotex-lab")?.dataset.layoutProfile
-    if (nextContent === content && (!nextContent || (profile && profile === shellProfile))) return
+    if (nextContent === content && (!nextContent || (profile && profile === shellProfile))) {
+      return
+    }
 
     stopObservingContent()
     content = nextContent
@@ -65,19 +75,23 @@ export function preserveShellFocusAcrossProfiles(shell: HTMLElement): () => void
 
   const recordFocus = (event: FocusEvent) => {
     const target = event.target
-    if (!(target instanceof Element) || target === document.body) return
+    if (!(target instanceof Element) || target === document.body) {
+      return
+    }
     focusedToggle = target.matches(".wl-topbar > .wl-icon-button")
   }
 
   const observer = new ResizeObserver(([entry]) => {
-    if (!entry) return
+    if (!entry) {
+      return
+    }
 
     const nextCompact = entry.contentRect.width < layoutProfileThresholds.mediumUpperBound
     if (!compact && nextCompact && focusedToggle) {
       requestAnimationFrame(() => {
-        shell
-          .querySelector<HTMLElement>('.wl-nav-link[aria-current="page"]')
-          ?.focus({ preventScroll: true })
+        shell.querySelector<HTMLElement>('.wl-nav-link[aria-current="page"]')?.focus({
+          preventScroll: true,
+        })
       })
       focusedToggle = false
     }
@@ -99,7 +113,9 @@ export function preserveShellFocusWithin(root: ParentNode): () => void {
 
   const bindCurrentShell = () => {
     const nextShell = root.querySelector<HTMLElement>(".wotex-lab")
-    if (nextShell === shell) return
+    if (nextShell === shell) {
+      return
+    }
 
     stopPreservingFocus()
     shell = nextShell
@@ -107,7 +123,11 @@ export function preserveShellFocusWithin(root: ParentNode): () => void {
   }
 
   const observer = new MutationObserver(bindCurrentShell)
-  observer.observe(root, { childList: true, subtree: true })
+  observer.observe(root, {
+    childList: true,
+    subtree: true,
+  })
+
   bindCurrentShell()
 
   return () => {

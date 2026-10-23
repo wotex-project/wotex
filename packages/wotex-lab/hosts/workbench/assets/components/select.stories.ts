@@ -6,7 +6,9 @@ const meta: Meta = {
   id: "forms-select",
   title: "Forms/Select",
   component: Select,
-  parameters: { fixture: storyFixture("select") },
+  parameters: {
+    fixture: storyFixture("select"),
+  },
 }
 export default meta
 type Story = StoryObj
@@ -17,8 +19,14 @@ export const Default: Story = {
     label: "Region",
     value: "eu",
     options: [
-      { label: "Europe", value: "eu" },
-      { label: "Americas", value: "us" },
+      {
+        label: "Europe",
+        value: "eu",
+      },
+      {
+        label: "Americas",
+        value: "us",
+      },
     ],
   },
 }

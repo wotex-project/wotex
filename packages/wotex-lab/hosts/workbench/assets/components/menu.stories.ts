@@ -6,7 +6,9 @@ const meta: Meta = {
   id: "overlays-menu",
   title: "Overlays/Menu",
   component: Menu,
-  parameters: { fixture: storyFixture("menu") },
+  parameters: {
+    fixture: storyFixture("menu"),
+  },
 }
 export default meta
 type Story = StoryObj
@@ -15,8 +17,14 @@ export const Open: Story = {
     label: "Actions",
     open: true,
     items: [
-      { id: "view", label: "View" },
-      { id: "remove", label: "Remove" },
+      {
+        id: "view",
+        label: "View",
+      },
+      {
+        id: "remove",
+        label: "Remove",
+      },
     ],
   },
 }

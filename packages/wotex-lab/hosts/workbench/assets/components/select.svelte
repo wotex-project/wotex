@@ -1,29 +1,29 @@
 <script lang="ts">
-export interface SelectOption {
-  label: string
-  value: string
-  disabled?: boolean
-}
+  export interface SelectOption {
+    label: string
+    value: string
+    disabled?: boolean
+  }
 
-let {
-  id,
-  name,
-  label,
-  value = "",
-  options,
-  disabled = false,
-  required = false,
-  onchange,
-}: {
-  id: string
-  name: string
-  label: string
-  value?: string
-  options: SelectOption[]
-  disabled?: boolean
-  required?: boolean
-  onchange?: (value: string) => void
-} = $props()
+  let {
+    id,
+    name,
+    label,
+    value = "",
+    options,
+    disabled = false,
+    required = false,
+    onchange,
+  }: {
+    id: string
+    name: string
+    label: string
+    value?: string
+    options: SelectOption[]
+    disabled?: boolean
+    required?: boolean
+    onchange?: (value: string) => void
+  } = $props()
 </script>
 
 <div class="wl-control">

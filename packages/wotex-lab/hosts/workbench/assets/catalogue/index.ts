@@ -32,11 +32,23 @@ export const createStoryTransport = (replies: Record<string, JsonValue> = {}): S
       failure = message
     },
     navigate: (_, href) => {
-      if (!href.startsWith("/")) throw new Error("story navigation must stay on the current origin")
+      if (!href.startsWith("/")) {
+        throw new Error("story navigation must stay on the current origin")
+      }
     },
     push: async (event, payload, commandId) => {
-      events.push({ event, payload, ...(commandId ? { commandId } : {}) })
-      if (!connected) throw new Error("story transport is disconnected")
+      events.push({
+        event,
+        payload,
+        ...(commandId
+          ? {
+              commandId,
+            }
+          : {}),
+      })
+      if (!connected) {
+        throw new Error("story transport is disconnected")
+      }
       if (failure) {
         const message = failure
         failure = undefined
@@ -58,6 +70,8 @@ export const storyFixtures = componentDescriptors.map((descriptor) => ({
 
 export const storyFixture = (component: string) => {
   const fixture = storyFixtures.find((candidate) => candidate.component === component)
-  if (!fixture) throw new Error(`unknown Storybook fixture: ${component}`)
+  if (!fixture) {
+    throw new Error(`unknown Storybook fixture: ${component}`)
+  }
   return fixture
 }

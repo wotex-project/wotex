@@ -6,11 +6,27 @@ const meta: Meta = {
   id: "reporting-legend",
   title: "Reporting/Legend",
   component: Legend,
-  parameters: { fixture: storyFixture("legend") },
+  parameters: {
+    fixture: storyFixture("legend"),
+  },
 }
 export default meta
 type Story = StoryObj
 export const Default: Story = {
-  args: { label: "Series", items: [{ id: "requests", label: "Requests", color: "#3457d5" }] },
+  args: {
+    label: "Series",
+    items: [
+      {
+        id: "requests",
+        label: "Requests",
+        color: "#3457d5",
+      },
+    ],
+  },
 }
-export const Empty: Story = { args: { label: "Series", items: [] } }
+export const Empty: Story = {
+  args: {
+    label: "Series",
+    items: [],
+  },
+}

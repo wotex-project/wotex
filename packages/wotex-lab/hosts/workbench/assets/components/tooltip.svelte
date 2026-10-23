@@ -1,7 +1,17 @@
 <script lang="ts">
-import type { Snippet } from "svelte"
+  import type { Snippet } from "svelte"
 
-let { text, children }: { text: string; children?: Snippet } = $props()
+  let {
+    text,
+    children,
+  }: {
+    text: string
+    children?: Snippet
+  } = $props()
 </script>
 
-<span class="wl-tooltip" title={text}>{#if children}{@render children()}{/if}</span>
+<span class="wl-tooltip" title={text}
+  >{#if children}
+    {@render children()}
+  {/if}</span
+>

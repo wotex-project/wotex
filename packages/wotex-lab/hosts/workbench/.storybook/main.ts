@@ -9,9 +9,19 @@ if (!/^\/(?:[a-zA-Z0-9._~-]+\/)*$/.test(base)) {
 const config: StorybookConfig = {
   stories: ["../assets/**/*.stories.ts"],
   addons: ["@storybook/addon-a11y"],
-  framework: { name: "@storybook/svelte-vite", options: { docgen: false } },
-  core: { disableTelemetry: true },
-  viteFinal: async (viteConfig) => ({ ...viteConfig, base }),
+  framework: {
+    name: "@storybook/svelte-vite",
+    options: {
+      docgen: false,
+    },
+  },
+  core: {
+    disableTelemetry: true,
+  },
+  viteFinal: async (viteConfig) => ({
+    ...viteConfig,
+    base,
+  }),
 }
 
 export default config

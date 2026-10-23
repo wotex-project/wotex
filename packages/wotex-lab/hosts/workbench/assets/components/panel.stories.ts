@@ -6,8 +6,14 @@ const meta: Meta = {
   id: "layout-panel",
   title: "Layout/Panel",
   component: Panel,
-  parameters: { fixture: storyFixture("panel") },
+  parameters: {
+    fixture: storyFixture("panel"),
+  },
 }
 export default meta
 type Story = StoryObj
-export const Default: Story = { args: { title: "Summary" } }
+export const Default: Story = {
+  args: {
+    title: "Summary",
+  },
+}

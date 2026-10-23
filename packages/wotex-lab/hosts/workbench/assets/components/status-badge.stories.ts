@@ -6,9 +6,21 @@ const meta: Meta = {
   id: "feedback-status-badge",
   title: "Feedback/Status badge",
   component: StatusBadge,
-  parameters: { fixture: storyFixture("status-badge") },
+  parameters: {
+    fixture: storyFixture("status-badge"),
+  },
 }
 export default meta
 type Story = StoryObj
-export const Success: Story = { args: { label: "Ready", kind: "success" } }
-export const Danger: Story = { args: { label: "Failed", kind: "danger" } }
+export const Success: Story = {
+  args: {
+    label: "Ready",
+    kind: "success",
+  },
+}
+export const Danger: Story = {
+  args: {
+    label: "Failed",
+    kind: "danger",
+  },
+}

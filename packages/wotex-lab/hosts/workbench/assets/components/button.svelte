@@ -1,21 +1,21 @@
 <script lang="ts">
-import type { Snippet } from "svelte"
+  import type { Snippet } from "svelte"
 
-let {
-  label,
-  variant = "primary",
-  disabled = false,
-  loading = false,
-  children,
-  onclick,
-}: {
-  label: string
-  variant?: "primary" | "secondary" | "danger"
-  disabled?: boolean
-  loading?: boolean
-  children?: Snippet
-  onclick?: (event: MouseEvent) => void
-} = $props()
+  let {
+    label,
+    variant = "primary",
+    disabled = false,
+    loading = false,
+    children,
+    onclick,
+  }: {
+    label: string
+    variant?: "primary" | "secondary" | "danger"
+    disabled?: boolean
+    loading?: boolean
+    children?: Snippet
+    onclick?: (event: MouseEvent) => void
+  } = $props()
 </script>
 
 <button
@@ -26,5 +26,9 @@ let {
   aria-busy={loading || undefined}
   {onclick}
 >
-  {#if children}{@render children()}{:else}{label}{/if}
+  {#if children}
+    {@render children()}
+  {:else}
+    {label}
+  {/if}
 </button>

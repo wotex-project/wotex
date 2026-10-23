@@ -10,8 +10,7 @@
   }
 
   [data-wotex-island-state="mounted"] > [data-wotex-island-fallback],
-  [data-wotex-island-state]:not([data-wotex-island-state="mounted"])
-    > [data-wotex-island-mount] {
+  [data-wotex-island-state]:not([data-wotex-island-state="mounted"]) > [data-wotex-island-mount] {
     display: none;
   }
 
@@ -116,9 +115,13 @@
   [data-wotex-design-system] *,
   [data-wotex-design-system] *::before,
   [data-wotex-design-system] *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: Preserve reduced-motion preferences over component styles. */
     scroll-behavior: auto !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Preserve reduced-motion preferences over component styles. */
     transition-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Preserve reduced-motion preferences over component styles. */
     animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Preserve reduced-motion preferences over component styles. */
     animation-iteration-count: 1 !important;
   }
 }
