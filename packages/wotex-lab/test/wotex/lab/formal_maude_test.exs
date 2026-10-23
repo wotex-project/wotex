@@ -49,7 +49,8 @@ defmodule Wotex.Lab.FormalMaudeTest do
                Profile.verify(profile, :safe, property, Abstraction.init())
 
       assert states > 100 and result.explored.states > 0
-      assert result.engine.maude == "3.5.1" and result.engine.ex_maude == "0.4.1"
+      assert result.engine.maude == "3.5.1"
+      assert result.engine.ex_maude == to_string(Application.spec(:ex_maude, :vsn))
       assert result.model.digest == profile.model.digest
     end
 
