@@ -26,8 +26,9 @@ are in the root `AGENTS.md`.
   build tooling. The base library keeps its first-tensor path independent of
   Phoenix and Node, and the reference release starts no Node runtime process.
 - Frontend source uses typed Svelte 5 runes, arrow functions and closure
-  factories, with blank lines between functions. Keep event markup to a named
-  handler reference; no inline callback functions. Use `$lib`/`$seeds` aliases
+  factories, with blank lines between functions. Inline event/callback handlers
+  may have expression bodies; block-bodied handlers must be named in the script
+  and passed by reference. Use `$lib`/`$seeds` aliases
   and actual `.ts` imports. Base controls own `assets/primitives/<name>/`; composed UI owns
   `assets/components/<name>/`; colocate stories. Island adapters reuse those
   components. `pnpm run lint` enforces the AST architecture contract as well

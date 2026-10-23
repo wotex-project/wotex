@@ -52,11 +52,13 @@ Children receive values and `on<Verb>` callbacks and do not fetch. Use
 `$bindable` only to preserve an existing two-way seam. Move scoped styles
 with their markup.
 
-Templates pass named handlers by reference. Inline arrows/functions are
-forbidden in event attributes, `on…` callback props and legacy `on:` directives.
-A single trivial item action may use a named curried handler such as
-`onclick={select(item.id)}`. A repeated row with several handlers owns a child
-component with local handlers.
+Event attributes, `on…` callback props and legacy `on:` directives may use
+expression-bodied inline arrows, such as `onclick={() => select(item.id)}`,
+`onchange={() => value = next}` or `onclick={() => open = !open}`. A handler
+with a block body must be named in the script and passed by reference;
+`onclick={() => { select(item.id) }}` is rejected. Named curried handlers such
+as `onclick={select(item.id)}` remain valid. A repeated row with several
+handlers owns a child component with local handlers.
 
 Raw `button`, `input`, `select` and `textarea` belong in
 `assets/primitives/`. Domain components compose those controls. Public and

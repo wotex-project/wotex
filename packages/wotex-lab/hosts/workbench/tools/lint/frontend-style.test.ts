@@ -53,23 +53,48 @@ test("Svelte scripts and module scripts report exact paths, lines, columns and r
   assert.ok(issues.every((issue) => issue.path === "assets/view.svelte"))
 })
 
-test("events, callback props, uppercase names and legacy directives refuse inline functions", () => {
-  for (const markup of [
-    "<button onclick={() => choose(id)}>Choose</button>",
-    "<Panel onSelect={() => choose(id)} />",
-    "<button on:click={() => choose(id)}>Choose</button>",
-    "<button onclick={function () { choose(id) }}>Choose</button>",
+test("events, callback props and legacy directives accept expression-bodied handlers", () => {
+  for (const handler of [
+    "choose",
+    "select(item.id)",
+    "() => choose(id)",
+    "(event) => choose(event)",
+    "() => value = next",
+    "() => open = !open",
+    "() => count++",
+    "() => ({ selected: true })",
+    "async () => await save()",
+    "ready ? () => save() : choose",
   ]) {
-    assert.ok(
-      rules(markup, "assets/primitives/demo/demo.svelte").includes("named-handlers"),
-      markup,
-    )
+    for (const markup of [
+      `<button onclick={${handler}}>Choose</button>`,
+      `<Panel onSelect={${handler}} />`,
+      `<button on:click={${handler}}>Choose</button>`,
+    ]) {
+      assert.deepEqual(rules(markup, "assets/primitives/demo/demo.svelte"), [], markup)
+    }
   }
-  for (const handler of ["choose", "select(item.id)"]) {
-    assert.deepEqual(
-      rules(`<button onclick={${handler}}>Choose</button>`, "assets/primitives/demo/demo.svelte"),
-      [],
-    )
+})
+
+test("block-bodied event and callback handlers must be named in the script", () => {
+  for (const handler of [
+    "() => { choose(id) }",
+    "() => { return choose(id) }",
+    "async () => { await save() }",
+    "function () { choose(id) }",
+    "ready ? () => { save() } : choose",
+    "wrap(() => { choose(id) })",
+  ]) {
+    for (const markup of [
+      `<button onclick={${handler}}>Choose</button>`,
+      `<Panel onSelect={${handler}} />`,
+      `<button on:click={${handler}}>Choose</button>`,
+    ]) {
+      assert.ok(
+        rules(markup, "assets/primitives/demo/demo.svelte").includes("named-handlers"),
+        markup,
+      )
+    }
   }
 })
 

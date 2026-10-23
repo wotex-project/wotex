@@ -59,8 +59,19 @@ const moduleSpecifier = (node: ts.Node) => {
   return undefined
 }
 
-const inlineFunction = (value: Record<string, unknown>) =>
-  value.type === "ArrowFunctionExpression" || value.type === "FunctionExpression"
+const blockBodiedFunction = (value: unknown): boolean => {
+  if (!value || typeof value !== "object") {
+    return false
+  }
+  if (Array.isArray(value)) {
+    return value.some(blockBodiedFunction)
+  }
+  const node = value as Record<string, unknown>
+  if (node.type === "ArrowFunctionExpression" || node.type === "FunctionExpression") {
+    return (node.body as Record<string, unknown> | undefined)?.type === "BlockStatement"
+  }
+  return Object.values(node).some(blockBodiedFunction)
+}
 
 const parameterName = (node: ts.Node): string | undefined => {
   if (
@@ -260,9 +271,9 @@ export const inspectFrontendSource = (
     if (
       node.type === "OnDirective" &&
       node.expression &&
-      inlineFunction(node.expression as Record<string, unknown>)
+      blockBodiedFunction(node.expression as Record<string, unknown>)
     ) {
-      report(Number(node.start), "named-handlers", "Pass a named event handler by reference.")
+      report(Number(node.start), "named-handlers", "Name a block-bodied handler in the script.")
     }
     if (
       node.type !== "Attribute" ||
@@ -276,12 +287,8 @@ export const inspectFrontendSource = (
       const expression = (value as Record<string, unknown>)?.expression as
         | Record<string, unknown>
         | undefined
-      if (expression && inlineFunction(expression)) {
-        report(
-          Number(node.start),
-          "named-handlers",
-          "Pass a named event/callback handler by reference.",
-        )
+      if (expression && blockBodiedFunction(expression)) {
+        report(Number(node.start), "named-handlers", "Name a block-bodied handler in the script.")
       }
     })
   })
