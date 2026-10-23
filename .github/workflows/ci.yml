@@ -331,6 +331,22 @@ jobs:
             except+=(--except "$check")
           done < <(yq -r '.lanes["${{ matrix.lane }}"].skip // [] | .[]' ../../tooling/packages.yaml)
           mix check --no-retry "${except[@]}" 2>&1 | tee "$RUNNER_TEMP/package-gate.log"
+      - name: Lab browser prerequisites
+        if: matrix.package == 'wotex-lab' && matrix.lane == 'current'
+        working-directory: packages/wotex-lab/hosts/workbench
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Lab browser journeys and Storybook accessibility
+        if: matrix.package == 'wotex-lab' && matrix.lane == 'current'
+        working-directory: packages/wotex-lab/hosts/workbench
+        env:
+          WOTEX_LAB_E2E: "1"
+        run: MIX_ENV=test mix test test/e2e
+      - name: Lab independent software devices
+        if: matrix.package == 'wotex-lab' && matrix.lane == 'current'
+        working-directory: packages/wotex-lab
+        env:
+          WOTEX_LAB_SIMULATORS: "1"
+        run: MIX_ENV=test mix test test/wotex/lab/modbus_simulator_test.exs
       - name: Retain package diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
@@ -341,6 +357,7 @@ jobs:
           path: |
             ${{ runner.temp }}/package-gate.log
             packages/${{ matrix.package }}/cover/
+            packages/${{ matrix.package }}/hosts/workbench/_build/test/e2e/
 
   native_check:
     name: ${{ matrix.package }} native checks

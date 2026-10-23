@@ -84,6 +84,30 @@ defmodule Wotex.Workspace.ToolchainTest do
     end
   end
 
+  test "Lab browser and independent device lanes follow its gate only on the current toolchain" do
+    ci = read(".github/workflows/ci.yml") |> YamlElixir.read_from_string!()
+    steps = get_in(ci, ["jobs", "check", "steps"])
+    gate = Enum.find_index(steps, &(&1["name"] == "Package gate"))
+
+    for name <- [
+          "Lab browser prerequisites",
+          "Lab browser journeys and Storybook accessibility",
+          "Lab independent software devices"
+        ] do
+      index = Enum.find_index(steps, &(&1["name"] == name))
+      assert index > gate
+
+      assert Enum.at(steps, index)["if"] ==
+               "matrix.package == 'wotex-lab' && matrix.lane == 'current'"
+    end
+
+    browser = Enum.find(steps, &(&1["name"] == "Lab browser journeys and Storybook accessibility"))
+    devices = Enum.find(steps, &(&1["name"] == "Lab independent software devices"))
+    assert browser["env"]["WOTEX_LAB_E2E"] == "1"
+    assert browser["run"] == "MIX_ENV=test mix test test/e2e"
+    assert devices["env"]["WOTEX_LAB_SIMULATORS"] == "1"
+  end
+
   test "mise.toml replaces .tool-versions and selects every package when it changes" do
     refute File.exists?(Path.join(Workspace.root(), ".tool-versions"))
     assert "mise.toml" in Manifest.load!().select_all_on
