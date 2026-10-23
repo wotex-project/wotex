@@ -259,6 +259,12 @@ end
 # downloads, discovers or starts anything: the formal engine path only names
 # a binary the operator provisioned and the host verifies before use.
 if config_env() == :prod do
+  static_root = Application.app_dir(:wotex_lab_workbench, "priv/static")
+
+  config :phoenix_assets,
+    static_root: static_root,
+    build: [vite_manifest: Path.join(static_root, ".vite/manifest.json")]
+
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
       raise "SECRET_KEY_BASE is required: mix phx.gen.secret generates one"
