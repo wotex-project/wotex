@@ -25,5 +25,7 @@ quietly() {
 )
 cd "$WOTEX_ROOT"
 quietly mix deps.get --check-locked
-quietly mix compile
+# Compile the root as one batch: incremental export invalidation in Mix 1.20
+# touches dependent sources, which are intentionally mounted read-only here.
+quietly mix compile --force
 exec mix "$task" --package "$package" "$@"
