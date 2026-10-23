@@ -62,6 +62,59 @@ defmodule WotexLabWorkbenchWeb.E2E.ConnectionsTest do
     assert_inert(room)
   end
 
+  test "return focus survives a canvas snapshot that finishes after the panel closes", %{conn: conn} do
+    conn = start_room(conn)
+
+    conn
+    |> press("#wl-board-toggle", "Tab")
+    |> assert_has(@temperature <> ":focus")
+    |> evaluate(
+      """
+      (() => {
+        window.originalDigest = crypto.subtle.digest.bind(crypto.subtle)
+        window.heldDigests = []
+        crypto.subtle.digest = (...args) => new Promise((resolve, reject) => {
+          window.heldDigests.push(() => window.originalDigest(...args).then(resolve, reject))
+        })
+      })()
+      """,
+      fn _ -> :ok end
+    )
+    |> press(":focus", "Enter")
+    |> assert_has(@source <> ":focus")
+    |> press(@source, "Escape")
+    |> assert_path("/")
+    |> refute_has("#wl-connections-panel")
+    |> evaluate(
+      """
+      (async () => {
+        crypto.subtle.digest = window.originalDigest
+        const held = window.heldDigests.splice(0)
+        await Promise.all(held.map(release => release()))
+        await new Promise(requestAnimationFrame)
+        await new Promise(requestAnimationFrame)
+        return held.length
+      })()
+      """,
+      &assert(&1 > 0)
+    )
+    |> assert_has(@temperature <> ":focus")
+  end
+
+  test "an unavailable canvas returns panel focus to the visible board menu", %{conn: conn} do
+    conn
+    |> start_room()
+    |> visit("/things?panel=connections")
+    |> assert_has("#wl-connections-panel")
+    |> evaluate(
+      "document.querySelector('[data-wotex-island=canvas]').dataset.wotexIslandState = 'failed'",
+      fn _ -> :ok end
+    )
+    |> click_link("Close panel")
+    |> refute_has("#wl-connections-panel")
+    |> assert_has("#wl-board-toggle:focus")
+  end
+
   test "Back, Cancel, Apply and native Remove focus the edited row and recover a removed origin", %{
     conn: conn,
     token: token

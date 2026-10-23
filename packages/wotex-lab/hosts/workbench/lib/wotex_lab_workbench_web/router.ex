@@ -61,6 +61,7 @@ defmodule WotexLabWorkbenchWeb.Router do
 
     get("/session/new", SessionController, :new)
     get("/evidence/report.json", ReportController, :show)
+    get("/evidence/datasets/:id", ReportController, :dataset)
     get("/metrics/dashboard.json", DashboardController, :show)
 
     live_session :workbench, on_mount: [WotexLabWorkbenchWeb.Scope] do

@@ -1,9 +1,21 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.27.0. Contract: accepted. Implementation status:
+Specification version: 0.28.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
-Version 0.27 centralizes reference-room and component and island-story sample definitions in
+Version 0.28.0 retains session-measurement filters across refresh and freeze.
+The query builder and session-measurement disclosures retain their browser
+state through updates. Closing a
+canvas inspector gives focus restoration one owner; the board-menu fallback
+cannot schedule a competing delayed focus after the originating node or edge.
+The completed capture receives a short status message and appears in the
+Evidence dataset table with a direct capture download. Downloaded session reports retain the full rows and
+their corrected content identity under WLB.10; no preview truncation or browser
+sample values substitute for captured data. Elixir browser journeys cover
+query/pin/saved restore, dataset/report downloads and explicit Action review,
+cancellation and approval. They do not close full application qualification.
+
+Version 0.27 centralizes reference-room, component and island-story sample definitions in
 the host's `priv/seeds.exs`. Explicit `mix seed` generates deterministic JSON;
 `mix seed --check` refuses missing or stale output without mutation. Neither
 command starts the application, a room, an operation or an external service.
@@ -938,7 +950,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-S11-14 | Preserve the authoritative subject, revision, local input, focus, command identity and recovery across composition changes while retaining required evidence and Action scope in compact composition. |
 | WLB-S11-15 | Deliver the separate editable WoTEx brand identity and approved asset handoff defined by WLB-C15, preserving the distinction between source values, proposals and accepted identity. |
 | WLB-S11-16 | Deliver the editable Lab page/state/profile inventory and connected task flows defined by WLB-C16, with source-aligned components, adjacent briefs and explicit approval/recovery boundaries. |
-| WLB-S11-17 | Author reference-room and component and island-story sample data in the backend Mix seed source; validate generated room input, reject stale generated outputs, and exclude Storybook sample payloads from production browser code. |
+| WLB-S11-17 | Author reference-room, component and island-story sample data in the backend Mix seed source; validate generated room input, reject stale generated outputs, and exclude Storybook sample payloads from production browser code. |
 
 ## Executable vectors
 

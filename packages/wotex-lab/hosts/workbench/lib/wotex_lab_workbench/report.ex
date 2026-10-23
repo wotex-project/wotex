@@ -11,7 +11,7 @@ defmodule WotexLabWorkbench.Report do
 
   alias Wotex.Lab.Evidence.Record
   alias Wotex.Lab.Formal.Result
-  alias WotexLabWorkbench.{Provenance, Run, Runs}
+  alias WotexLabWorkbench.{Provenance, Run, Runs, TelemetryDataset}
 
   @max_bytes 1_048_576
 
@@ -37,7 +37,7 @@ defmodule WotexLabWorkbench.Report do
         "source_index" => Map.take(Provenance.source_index(), ["kind", "observed_on", "packages"])
       },
       "runs" => Enum.map(snapshot.runs, &run_entry/1),
-      "datasets" => Runs.plain(snapshot.datasets),
+      "datasets" => Enum.map(snapshot.datasets, &TelemetryDataset.to_map/1),
       "formal" => Enum.map(snapshot.formal, &Result.to_map/1),
       "policy" => Runs.plain(snapshot.policy),
       "conformance" => %{

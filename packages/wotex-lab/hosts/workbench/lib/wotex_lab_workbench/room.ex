@@ -31,7 +31,6 @@ defmodule WotexLabWorkbench.Room do
   alias Wotex.Lab.Adapters.Runtime.{Loopback, StaticRef}
   alias Wotex.Lab.Continuum.{Channel, Host}
   alias Wotex.Lab.Error
-  alias Wotex.Lab.Evidence.Digest
   alias Wotex.Lab.Formal.Result
   alias Wotex.Lab.Metrics.{Collector, History}
   alias Wotex.Lab.Reference.Thing
@@ -49,6 +48,7 @@ defmodule WotexLabWorkbench.Room do
     Run,
     Runs,
     Seeds,
+    TelemetryDataset,
     ThingProperties
   }
 
@@ -588,36 +588,15 @@ defmodule WotexLabWorkbench.Room do
              :dataset_limit,
              "dataset capacity reached"
            ),
-         {:ok, live} <- unavailable(Metrics.query(query)) do
-      rows =
-        Enum.map(
-          live.samples,
-          &Map.take(&1, [:sequence, :at, :component, :operation, :event, :duration_ms, :outcome])
-        )
-
-      encoded = Jason.encode!(Runs.plain(rows))
-      digest = Digest.bytes(encoded)
-
-      recorded_query =
-        query
-        |> Map.new()
-        |> Map.delete(:scope)
-        |> Runs.plain()
-
-      dataset = %{
-        id: "dataset-#{length(state.datasets) + 1}",
-        digest: digest,
-        query: recorded_query,
-        interval: live.interval,
-        watermark: live.watermark,
-        rows: length(rows),
-        unit: live.unit,
-        ordering: "sequence ascending",
-        method: "none (rows kept as queried)",
-        loss: live.loss,
-        frozen_at: DateTime.utc_now()
-      }
-
+         {:ok, live} <- unavailable(Metrics.query(query)),
+         {:ok, dataset} <-
+           TelemetryDataset.new(
+             "dataset-#{length(state.datasets) + 1}",
+             state.id,
+             query,
+             live,
+             DateTime.utc_now()
+           ) do
       record_metric(state.id, :scenario, :encode, 0, :ok)
       {:reply, {:ok, dataset}, %{state | datasets: [dataset | state.datasets]}}
     else

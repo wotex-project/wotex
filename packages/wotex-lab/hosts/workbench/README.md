@@ -12,6 +12,13 @@ decision and dispatches only after the separate exact approval form passes the
 policy and freshness checks again. Mounting or reconnecting starts no room or
 experiment.
 
+Session measurements can be frozen using the last successful component and
+operation filters. Evidence lists each capture with a direct download, and its session-report download
+contains every captured row, including null durations. Captures bind the query,
+source, interval, watermark and loss to their digest and remain unchanged as
+live measurements arrive. Limits are eight captures per room, 2,000 rows and
+256 KiB of canonical content per capture. Reports retain the one-MiB ceiling.
+
 The entry at `/` is a spatial workbench. Search board in its menu or Command/Control K
 finds current Things, processes, Directory entries and owned pins. Filtering and
 opening a result perform no operation. Back restores the search and selected row. Things, connections, selection and

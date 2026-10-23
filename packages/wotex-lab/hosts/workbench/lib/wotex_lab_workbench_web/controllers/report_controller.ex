@@ -12,8 +12,32 @@ defmodule WotexLabWorkbenchWeb.ReportController do
 
   use WotexLabWorkbenchWeb, :controller
 
-  alias WotexLabWorkbench.{Report, Room, Sessions}
+  alias WotexLabWorkbench.{Report, Room, Sessions, TelemetryDataset}
   alias WotexLabWorkbenchWeb.Plugs.SessionToken
+
+  @doc "Downloads one complete frozen dataset from the verified session's room."
+  @spec dataset(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def dataset(conn, %{"id" => id} = params)
+      when map_size(params) == 1 and is_binary(id) and byte_size(id) in 1..64 do
+    with {:ok, %{room: room}} when is_pid(room) <-
+           Sessions.verify(get_session(conn, SessionToken.key())),
+         %{} = dataset <- Enum.find(Room.snapshot(room).datasets, &(&1.id == id)) do
+      conn
+      |> put_resp_content_type("application/json")
+      |> put_resp_header("cache-control", "no-store")
+      |> put_resp_header(
+        "content-disposition",
+        ~s(attachment; filename="wotex-lab-#{dataset.id}.json")
+      )
+      |> send_resp(200, Jason.encode!(TelemetryDataset.to_map(dataset)))
+    else
+      nil -> refuse(conn, 404, "dataset unavailable")
+      {:ok, _} -> refuse(conn, 404, "no room: start one from the workbench")
+      {:error, _} -> refuse(conn, 403, "session denied")
+    end
+  end
+
+  def dataset(conn, _), do: refuse(conn, 400, "dataset query is malformed")
 
   @doc "Sends the report, or a plain-text refusal when the session has no room."
   @spec show(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -27,6 +51,7 @@ defmodule WotexLabWorkbenchWeb.ReportController do
 
       conn
       |> put_resp_content_type("application/json")
+      |> put_resp_header("cache-control", "no-store")
       |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
       |> send_resp(200, json)
     else

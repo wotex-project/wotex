@@ -1,6 +1,32 @@
 # WLB.10: Metrics, storage and AI inspection
 
-Specification version: 0.32.1. Contract: accepted. Source status: implemented.
+Specification version: 0.33.0. Contract: accepted. Source status: implemented.
+
+Version 0.33.0 corrects the Workbench's separate session-telemetry export.
+Freezing retains every selected event row, including null durations, instead
+of retaining only a count and digest. The last successful component/operation
+selection is used for refresh and freeze. The room supplies the source scope;
+browser parameters cannot replace it. Each capture is limited to 2,000 rows
+and 256 KiB of canonical content, with at most eight captures per room.
+Oversized or invalid captures fail before retention or an export telemetry event.
+
+The additive `wotex-lab-session-dataset/v1` shape keeps the existing sequential
+ID and row count, and adds `samples`, source, missing-value, unsplit and
+truncation metadata. Its `sha256:` digest covers canonical JSON of every
+field except `id`, `digest` and `frozen_at`, using the Lab canonical JSON
+encoder. This corrects the historical digest over a truncated row preview;
+historical digests cannot be reinterpreted as full captures. Reports serialize
+all captured rows without the generic 64-item presentation preview. New live
+events do not change a retained capture. The report's one-MiB limit still
+applies; a report that cannot fit after removing its oldest Runs is refused.
+`GET /evidence/datasets/:id` downloads one complete retained capture from the
+verified browser session's room, with no-store caching and a JSON attachment.
+Unknown captures or an absent room return 404, malformed parameters return 400,
+and invalid sessions return 403. A sequential ID cannot select another room's
+capture. This read-only route performs no query, freeze or experiment.
+These raw session events are distinct from the diagnostic-history query
+datasets below. Export performs no training admission, normalization, filling,
+splitting or experiment execution. The base library API is unchanged.
 
 The base library owns the metric catalogue, bounded collection and ETS history,
 read-only query contract, immutable dataset export, Prometheus exposition,

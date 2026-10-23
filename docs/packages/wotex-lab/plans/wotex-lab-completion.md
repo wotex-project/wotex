@@ -1,11 +1,16 @@
 # Wotex Lab completion contract
 
-Plan version: 1.9.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.10.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The Workbench additionally requires backend-owned Mix seed definitions,
 deterministic generated data checks and an empty initial browser with no
 fabricated readings, Runs, pins or evidence (WLB-S11-17 and WLB-V11-17).
+Session-telemetry exports retain complete bounded rows and bind their query,
+source, interval, watermark and loss to the content identity, as specified by
+WLB.10. Each retained capture has a session-scoped direct download independent
+of the session-report ceiling. Presentation previews cannot substitute for an
+exported capture.
 
 This is a versioned implementation and acceptance baseline, not an execution
 tracker. All work packages below belong to the accepted programme. Dependencies

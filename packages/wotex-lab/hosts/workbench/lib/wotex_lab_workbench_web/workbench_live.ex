@@ -105,6 +105,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:pin_refresh_rotation, 0)
       |> assign(:metric_draft, %{metric: "nx_duration_seconds", range: "5m"})
       |> assign(:metric_result, nil)
+      |> assign(:session_metric_query, limit: 2_000)
       |> assign(:metric_room, nil)
       |> assign(:selected_pin, nil)
       |> assign(:selected_experiment, "thermal")
@@ -457,7 +458,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     command(socket, :query, fn scope ->
       with {:ok, filters} <- metric_filters(params, scope.session_id),
            {:ok, metrics} <- Metrics.query(filters) do
-        {:ok, scope, {:assign, :metrics, metrics}}
+        {:ok, scope, {:session_metrics, metrics, Keyword.delete(filters, :scope)}}
       else
         {:error, :unavailable} ->
           {:error, Error.new(:unavailable, :metrics, "no measurements exist for this session")}
@@ -609,8 +610,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   def handle_event("export_dataset", _, socket) do
     command(socket, :export, fn scope ->
-      with {:ok, _} <- Room.export_dataset(scope.room, scope: scope.session_id, limit: 2_000),
-           do: {:ok, scope, nil}
+      query = Keyword.put(socket.assigns.session_metric_query, :scope, scope.session_id)
+
+      with {:ok, dataset} <- Room.export_dataset(scope.room, query),
+           do: {:ok, scope, {:dataset, dataset}}
     end)
   end
 
@@ -1049,6 +1052,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                   :if={is_nil(@selected_pin)}
                   id="metric-query-builder"
                   class="wl-disclosure"
+                  phx-mounted={JS.ignore_attributes("open")}
                   open={
                     @investigation.state == :disabled or @metric_result != nil or is_nil(@scope.room)
                   }
@@ -1074,7 +1078,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                   :if={run_pin?(@board, @selected_pin)}
                   pin={selected_pin(@board, @selected_pin)}
                 />
-                <details :if={is_nil(@selected_pin)} class="wl-disclosure">
+                <details
+                  :if={is_nil(@selected_pin)}
+                  id="wl-session-measurements"
+                  class="wl-disclosure"
+                  phx-mounted={JS.ignore_attributes("open")}
+                >
                   <summary>Session measurements</summary>
                   <.metrics_view
                     metrics={@metrics}
@@ -1083,6 +1092,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
                     room={@scope.room}
                     dashboard_panels={@dashboard_panels}
                     session_id={@scope.session_id}
+                    query={@session_metric_query}
                     island_revision={@island_revision}
                     island_generation={@island_generation}
                   />
@@ -1204,7 +1214,6 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         if !@menu_open,
           do:
             JS.patch("/")
-            |> JS.focus(to: "#wl-board-toggle")
             |> restore_canvas_focus(@restore_canvas_focus)
       }
       phx-key="Escape"
@@ -1232,7 +1241,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           patch="/"
           class="wl-panel-close"
           aria-label="Close panel"
-          phx-click={JS.focus(to: "#wl-board-toggle") |> restore_canvas_focus(@restore_canvas_focus)}
+          phx-click={restore_canvas_focus(%JS{}, @restore_canvas_focus)}
         ><img class="wl-menu-icon" src="/icons/x.svg" alt="" width="14" height="14" /></.link>
       </header>
       <div class="wl-workbench-panel-body">{render_slot(@inner_block)}</div>
@@ -1240,8 +1249,18 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     """
   end
 
-  defp restore_canvas_focus(js, true), do: JS.dispatch(js, "wotex:restore-canvas-focus")
-  defp restore_canvas_focus(js, false), do: js
+  defp restore_canvas_focus(js, true) do
+    js
+    |> JS.focus(
+      to:
+        ".wl-shell-canvas:has([data-wotex-island='canvas']:not([data-wotex-island-state='mounted'])) #wl-board-toggle"
+    )
+    |> JS.dispatch("wotex:restore-canvas-focus",
+      to: "[data-wotex-island='canvas'][data-wotex-island-state='mounted']"
+    )
+  end
+
+  defp restore_canvas_focus(js, false), do: JS.focus(js, to: "#wl-board-toggle")
 
   attr(:experiments, :list, required: true)
   attr(:selected, :string, required: true)
@@ -1777,12 +1796,20 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
   defp property_error_text(%{operation: "observe"}), do: "Observation unavailable"
   defp property_error_text(_), do: "Operation unavailable"
 
+  defp query_value(query, key) do
+    case Keyword.get(query, key) do
+      nil -> ""
+      value -> Atom.to_string(value)
+    end
+  end
+
   attr(:metrics, :any, required: true)
   attr(:room, :any, required: true)
   attr(:dashboard_panels, :list, required: true)
   attr(:history, :any, required: true)
   attr(:history_range, :string, required: true)
   attr(:session_id, :string, required: true)
+  attr(:query, :list, required: true)
   attr(:island_revision, :integer, required: true)
   attr(:island_generation, :string, required: true)
 
@@ -1801,7 +1828,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           name="component"
           label="Component"
           type="select"
-          value=""
+          value={query_value(@query, :component)}
           options={
             [{"all", ""}] ++
               Enum.map(Wotex.Lab.Telemetry.components(), &{Atom.to_string(&1), Atom.to_string(&1)})
@@ -1811,7 +1838,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
           name="operation"
           label="Operation"
           type="select"
-          value=""
+          value={query_value(@query, :operation)}
           options={
             [{"all", ""}] ++
               Enum.map(Wotex.Lab.Telemetry.operations(), &{Atom.to_string(&1), Atom.to_string(&1)})
@@ -1937,6 +1964,23 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
         >
           {Run.state_text(run)}
         </:col><:col :let={run} label="Digest"><code>{run.record_digest || "missing"}</code></:col>
+      </.data_table>
+      <.data_table
+        :if={@snapshot.datasets != []}
+        id="evidence-datasets"
+        caption="Frozen datasets"
+        rows={@snapshot.datasets}
+      >
+        <:col :let={dataset} label="Dataset">{dataset.id}</:col>
+        <:col :let={dataset} label="Rows">{dataset.rows}</:col>
+        <:col :let={dataset} label="Digest"><code>{dataset.digest}</code></:col>
+        <:col :let={dataset} label="Data">
+          <a
+            href={"/evidence/datasets/#{URI.encode(dataset.id)}"}
+            download
+            aria-label={"Download #{dataset.id}"}
+          >Download</a>
+        </:col>
       </.data_table>
       <.tensor_summary :if={@subject && @subject.tensor} summary={@subject.tensor} />
       <section class="wl-panel">
@@ -2355,6 +2399,12 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp apply_effect(socket, nil), do: socket
   defp apply_effect(socket, {:assign, key, value}), do: assign(socket, key, value)
+
+  defp apply_effect(socket, {:session_metrics, metrics, query}),
+    do: assign(socket, metrics: metrics, session_metric_query: query)
+
+  defp apply_effect(socket, {:dataset, dataset}),
+    do: put_flash(socket, :info, "Frozen #{dataset.id} · #{dataset.rows} rows")
 
   defp apply_effect(socket, {:navigate, path}), do: push_patch(socket, to: path)
 
@@ -2923,7 +2973,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       snapshot = safe(fn -> Room.snapshot(room) end, nil)
 
       metrics =
-        case Metrics.query(scope: session_id, limit: 2_000) do
+        case Metrics.query(Keyword.put(socket.assigns.session_metric_query, :scope, session_id)) do
           {:ok, result} -> result
           {:error, :unavailable} -> nil
         end
