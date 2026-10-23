@@ -7,6 +7,7 @@ defmodule Wotex.BLE.CoreBluetooth.Response do
   @codes ~w(ok invalid_options not_authorized disconnected stale_discovery not_permitted not_supported invalid_value_length timeout clock_regressed invalid_response resource_limit transport_error cleanup_timeout peer_not_found busy invalid_value)a
   @code_map Map.new(@codes, &{Atom.to_string(&1), &1})
 
+  @doc "Validates the response envelope against the active connection generation."
   @spec decode(map(), non_neg_integer()) :: tuple() | :invalid
   def decode(%{"version" => 1, "generation" => generation} = frame, generation) do
     case frame do
@@ -53,6 +54,7 @@ defmodule Wotex.BLE.CoreBluetooth.Response do
 
   defp decode_error(_, _), do: :invalid
 
+  @doc "Validates and decodes the result of one supported native operation."
   @spec result(atom(), term(), pos_integer()) :: {:ok, term()} | :invalid
   def result(:open, %{"generation" => generation} = value, generation) when map_size(value) == 1,
     do: {:ok, :opened}

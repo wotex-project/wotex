@@ -166,6 +166,29 @@ defmodule Wotex.BLE.CoreBluetoothStreamTest do
              })
   end
 
+  test "malformed selectors and transport envelopes are rejected before stream admission" do
+    alias Wotex.BLE.CoreBluetooth.{Options, Response}
+
+    assert {:error, _} = Options.new(nil, self())
+    assert {:error, _} = Stream.options(nil, 100, self())
+    assert {:error, _} = Stream.mode(nil, :auto)
+    refute Stream.handle?(nil)
+    assert :invalid = Stream.identifier(nil)
+    assert :invalid = ReportFlow.retire(ReportFlow.new(7), %{})
+
+    lost = %{"version" => 1, "generation" => 7, "event" => "connection_lost", "code" => "busy"}
+    assert {:lost, :busy} = Response.decode(lost, 7)
+    assert :invalid = Response.decode(%{lost | "code" => "ok"}, 7)
+    assert :invalid = Response.decode(%{lost | "code" => "unknown"}, 7)
+    assert :invalid = Response.decode(%{"version" => 1, "generation" => 7}, 7)
+
+    assert :invalid =
+             Response.decode(
+               %{"version" => 1, "generation" => 7, "id" => "2", "ok" => false, "error" => nil},
+               7
+             )
+  end
+
   defp binding(id, route) do
     {:ok, characteristic} =
       Characteristic.new(%{

@@ -753,6 +753,304 @@ defmodule Wotex.BLE.CoreBluetoothClientTest do
     refute_received {:wotex_runtime, _, {:ok, _, _}}
   end
 
+  test "invalid public handles, deadlines and stream requests leave native custody intact",
+       context do
+    {session, _} = connected(context, "stream-silent")
+    handle = session.handle
+    forged = %{handle | reference: make_ref()}
+
+    for invalid <- [nil, self(), Map.put(handle, :extra, true)] do
+      assert {:error, %Error{code: :invalid_handle}} = CoreBluetooth.health_check(invalid, 100)
+    end
+
+    assert {:error, %Error{code: :invalid_handle}} = CoreBluetooth.session(nil)
+    assert {:error, %Error{code: :invalid_options}} = CoreBluetooth.start_link(nil)
+
+    for timeout <- [0, 60_001, :infinity] do
+      assert {:error, %Error{code: :invalid_timeout}} = CoreBluetooth.health_check(handle, timeout)
+    end
+
+    assert {:error, %Error{code: :invalid_options}} = CoreBluetooth.subscribe(handle, nil, 100)
+    assert {:error, %Error{code: :invalid_subscription}} = CoreBluetooth.unsubscribe(handle, nil)
+    assert {:error, %Error{code: :invalid_handle}} = CoreBluetooth.disconnect(forged)
+
+    assert {:error, %Error{code: :invalid_handle}} =
+             CoreBluetooth.subscribe(forged, %{address: @unique}, 100)
+
+    assert {:error, %Error{code: :invalid_request}} =
+             GenServer.call(handle.pid, {:operation, handle, :unsupported, deadline(500)})
+
+    assert {:error, %Error{code: :invalid_request}} = GenServer.call(handle.pid, :unsupported)
+    GenServer.cast(handle.pid, :stale_control)
+    send(handle.pid, {:subscription_claim_timeout, self()})
+    send(handle.pid, {:ble_report_consumed, handle.reference, self(), 1, make_ref()})
+    assert {:ok, %{connected: true}} = CoreBluetooth.health_check(handle, 500)
+    assert :ok = BLE.disconnect(session)
+  end
+
+  test "closing generations refuse new work and bound simultaneous close waiters", context do
+    {session, path} = connected(context, "hold-close")
+    handle = session.handle
+    first = Task.async(fn -> CoreBluetooth.disconnect(handle) end)
+    eventually(fn -> :sys.get_state(handle.pid).phase == :closing end)
+    forged = %{handle | reference: make_ref()}
+
+    assert {:error, %Error{code: :disconnected}} = CoreBluetooth.session(handle.pid)
+    assert {:error, %Error{code: :disconnected}} = CoreBluetooth.health_check(handle, 100)
+    assert {:error, %Error{code: :invalid_handle}} = CoreBluetooth.health_check(forged, 100)
+
+    assert {:error, %Error{code: :disconnected}} =
+             CoreBluetooth.subscribe(handle, %{address: @unique}, 100)
+
+    assert {:error, %Error{code: :invalid_handle}} =
+             CoreBluetooth.subscribe(forged, %{address: @unique}, 100)
+
+    rest = for _ <- 1..63, do: Task.async(fn -> CoreBluetooth.disconnect(handle) end)
+    eventually(fn -> length(:sys.get_state(handle.pid).close_waiters) == 64 end)
+    assert {:error, %Error{code: :busy}} = CoreBluetooth.disconnect(handle)
+
+    for waiter <- [first | rest] do
+      assert {:error, %Error{code: :cleanup_timeout}} = Task.await(waiter, 3000)
+    end
+
+    assert_retired(path)
+  end
+
+  test "malformed native lines, oversized frames and connection loss retire active writes",
+       context do
+    for {data, code} <- [
+          {{:eol, "{"}, :invalid_response},
+          {{:noeol, String.duplicate("x", 131_072)}, :response_limit},
+          {{:eol,
+            Jason.encode!(%{
+              version: 1,
+              generation: 7,
+              event: "connection_lost",
+              code: "not_authorized"
+            })}, :not_authorized},
+          {{:eol,
+            Jason.encode!(%{version: 1, generation: 7, id: "foreign", ok: true, result: nil})},
+           :invalid_response}
+        ] do
+      {session, path} = connected(context, "hold")
+      task = Task.async(fn -> BLE.write(session, @unique, <<1>>, timeout: 1000) end)
+      eventually(fn -> match?(%{submitted: true}, :sys.get_state(session.handle.pid).active) end)
+      port = :sys.get_state(session.handle.pid).port
+      send(session.handle.pid, {port, {:data, data}})
+      assert {:error, %Error{code: ^code, effect: :unknown}} = Task.await(task, 3000)
+      assert_retired(path)
+    end
+  end
+
+  test "late native success and explicit refusal preserve different mutation evidence", context do
+    for operation <- [:read, :write] do
+      {session, path} = connected(context, "hold")
+
+      task =
+        Task.async(fn ->
+          if operation == :read,
+            do: BLE.read(session, @unique, timeout: 500),
+            else: BLE.write(session, @unique, <<1>>, timeout: 500)
+        end)
+
+      eventually(fn ->
+        active = :sys.get_state(session.handle.pid).active
+        active != nil and (operation == :read or active.submitted)
+      end)
+
+      state = :sys.get_state(session.handle.pid)
+      :ok = :sys.suspend(session.handle.pid)
+
+      try do
+        result =
+          if operation == :read,
+            do: %{
+              ok: false,
+              error: %{
+                code: "not_permitted",
+                cause: "not_permitted",
+                submitted: false,
+                cleanup_confirmed: true
+              }
+            },
+            else: %{ok: true, result: nil}
+
+        frame = Map.merge(result, %{version: 1, generation: 7, id: state.active.id})
+        send(session.handle.pid, {state.port, {:data, {:eol, Jason.encode!(frame)}}})
+        Process.sleep(530)
+      after
+        :sys.resume(session.handle.pid)
+      end
+
+      effect = if operation == :read, do: :none, else: :unknown
+      assert {:error, %Error{code: :timeout, effect: ^effect}} = Task.await(task, 3000)
+      assert_retired(path)
+    end
+  end
+
+  test "request identity exhaustion closes without sending a reused native operation", context do
+    {session, path} = connected(context)
+    :sys.replace_state(session.handle.pid, &%{&1 | sequence: 0xFFFF_FFFF_FFFF_FFFF})
+    assert {:error, %Error{code: :resource_limit}} = BLE.read(session, @unique)
+    refute Enum.any?(calls(path), &(&1["operation"] == "read"))
+    assert_retired(path)
+  end
+
+  test "receiver loss removes an unsent subscription without interrupting a submitted write",
+       context do
+    {session, path} = connected(context, "stream-point-hold")
+    write = Task.async(fn -> BLE.write(session, @unique, <<1>>) end)
+    eventually(fn -> match?(%{submitted: true}, :sys.get_state(session.handle.pid).active) end)
+    receiver = spawn(fn -> receive do: (:stop -> :ok) end)
+    on_exit(fn -> Process.exit(receiver, :kill) end)
+
+    opening = Task.async(fn -> BLE.subscribe(session, %{address: @unique, receiver: receiver}) end)
+    eventually(fn -> queue_size(session) == 1 end)
+    Process.exit(receiver, :kill)
+    assert {:error, %Error{code: :disconnected}} = Task.await(opening)
+    assert {:ok, handle} = CoreBluetooth.session(session.handle.pid)
+    assert handle == session.handle
+    assert :sys.get_state(handle.pid).subscriptions == %{}
+    refute Enum.any?(calls(path), &(&1["operation"] == "subscribe"))
+    assert :ok = BLE.disconnect(session)
+    assert {:error, %Error{effect: :unknown}} = Task.await(write)
+    assert_retired(path)
+  end
+
+  test "dispatch drops dead and expired queued callers before sending another native request",
+       context do
+    for abandoned <- [:dead, :expired] do
+      {session, path} = connected(context, "hold")
+      write = Task.async(fn -> BLE.write(session, @unique, <<1>>) end)
+      eventually(fn -> match?(%{submitted: true}, :sys.get_state(session.handle.pid).active) end)
+      parent = self()
+
+      reader =
+        spawn(fn ->
+          send(parent, {:queued_result, BLE.read(session, @unique, timeout: 500)})
+        end)
+
+      monitor = Process.monitor(reader)
+      eventually(fn -> queue_size(session) == 1 end)
+      state = :sys.get_state(session.handle.pid)
+      :ok = :sys.suspend(session.handle.pid)
+
+      try do
+        true = Port.command(state.port, ~s({"fixture":"release"}\n))
+        eventually(fn -> queued_native_reply?(session.handle.pid, state.port, state.active.id) end)
+
+        if abandoned == :dead do
+          Process.exit(reader, :kill)
+          assert_receive {:DOWN, ^monitor, :process, ^reader, :killed}, 1000
+        else
+          Process.sleep(530)
+        end
+      after
+        :sys.resume(session.handle.pid)
+      end
+
+      assert {:ok, :written} = Task.await(write)
+
+      if abandoned == :expired do
+        assert_receive {:queued_result, {:error, %Error{code: :timeout}}}, 1000
+        assert_receive {:DOWN, ^monitor, :process, ^reader, :normal}, 1000
+      end
+
+      assert {:ok, _} = BLE.health_check(session)
+      refute Enum.any?(calls(path), &(&1["operation"] == "read"))
+      assert :ok = BLE.disconnect(session)
+      assert_retired(path)
+    end
+  end
+
+  test "loss of an explicitly linked process joins native cleanup", context do
+    {session, path} = connected(context)
+    owner = self()
+
+    linked =
+      spawn(fn ->
+        Process.link(session.handle.pid)
+        send(owner, :linked)
+        receive do: (:fail -> exit(:failed))
+      end)
+
+    assert_receive :linked
+    monitor = Process.monitor(session.handle.pid)
+    send(linked, :fail)
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 3000
+    assert_retired(path)
+  end
+
+  test "an unclaimed opening reply expires without publishing a usable stream", context do
+    {session, path} = connected(context, "stream-silent")
+    handle = session.handle
+    monitor = Process.monitor(handle.pid)
+    request = %{address: @unique, receiver: self(), timeout: 100}
+
+    # Stop at the reply/claim handoff to model a caller that never completes it.
+    assert {:ok, subscription} =
+             GenServer.call(
+               handle.pid,
+               {:subscribe, handle, request, 100, deadline(100)},
+               1000
+             )
+
+    assert_receive {:wotex_ble, _, {:error, %Error{code: :timeout}}}, 3000
+    assert_receive {:DOWN, ^monitor, :process, _, :normal}, 3000
+    refute Process.alive?(subscription.pid)
+    refute_received {:wotex_ble, _, {:ok, _, _}}
+    assert_retired(path)
+  end
+
+  test "the public call deadline remains bounded when its connection cannot schedule", context do
+    {session, path} = connected(context)
+    :ok = :sys.suspend(session.handle.pid)
+
+    try do
+      task = Task.async(fn -> BLE.write(session, @unique, <<1>>, timeout: 1) end)
+      assert {:error, %Error{code: :timeout, effect: :unknown}} = Task.await(task, 3000)
+    after
+      :sys.resume(session.handle.pid)
+    end
+
+    assert {:ok, _} = BLE.health_check(session)
+    refute Enum.any?(calls(path), &(&1["operation"] == "write"))
+    assert :ok = BLE.disconnect(session)
+  end
+
+  test "forged lost-subscription handles cannot borrow another generation's cleanup", context do
+    {session, _} = connected(context)
+    dead = spawn(fn -> :ok end)
+    monitor = Process.monitor(dead)
+    assert_receive {:DOWN, ^monitor, :process, ^dead, _}, 1000
+    forged = %{session.handle | reference: make_ref()}
+
+    subscription = %Wotex.BLE.Subscription{
+      pid: dead,
+      reference: make_ref(),
+      session_reference: forged.reference,
+      generation: forged.generation
+    }
+
+    assert {:error, %Error{code: :invalid_subscription}} =
+             CoreBluetooth.unsubscribe(forged, subscription)
+
+    GenServer.cast(session.handle.pid, {:subscription_claimed, session.handle, subscription})
+    assert {:ok, _} = BLE.health_check(session)
+    assert :ok = BLE.disconnect(session)
+  end
+
+  defp deadline(timeout), do: System.monotonic_time(:millisecond) + timeout
+
+  defp queued_native_reply?(pid, port, id) do
+    {:messages, messages} = Process.info(pid, :messages)
+
+    Enum.any?(messages, fn
+      {^port, {:data, {:eol, line}}} -> Jason.decode!(line)["id"] == id
+      _ -> false
+    end)
+  end
+
   defp stream_consumer(options, kind) do
     {key, start, stop} =
       if kind == :property,

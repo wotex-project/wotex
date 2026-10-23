@@ -7,6 +7,7 @@ defmodule Wotex.BLE.CoreBluetooth.Stream do
   @fields [:address, :receiver, :mode, :max_queue_length, :value_type, :byte_order, :timeout]
   @uint64 0xFFFF_FFFF_FFFF_FFFF
 
+  @doc "Validates the notification receiver, queue, mode and value decoding options."
   @spec options(term(), term(), pid()) :: {:ok, map()} | {:error, Error.t()}
   def options(%{address: address} = request, default, caller) do
     with true <- Map.keys(request) -- @fields == [],
@@ -42,6 +43,7 @@ defmodule Wotex.BLE.CoreBluetooth.Stream do
 
   def options(_, _, _), do: {:error, Error.new(:invalid_options)}
 
+  @doc "Selects a supported notification mode from the characteristic capabilities."
   @spec mode(Characteristic.t(), term()) :: {:ok, :notify | :indicate} | {:error, Error.t()}
   def mode(%Characteristic{notify: notify, indicate: indicate}, requested) do
     case {notify, indicate, requested} do
@@ -53,6 +55,7 @@ defmodule Wotex.BLE.CoreBluetooth.Stream do
 
   def mode(_, _), do: {:error, Error.new(:invalid_options)}
 
+  @doc "Checks the shape, local owner and generation of a subscription handle."
   @spec handle?(term()) :: boolean()
   def handle?(
         %Subscription{
@@ -69,6 +72,7 @@ defmodule Wotex.BLE.CoreBluetooth.Stream do
 
   def handle?(_), do: false
 
+  @doc "Validates the native subscription binding against its admitted configuration."
   @spec binding(term(), String.t(), map(), Characteristic.t()) :: {:ok, map()} | :invalid
   def binding(
         %{
@@ -104,6 +108,7 @@ defmodule Wotex.BLE.CoreBluetooth.Stream do
 
   def binding(_, _, _, _), do: :invalid
 
+  @doc "Admits a canonical positive decimal subscription identifier within uint64 bounds."
   @spec identifier(term()) :: {:ok, pos_integer()} | :invalid
   def identifier(id) when is_binary(id) and byte_size(id) in 1..20 do
     with true <- not String.starts_with?(id, "0"),

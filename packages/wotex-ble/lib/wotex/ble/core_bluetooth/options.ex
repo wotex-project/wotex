@@ -8,6 +8,7 @@ defmodule Wotex.BLE.CoreBluetooth.Options do
   @artifacts ~w(executable executable_sha256 guardian guardian_sha256)a
   @fields [:peer, :generation, :pairing, :permission, :timeout, :owner] ++ @artifacts
 
+  @doc "Validates the explicit peer, owner, deadline and executable options."
   @spec new(term(), pid()) :: {:ok, map()} | {:error, Error.t()}
   def new(input, caller) when is_list(input) do
     with values <- Enum.take(input, length(@fields) + 1),

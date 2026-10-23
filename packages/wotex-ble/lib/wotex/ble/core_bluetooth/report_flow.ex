@@ -14,12 +14,15 @@ defmodule Wotex.BLE.CoreBluetooth.ReportFlow do
           routes: MapSet.t()
         }
 
+  @doc "Creates an empty notification ledger for one connection generation."
   @spec new(pos_integer()) :: t()
   def new(generation), do: %__MODULE__{generation: generation}
 
+  @doc "Checks whether a route has already been admitted in this generation."
   @spec used?(t(), pos_integer()) :: boolean()
   def used?(flow, route), do: MapSet.member?(flow.routes, route)
 
+  @doc "Reserves a fresh subscription route and its bounded notification credit."
   @spec open(t(), pid(), map()) :: {:ok, t()} | :invalid
   def open(flow, owner, binding) do
     with {:ok, number} <- Stream.identifier(binding.subscription_id),
@@ -43,6 +46,7 @@ defmodule Wotex.BLE.CoreBluetooth.ReportFlow do
     end
   end
 
+  @doc "Admits the next notification and records its owner acknowledgement token."
   @spec report(t(), term()) ::
           {:ok, pid(), String.t(), {pos_integer(), reference()}, tuple(), t()} | :invalid
   def report(
@@ -87,6 +91,7 @@ defmodule Wotex.BLE.CoreBluetooth.ReportFlow do
 
   def report(_, _), do: :invalid
 
+  @doc "Marks an owned notification consumed and advances the contiguous acknowledgement."
   @spec consume(t(), pid(), String.t(), term(), term()) :: {map() | nil, t()}
   def consume(flow, owner, id, sequence, token) do
     with %{owner: ^owner} = stream <- flow.streams[id],
@@ -104,6 +109,7 @@ defmodule Wotex.BLE.CoreBluetooth.ReportFlow do
     end
   end
 
+  @doc "Validates a retirement receipt and removes the subscription ledger."
   @spec retire(t(), term()) :: {:ok, String.t(), pid(), map() | nil, t()} | :invalid
   def retire(
         flow,

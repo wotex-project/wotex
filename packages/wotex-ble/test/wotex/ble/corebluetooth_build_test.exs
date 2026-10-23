@@ -16,6 +16,9 @@ defmodule Wotex.BLE.CoreBluetoothBuildTest do
   end
 
   if :os.type() == {:unix, :darwin} do
+    import ExUnit.CaptureIO
+
+    alias Mix.Tasks.Wotex.Ble.Corebluetooth.Build, as: BuildTask
     alias Wotex.BLE.BlueZ.Artifacts
     alias Wotex.BLE.CoreBluetooth.Build
 
@@ -90,6 +93,16 @@ defmodule Wotex.BLE.CoreBluetoothBuildTest do
       end
 
       assert {:ok, %{reused: true}} = Build.run(context.directory)
+    end
+
+    test "the public task reports verified artifacts and rejects malformed arguments", context do
+      output = capture_io(fn -> assert :ok = BuildTask.run(["--workspace", context.directory]) end)
+      assert output =~ "CoreBluetooth build verified: #{context.directory}"
+      assert output =~ "Manifest: #{Path.join(context.directory, "native-manifest.json")}"
+
+      assert_raise Mix.Error, ~r/invalid_native_build_arguments/, fn ->
+        BuildTask.run(["--workspace", "relative"])
+      end
     end
   end
 end

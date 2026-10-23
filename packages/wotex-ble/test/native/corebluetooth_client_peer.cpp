@@ -71,6 +71,13 @@ int main(int argc, char **argv) {
   while (std::getline(std::cin, line)) {
     trace << line << '\n' << std::flush;
     const auto input = Json::parse(line);
+    // Test-only control releases a held write through the actual protocol pipe.
+    if (input.size() == 1 && input.value("fixture", "") == "release") {
+      if (active.empty()) return 65;
+      reply(active, nullptr);
+      active.clear();
+      continue;
+    }
     if (input.contains("event")) {
       const auto id = input.at("subscription_id").get<std::string>();
       const auto sequence = input.at("sequence").get<std::uint64_t>();
