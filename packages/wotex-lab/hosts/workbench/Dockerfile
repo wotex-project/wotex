@@ -7,6 +7,7 @@ WORKDIR /build
 RUN mix local.hex --force && mix local.rebar --force
 COPY mix.exs mix.lock ./
 COPY config ./config
+COPY mix_tasks ./mix_tasks
 RUN mix deps.get --only prod
 RUN mix deps.compile
 
