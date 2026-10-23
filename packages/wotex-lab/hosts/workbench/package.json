@@ -8,7 +8,7 @@
     "build": "node bin/clean_assets.mjs && vite build",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build --quiet",
-    "check:browser:documentation": "node bin/check_documentation_browser.mjs",
+    "check:browser:documentation": "WOTEX_LAB_E2E=1 WOTEX_LAB_DOCUMENTATION=1 mix test test/e2e/documentation_test.exs",
     "check:browser:islands": "node bin/check_islands_browser.mjs",
     "check": "pnpm run lint && pnpm run audit:dependencies && pnpm run typecheck && pnpm run test:layout && pnpm run build && node bin/check_assets.mjs",
     "audit:dependencies": "pnpm audit --audit-level low",

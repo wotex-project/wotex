@@ -100,6 +100,19 @@ jobs:
         working-directory: packages/wotex-lab/hosts/workbench
         run: pnpm install --frozen-lockfile
 
+      - name: Qualify hosted and static documentation in Chromium
+        working-directory: packages/wotex-lab/hosts/workbench
+        env:
+          MIX_ENV: test
+          WOTEX_PATH_DEPS: "1"
+          DOC_SHELL_CANDIDATE: ${{ github.workspace }}/.candidates/doc_shell
+          PHOENIX_ASSETS_CANDIDATE: ${{ github.workspace }}/.candidates/phoenix-assets
+        run: |
+          mix deps.get --check-locked
+          pnpm exec playwright install --with-deps chromium
+          pnpm run build
+          pnpm run check:browser:documentation
+
       - name: Build and preflight the complete publication
         working-directory: packages/wotex-lab/hosts/workbench
         shell: bash

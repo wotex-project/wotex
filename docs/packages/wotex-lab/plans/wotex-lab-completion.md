@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.16.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.16.1. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -66,6 +66,11 @@ artifacts retain prose and signatures for API pages. The accepted compact
 reader still needs its separately published Phoenix Assets inline-search seam;
 the renderer must also declare support for the 1.0 dependency. The DocShell
 upgrade does not close renderer, archive or accessibility claims.
+
+Version 1.16.1 moves hosted/static documentation browser acceptance into
+Elixir and shares the existing backend fixture between its tests and the
+archive builder. Source-candidate API compatibility, archive resolution and
+published adoption remain separate qualification states.
 
 ## Delivery status
 

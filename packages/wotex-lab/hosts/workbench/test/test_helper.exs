@@ -1,3 +1,4 @@
+Code.require_file("../bin/support/documentation_browser_fixture.exs", __DIR__)
 Code.require_file("../../../test/support/child_environment.ex", __DIR__)
 Code.require_file("../../../test/support/modbus_simulator.ex", __DIR__)
 
@@ -7,7 +8,10 @@ e2e = if System.get_env("WOTEX_LAB_E2E") == "1", do: [], else: [e2e: true]
 
 simulators = if System.get_env("WOTEX_LAB_SIMULATORS") == "1", do: [], else: [simulator: true]
 
-ExUnit.start(exclude: grafana ++ greptime ++ e2e ++ simulators)
+documentation =
+  if System.get_env("WOTEX_LAB_DOCUMENTATION") == "1", do: [], else: [documentation: true]
+
+ExUnit.start(exclude: grafana ++ greptime ++ e2e ++ simulators ++ documentation)
 
 if System.get_env("WOTEX_LAB_E2E") == "1" do
   {:ok, {_, port}} = WotexLabWorkbenchWeb.Endpoint.server_info(:http)

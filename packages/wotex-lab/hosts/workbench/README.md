@@ -119,6 +119,18 @@ An explicit `--pagefind-executable` overrides it. The legacy
 Generated indexes ship as static assets; the running release starts no search
 builder. The accepted inline reader still needs the renderer candidate API;
 published renderer availability and its archive qualification remain separate.
+The renderer candidate's declared dependency range also predates DocShell 1.0.
+To qualify its source API, explicitly supply both candidate paths and run:
+
+```sh
+WOTEX_PATH_DEPS=1 PHOENIX_ASSETS_CANDIDATE=/absolute/renderer-source \
+  DOC_SHELL_CANDIDATE=/absolute/doc-shell-1.0-source \
+  pnpm run check:browser:documentation
+```
+
+This runs Elixir ExUnit browser journeys against hosted and static output with
+external requests blocked. It does not prove that the renderer's Hex archive
+admits DocShell 1.0 or that a public site has been deployed.
 
 Biome owns frontend formatting and linting, including Svelte scripts and markup.
 The pinned configuration uses two-space indentation, a 100-column line width,
@@ -133,8 +145,8 @@ The frontend uses Svelte 5 runes, typed props and named arrow functions.
 Protocol transitions stay in pure helpers; each mounted island owns a closure
 controller. `createLiveViewHook` adapts LiveView's receiver to explicit callback
 arguments. Application code defines no classes or object methods. Event markup
-references a named handler; state changes, branching and async
-work live in named functions. Functions have blank lines between them.
+allows expression-bodied handlers; blocks use named script functions. Branching
+and async work live in named functions. Functions have blank lines between them.
 
 `assets/primitives/<name>/` owns base controls; `assets/components/<name>/`
 owns composed UI and colocated stories. `assets/design-system/` owns tokens,

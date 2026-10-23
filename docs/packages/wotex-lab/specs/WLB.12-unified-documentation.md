@@ -1,6 +1,6 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.6.0. Contract: accepted. Implementation status:
+Specification version: 0.6.1. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 The documentation cohort pins published DocShell 1.0.0 across the family
@@ -12,6 +12,16 @@ corpus. The public extraction/projection regression checks both sides of this
 handoff. Existing document identities, routes, Action authority and optional
 artifact-capability selection are unchanged. Historical collection and renderer
 evidence is not transferred to the new dependency cohort.
+
+The documentation browser acceptance suite lives in Elixir under
+`hosts/workbench/test/e2e/documentation_test.exs`. The hosted and static readers
+consume the same backend-built fixture, served on isolated loopback listeners.
+The suite covers lazy real-index queries, all seven facets, scope controls,
+keyboard search, 320-pixel reflow, 400% zoom, themes, reduced motion, RTL,
+not-found behavior and native navigation without JavaScript. Context routing
+refuses external requests, and browser exceptions and unexpected console errors
+fail acceptance. It remains an explicit renderer-candidate lane; the old Node
+journey runner is removed. Historical evidence is not renewed by moving tests.
 
 ## Implemented source and evidence boundary
 

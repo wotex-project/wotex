@@ -10,7 +10,7 @@ defmodule Wotex.Lab.SourceArchiveTest do
 
   @moduletag :tmp_dir
 
-  test "the Workbench source archive retains executable frontend gates and their inputs", %{
+  test "the Workbench source archive retains executable frontend and browser gates and inputs", %{
     tmp_dir: root
   } do
     host = Path.expand("../../../hosts/workbench", __DIR__)
@@ -21,6 +21,9 @@ defmodule Wotex.Lab.SourceArchiveTest do
     files = Map.new(files, fn {path, bytes} -> {List.to_string(path), bytes} end)
 
     for path <- ~w(package.json biome.jsonc .gitignore bin/register_aliases.ts .storybook/main.ts
+                   bin/serve_documentation_browser_fixture.exs
+                   bin/support/documentation_browser_fixture.exs
+                   test/e2e/documentation_test.exs test/support/documentation_server.ex
                    tools/lint/check.ts tools/lint/frontend-style.ts tools/lint/ordering.ts
                    tools/lint/spacing.ts tools/lint/format.ts tools/lint/biome-host.ts
                    tools/lint/frontend-style.test.ts tools/lint/biome.test.ts

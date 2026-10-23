@@ -30,6 +30,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
   @deadline_ms 900_000
   @cohort ~w(hosts/workbench/config/**/* hosts/workbench/lib/**/*
              hosts/workbench/bin/serve_documentation_browser_fixture.exs
+             hosts/workbench/bin/support/documentation_browser_fixture.exs
              hosts/workbench/mix_tasks/**/* hosts/workbench/priv/static/**/*
              hosts/workbench/priv/seeds.exs hosts/workbench/priv/seeds/**/*
              hosts/workbench/README.md hosts/workbench/mix.exs hosts/workbench/mix.lock
