@@ -205,7 +205,7 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
 
     {output, status} =
       System.cmd("tar", ["-cf", archive, "-C", source | relative],
-        env: ChildEnvironment.scrubbed(),
+        env: [{"COPYFILE_DISABLE", "1"} | ChildEnvironment.scrubbed()],
         stderr_to_stdout: true
       )
 

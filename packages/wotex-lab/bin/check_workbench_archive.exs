@@ -195,7 +195,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
 
     {output, status} =
       System.cmd("tar", ["-cf", archive, "-C", stage, "."],
-        env: ChildEnvironment.scrubbed(),
+        env: [{"COPYFILE_DISABLE", "1"} | ChildEnvironment.scrubbed()],
         stderr_to_stdout: true
       )
 
@@ -224,6 +224,9 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     |> Path.join("**/*")
     |> Path.wildcard(match_dot: true)
     |> Enum.each(fn path ->
+      String.starts_with?(Path.basename(path), "._") &&
+        abort("source artifact contains platform metadata: #{Path.relative_to(path, consumer)}")
+
       match?({:ok, %File.Stat{type: :symlink}}, File.lstat(path)) &&
         abort("source artifact contains a symlink: #{Path.relative_to(path, consumer)}")
     end)
@@ -532,7 +535,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
 
     {log, status} =
       System.cmd("tar", ["-czf", release_target, "-C", release_root, Path.basename(release)],
-        env: ChildEnvironment.scrubbed(),
+        env: [{"COPYFILE_DISABLE", "1"} | ChildEnvironment.scrubbed()],
         stderr_to_stdout: true
       )
 

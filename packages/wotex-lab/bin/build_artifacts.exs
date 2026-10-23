@@ -145,7 +145,7 @@ defmodule Wotex.Lab.BuildArtifacts do
 
     {log, status} =
       System.cmd("tar", ["-cf", output, "-C", root | relative],
-        env: ChildEnvironment.scrubbed(),
+        env: [{"COPYFILE_DISABLE", "1"} | ChildEnvironment.scrubbed()],
         stderr_to_stdout: true
       )
 
