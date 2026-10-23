@@ -1,6 +1,6 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.6.2. Contract: accepted. Implementation status:
+Specification version: 0.7.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 The documentation cohort pins published DocShell 1.0.0 across the family
@@ -145,11 +145,20 @@ this repository, plus the separate `wotex-dot` source. A directory under
 | Binding templates | `wotex-binding-http`, `wotex-binding-mqtt` |
 | Protocol bindings | `wotex-modbus`, `wotex-coap`, `wotex-bacnet`, `wotex-opcua`, `wotex-ble`, `wotex-matter`, `wotex-thread` |
 | Discovery and exchange | `wotex-directory`, `wotex-continuum` |
+| Profiles and routines | `wotex-profiles`, `wotex-routines` |
+| Generic transport and coordinator | `wotex-udp`, `wotex-zigbee` |
 | Numerical computing | `wotex-nx` |
 | Conformance | `wotex-conformance` |
 | Laboratory | `wotex-lab` |
 | Family documentation | `docs/` outside `docs/packages/`: the root index `docs/README.md`, architecture and guides |
 | Project governance | `wotex-dot` |
+
+The accepted membership contains all twenty registered packages plus the family
+documentation and project governance sources. The four newly admitted packages
+use the same DocShell 1.0 build-only dependency and existing isolated extraction
+configuration. The committed eighteen-source cohort remains historical until
+the owning collection builder regenerates all twenty-two sources from exact
+revisions; adding names or dependencies does not renew collection evidence.
 
 Every row except the last two names a package under `packages/`.
 `packages/wotex-lab/priv/documentation/cohort.json` describes each member with

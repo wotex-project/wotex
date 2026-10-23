@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.16.2. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.17.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -76,6 +76,12 @@ Version 1.16.2 fetches exact documentation revisions into disposable detached
 checkouts without configuring remotes. Invalid identities and credential-bearing
 URLs fail before checkout; missing objects fail during fetch. Runtime routes,
 source membership and Action authority are unchanged.
+
+Version 1.17 admits Profiles, Routines, UDP and Zigbee to the complete
+documentation target, bringing it to twenty package sources plus family and
+governance documents. All four producers have the same build-only DocShell
+dependency. The previous eighteen-source lock is historical until an executed
+twenty-two-source build replaces it.
 
 ## Delivery status
 
