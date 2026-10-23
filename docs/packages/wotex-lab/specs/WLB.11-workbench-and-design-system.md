@@ -1,6 +1,6 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.32.0. Contract: accepted. Implementation status:
+Specification version: 0.32.1. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 Version 0.32 adds explicitly selected host-configured Modbus room profiles.
@@ -8,6 +8,16 @@ The session registry admits up to four closed IPv4 endpoint profiles and
 exclusively leases each remote endpoint to one live room. Built-in loopback
 rooms retain their existing defaults. Browser input selects only a configured
 profile id; it cannot supply an address, module, credentials or executable.
+
+Version 0.32.1 corrects the reference host's monotonic-to-UTC mapping.
+Each room samples a wall instant and monotonic coordinate once. Their offset
+anchors observation and result times; the same projected advancing clock
+supplies channel delivery and host lifecycle times. Directory simulation keeps
+its separately owned fixed wall instant. Monotonic deadlines and policy expiry
+remain unchanged. Wire fields, schemas and authority are unchanged; timestamps
+now identify the actual room interval rather than an offset calendar year.
+The clock regression exercises actual Modbus reads and approved dispatch,
+decodes the exchanged values and checks their UTC interval.
 
 ## Configured Modbus room profile
 

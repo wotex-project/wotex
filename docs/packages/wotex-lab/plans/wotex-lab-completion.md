@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.14.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.14.1. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -36,6 +36,10 @@ The frontend standard and executable gate retain the same distinction.
 Version 1.14 adds explicit host-configured Modbus rooms and simulator-backed
 Workbench browser acceptance under WLB.11. Endpoint leases, actual transport
 receipts and Action approval remain server-owned.
+
+Version 1.14.1 corrects the host clock anchor for Continuum observations,
+results, deliveries and lifecycle timestamps. Policy expiry remains monotonic;
+wire schemas and command authority are unchanged.
 
 ## Delivery status
 

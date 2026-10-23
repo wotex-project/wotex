@@ -195,7 +195,10 @@ defmodule WotexLabWorkbench.Room do
     Process.put(:room_owned_local, [])
     Process.put(:room_owned_monitors, %{})
     lab = Keyword.fetch!(opts, :lab)
-    epoch = DateTime.utc_now()
+    wall_started_at = DateTime.utc_now()
+    monotonic_started_at = System.monotonic_time(:millisecond)
+    epoch = DateTime.add(wall_started_at, -monotonic_started_at, :millisecond)
+    wire_clock = fn -> DateTime.add(epoch, System.monotonic_time(:millisecond), :millisecond) end
     token = Base.url_encode64(:crypto.strong_rand_bytes(16), padding: false)
     instance = "room-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
 
@@ -211,21 +214,21 @@ defmodule WotexLabWorkbench.Room do
          {:ok, specs} <- RoomProfiles.specs(profile, seed_specs),
          {:ok, things} <- start_things(lab, token, specs, profile),
          {:ok, repository} <- managed(lab, :things, {EtsRepository, id: :directory}),
-         {:ok, clock} <- local(Clock.start_link(epoch)),
+         {:ok, clock} <- local(Clock.start_link(wall_started_at)),
          {:ok, identifier} <- local(Identifier.start_link()),
          {:ok, service} <- service(repository, clock, identifier, things),
          context <- Context.new!(:operator),
          :ok <- register_all(service, context, things),
          {:ok, consumed} <- consume_things(service, context, things, token, specs, profile),
          {:ok, channel} <-
-           local(Channel.start_link(id: :room_channel, clock: fn -> epoch end, capacity: 64)),
+           local(Channel.start_link(id: :room_channel, clock: wire_clock, capacity: 64)),
          {:ok, host} <-
            local(
              Host.start_link(
                id: :room_host,
                channel: channel,
                endpoint: "cloud",
-               clock: fn -> epoch end,
+               clock: wire_clock,
                things: consumed
              )
            ),
@@ -271,7 +274,7 @@ defmodule WotexLabWorkbench.Room do
          channel: channel,
          host: host,
          policy: policy,
-         scope: Scenario.scope("edge", epoch),
+         scope: Scenario.scope("edge", wall_started_at),
          watermark: 1,
          state_revision: 1,
          runs: %{},
