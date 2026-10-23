@@ -1,0 +1,367 @@
+{
+  "button": {
+    "Danger": {
+      "label": "Delete",
+      "variant": "danger"
+    },
+    "Disabled": {
+      "disabled": true,
+      "label": "Unavailable"
+    },
+    "Loading": {
+      "label": "Loading",
+      "loading": true
+    },
+    "Primary": {
+      "label": "Primary action"
+    }
+  },
+  "callout": {
+    "Note": {
+      "kind": "note",
+      "title": "Read this first"
+    },
+    "Warning": {
+      "kind": "warning",
+      "title": "Review before continuing"
+    }
+  },
+  "chart": {
+    "Empty": {
+      "points": [],
+      "series": [],
+      "title": "Throughput"
+    },
+    "Populated": {
+      "points": [
+        {
+          "key": "one",
+          "label": "09:00",
+          "values": {
+            "requests": 20
+          }
+        },
+        {
+          "key": "two",
+          "label": "10:00",
+          "values": {
+            "requests": 48
+          }
+        }
+      ],
+      "series": [
+        {
+          "id": "requests",
+          "label": "Requests"
+        }
+      ],
+      "title": "Throughput"
+    }
+  },
+  "checkbox": {
+    "Checked": {
+      "checked": true,
+      "id": "alerts",
+      "label": "Send alerts",
+      "name": "alerts"
+    }
+  },
+  "data-grid": {
+    "Empty": {
+      "columns": [],
+      "label": "Records",
+      "rows": []
+    },
+    "Populated": {
+      "columns": [
+        {
+          "key": "name",
+          "label": "Name"
+        },
+        {
+          "key": "state",
+          "label": "State"
+        }
+      ],
+      "label": "Records",
+      "rows": [
+        {
+          "key": "one",
+          "values": {
+            "name": "First",
+            "state": "Ready"
+          }
+        },
+        {
+          "key": "two",
+          "values": {
+            "name": "Second",
+            "state": "Waiting"
+          }
+        }
+      ]
+    }
+  },
+  "data-table": {
+    "Empty": {
+      "caption": "Example records",
+      "columns": [],
+      "rows": []
+    },
+    "Populated": {
+      "caption": "Example records",
+      "columns": [
+        {
+          "key": "name",
+          "label": "Name"
+        },
+        {
+          "key": "state",
+          "label": "State"
+        }
+      ],
+      "rows": [
+        {
+          "key": "one",
+          "values": {
+            "name": "First",
+            "state": "Ready"
+          }
+        }
+      ]
+    }
+  },
+  "dialog": {
+    "Open": {
+      "id": "example-dialog",
+      "open": true,
+      "title": "Example dialog"
+    }
+  },
+  "disclosure": {
+    "Open": {
+      "open": true,
+      "summary": "More information"
+    }
+  },
+  "field": {
+    "Default": {
+      "id": "name",
+      "label": "Name",
+      "name": "name"
+    },
+    "Invalid": {
+      "error": "Enter a valid address",
+      "id": "email",
+      "label": "Email",
+      "name": "email",
+      "value": "invalid"
+    }
+  },
+  "filter": {
+    "Default": {
+      "fields": [
+        {
+          "label": "Contains",
+          "name": "query"
+        },
+        {
+          "label": "State",
+          "name": "state",
+          "options": [
+            {
+              "label": "Any",
+              "value": ""
+            },
+            {
+              "label": "Ready",
+              "value": "ready"
+            }
+          ]
+        }
+      ],
+      "legend": "Filter results"
+    }
+  },
+  "icon-button": {
+    "Default": {
+      "icon": "search",
+      "label": "Open search"
+    },
+    "Disabled": {
+      "disabled": true,
+      "icon": "close",
+      "label": "Unavailable"
+    }
+  },
+  "inspector": {
+    "Open": {
+      "fields": [
+        {
+          "label": "State",
+          "value": "Ready"
+        },
+        {
+          "label": "Owner",
+          "value": "Example"
+        }
+      ],
+      "open": true,
+      "title": "Record details"
+    }
+  },
+  "legend": {
+    "Default": {
+      "items": [
+        {
+          "color": "#3457d5",
+          "id": "requests",
+          "label": "Requests"
+        }
+      ],
+      "label": "Series"
+    },
+    "Empty": {
+      "items": [],
+      "label": "Series"
+    }
+  },
+  "link": {
+    "External": {
+      "href": "https://example.test/docs",
+      "label": "External documentation"
+    },
+    "Internal": {
+      "href": "/guide",
+      "label": "Read the guide"
+    }
+  },
+  "menu": {
+    "Open": {
+      "items": [
+        {
+          "id": "view",
+          "label": "View"
+        },
+        {
+          "id": "remove",
+          "label": "Remove"
+        }
+      ],
+      "label": "Actions",
+      "open": true
+    }
+  },
+  "navigation": {
+    "CurrentPage": {
+      "current": "/guide",
+      "items": [
+        {
+          "id": "home",
+          "path": "/",
+          "title": "Home"
+        },
+        {
+          "id": "guide",
+          "path": "/guide",
+          "title": "Guide"
+        }
+      ],
+      "label": "Documentation"
+    }
+  },
+  "panel": {
+    "Default": {
+      "title": "Summary"
+    }
+  },
+  "progress": {
+    "Determinate": {
+      "label": "Upload progress",
+      "value": 64
+    },
+    "Indeterminate": {
+      "label": "Working"
+    }
+  },
+  "radio-group": {
+    "Default": {
+      "legend": "Density",
+      "name": "density",
+      "options": [
+        {
+          "label": "Comfortable",
+          "value": "comfortable"
+        },
+        {
+          "label": "Compact",
+          "value": "compact"
+        }
+      ],
+      "value": "comfortable"
+    }
+  },
+  "select": {
+    "Default": {
+      "id": "region",
+      "label": "Region",
+      "name": "region",
+      "options": [
+        {
+          "label": "Europe",
+          "value": "eu"
+        },
+        {
+          "label": "Americas",
+          "value": "us"
+        }
+      ],
+      "value": "eu"
+    }
+  },
+  "state": {
+    "Disconnected": {
+      "message": "Reconnect to resume.",
+      "state": "disconnected",
+      "title": "Disconnected"
+    }
+  },
+  "status-badge": {
+    "Danger": {
+      "kind": "danger",
+      "label": "Failed"
+    },
+    "Success": {
+      "kind": "success",
+      "label": "Ready"
+    }
+  },
+  "tabs": {
+    "Default": {
+      "label": "Example sections",
+      "tabs": [
+        {
+          "content": "Readable summary",
+          "id": "summary",
+          "label": "Summary"
+        },
+        {
+          "content": "Readable details",
+          "id": "details",
+          "label": "Details"
+        }
+      ]
+    }
+  },
+  "toast": {
+    "Success": {
+      "kind": "success",
+      "message": "Changes saved"
+    }
+  },
+  "tooltip": {
+    "Default": {
+      "text": "Additional context"
+    }
+  }
+}

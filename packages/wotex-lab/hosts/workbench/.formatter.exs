@@ -5,7 +5,8 @@
     "{mix,.formatter,.check,.credo}.exs",
     "{config,lib,test}/**/*.{ex,exs,heex}",
     "bin/*.exs",
-    "mix_tasks/*.ex"
+    "mix_tasks/*.ex",
+    "priv/seeds.exs"
   ],
   line_length: 100
 ]

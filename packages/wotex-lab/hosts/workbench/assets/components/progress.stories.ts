@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { storyFixture } from "../catalogue/index.js"
+import { componentStory, storyFixture } from "../catalogue/index.js"
 import Progress from "./progress.svelte"
 
 const meta: Meta = {
@@ -13,13 +13,8 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 export const Determinate: Story = {
-  args: {
-    label: "Upload progress",
-    value: 64,
-  },
+  args: componentStory("progress", "Determinate"),
 }
 export const Indeterminate: Story = {
-  args: {
-    label: "Working",
-  },
+  args: componentStory("progress", "Indeterminate"),
 }

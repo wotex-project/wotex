@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { createStoryTransport } from "../catalogue/index.js"
+import { createStoryTransport, islandStory } from "../catalogue/index.js"
 import DataGrid from "./data-grid.svelte"
 
 const meta: Meta = {
@@ -12,46 +12,14 @@ type Story = StoryObj
 
 export const Connected: Story = {
   args: {
-    payload: {
-      label: "Discovered Things",
-      columns: [
-        {
-          key: "name",
-          label: "Thing",
-        },
-        {
-          key: "protocol",
-          label: "Protocol",
-        },
-      ],
-      rows: [
-        {
-          key: "sensor",
-          values: {
-            name: "Lab sensor",
-            protocol: "CoAP",
-          },
-        },
-        {
-          key: "relay",
-          values: {
-            name: "Bench relay",
-            protocol: "Modbus",
-          },
-        },
-      ],
-    },
+    payload: islandStory("data-grid"),
     transport: createStoryTransport(),
   },
 }
 
 export const Empty: Story = {
   args: {
-    payload: {
-      label: "Discovered Things",
-      columns: [],
-      rows: [],
-    },
+    payload: islandStory("data-grid", "empty"),
     transport: createStoryTransport(),
   },
 }

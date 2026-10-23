@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { storyFixture } from "../catalogue/index.js"
+import { componentStory, storyFixture } from "../catalogue/index.js"
 import Navigation from "./navigation.svelte"
 
 const meta: Meta = {
@@ -13,20 +13,5 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 export const CurrentPage: Story = {
-  args: {
-    label: "Documentation",
-    current: "/guide",
-    items: [
-      {
-        id: "home",
-        title: "Home",
-        path: "/",
-      },
-      {
-        id: "guide",
-        title: "Guide",
-        path: "/guide",
-      },
-    ],
-  },
+  args: componentStory("navigation", "CurrentPage"),
 }

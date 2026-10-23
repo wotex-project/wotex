@@ -43,8 +43,18 @@ From this directory:
 
 ```sh
 WOTEX_PATH_DEPS=1 mix setup
+WOTEX_PATH_DEPS=1 mix seed
 WOTEX_PATH_DEPS=1 mix phx.server
 ```
+
+`priv/seeds.exs` owns reference-room simulator values and component and island Storybook
+examples. `mix seed` generates deterministic JSON; `mix seed --check` refuses
+missing or stale output without writing it. Neither command starts a room or
+performs an operation. The host gate checks these files. Room startup validates
+the generated seed before starting its Things; invalid or missing data refuses
+startup. Browser islands receive only server snapshots. Static Storybook alone
+imports the generated example payloads, and production bundles exclude them.
+This host uses disposable room processes rather than Ash resources or a database.
 
 `WOTEX_PATH_DEPS=1` is the sole workspace switch. With it unset, dependencies
 are resolved as versioned artifacts. LiveView owns session state, admission and

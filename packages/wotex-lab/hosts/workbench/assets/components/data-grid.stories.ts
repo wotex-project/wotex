@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { storyFixture } from "../catalogue/index.js"
+import { componentStory, storyFixture } from "../catalogue/index.js"
 import DataGrid from "./data-grid.svelte"
 
 const meta: Meta = {
@@ -13,40 +13,8 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 export const Populated: Story = {
-  args: {
-    label: "Records",
-    columns: [
-      {
-        key: "name",
-        label: "Name",
-      },
-      {
-        key: "state",
-        label: "State",
-      },
-    ],
-    rows: [
-      {
-        key: "one",
-        values: {
-          name: "First",
-          state: "Ready",
-        },
-      },
-      {
-        key: "two",
-        values: {
-          name: "Second",
-          state: "Waiting",
-        },
-      },
-    ],
-  },
+  args: componentStory("data-grid", "Populated"),
 }
 export const Empty: Story = {
-  args: {
-    label: "Records",
-    columns: [],
-    rows: [],
-  },
+  args: componentStory("data-grid", "Empty"),
 }

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { storyFixture } from "../catalogue/index.js"
+import { componentStory, storyFixture } from "../catalogue/index.js"
 import Checkbox from "./checkbox.svelte"
 
 const meta: Meta = {
@@ -13,10 +13,5 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 export const Checked: Story = {
-  args: {
-    id: "alerts",
-    name: "alerts",
-    label: "Send alerts",
-    checked: true,
-  },
+  args: componentStory("checkbox", "Checked"),
 }

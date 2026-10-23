@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { storyFixture } from "../catalogue/index.js"
+import { componentStory, storyFixture } from "../catalogue/index.js"
 import StatusBadge from "./status-badge.svelte"
 
 const meta: Meta = {
@@ -13,14 +13,8 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 export const Success: Story = {
-  args: {
-    label: "Ready",
-    kind: "success",
-  },
+  args: componentStory("status-badge", "Success"),
 }
 export const Danger: Story = {
-  args: {
-    label: "Failed",
-    kind: "danger",
-  },
+  args: componentStory("status-badge", "Danger"),
 }

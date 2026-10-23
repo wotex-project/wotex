@@ -48,6 +48,7 @@ defmodule WotexLabWorkbench.Room do
     Provenance,
     Run,
     Runs,
+    Seeds,
     ThingProperties
   }
 
@@ -63,21 +64,6 @@ defmodule WotexLabWorkbench.Room do
   @history_snapshots 120
   @history_bytes 1_048_576
   @history_queries 4
-  @things [
-    %{
-      key: "thermostat",
-      role: :thermostat,
-      scheme: "sim-thermostat",
-      state: %{"temperature" => 21.5}
-    },
-    %{key: "meter", role: :meter, scheme: "sim-meter", state: %{"power" => 2_500.0}},
-    %{
-      key: "actuator",
-      role: :actuator,
-      scheme: "loopback",
-      state: %{"temperature" => 20.0, "target" => 21.0}
-    }
-  ]
 
   @doc false
   @spec child_spec(keyword()) :: Supervisor.child_spec()
@@ -206,14 +192,16 @@ defmodule WotexLabWorkbench.Room do
     token = Base.url_encode64(:crypto.strong_rand_bytes(16), padding: false)
     instance = "room-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
 
-    with {:ok, things} <- start_things(lab, token),
+    with {:ok, specs} <- Seeds.room(),
+         {:ok, things} <- start_things(lab, token, specs),
          {:ok, repository} <- managed(lab, :things, {EtsRepository, id: :directory}),
          {:ok, clock} <- local(Clock.start_link(epoch)),
          {:ok, identifier} <- local(Identifier.start_link()),
          {:ok, service} <- service(repository, clock, identifier, things),
          context <- Context.new!(:operator),
          :ok <- register_all(service, context, things),
-         {:ok, consumed} <- Scenario.discover(service, context, transport_opts(things, token)),
+         {:ok, consumed} <-
+           Scenario.discover(service, context, transport_opts(things, token, specs)),
          {:ok, channel} <-
            local(Channel.start_link(id: :room_channel, clock: fn -> epoch end, capacity: 64)),
          {:ok, host} <-
@@ -254,13 +242,14 @@ defmodule WotexLabWorkbench.Room do
          lab: lab,
          epoch: epoch,
          things: things,
+         specs: specs,
          repository: repository,
          service: service,
          context: context,
          consumed: consumed,
          connections: Connections.new(Map.values(things)),
          observations: observations,
-         ids: Map.new(@things, fn spec -> {spec.role, things[spec.key].id} end),
+         ids: Map.new(specs, fn spec -> {spec.role, things[spec.key].id} end),
          channel: channel,
          host: host,
          policy: policy,
@@ -413,7 +402,7 @@ defmodule WotexLabWorkbench.Room do
 
   def handle_call(:things, _, state) do
     listed =
-      Enum.map(@things, fn %{key: key, scheme: scheme} ->
+      Enum.map(state.specs, fn %{key: key, scheme: scheme} ->
         thing = state.things[key]
 
         %{
@@ -867,9 +856,9 @@ defmodule WotexLabWorkbench.Room do
   defp error_code(list) when is_list(list), do: :invalid
   defp error_code(_), do: :error
 
-  defp start_things(lab, token) do
-    Enum.reduce_while(@things, {:ok, %{}}, fn spec, {:ok, acc} ->
-      {:ok, td} = thing_description(spec.key)
+  defp start_things(lab, token, specs) do
+    Enum.reduce_while(specs, {:ok, %{}}, fn spec, {:ok, acc} ->
+      td = spec.td
       document = ThingDescription.to_map(td)
 
       child =
@@ -905,61 +894,6 @@ defmodule WotexLabWorkbench.Room do
     end)
   end
 
-  defp thing_description("actuator") do
-    :wotex_lab
-    |> Application.app_dir("priv/fixtures/loopback/thing-description.json")
-    |> File.read!()
-    |> ThingDescription.parse()
-  end
-
-  defp thing_description("thermostat") do
-    ThingDescription.from_map(%{
-      "@context" => Wotex.td_context_1_1(),
-      "id" => "urn:wotex:lab:workbench:thermostat",
-      "title" => "Simulated thermostat",
-      "security" => ["nosec_sc"],
-      "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
-      "properties" => %{
-        "temperature" => %{
-          "type" => "number",
-          "unit" => "Cel",
-          "readOnly" => true,
-          "observable" => true,
-          "forms" => [
-            %{
-              "href" => "sim-thermostat://thermostat/temperature",
-              "op" => ["readproperty", "observeproperty", "unobserveproperty"]
-            }
-          ]
-        }
-      }
-    })
-  end
-
-  defp thing_description("meter") do
-    ThingDescription.from_map(%{
-      "@context" => Wotex.td_context_1_1(),
-      "id" => "urn:wotex:lab:workbench:meter",
-      "title" => "Simulated energy meter",
-      "security" => ["nosec_sc"],
-      "securityDefinitions" => %{"nosec_sc" => %{"scheme" => "nosec"}},
-      "properties" => %{
-        "power" => %{
-          "type" => "number",
-          "unit" => "W",
-          "readOnly" => true,
-          "observable" => true,
-          "forms" => [
-            %{
-              "href" => "sim-meter://meter/power",
-              "op" => ["readproperty", "observeproperty", "unobserveproperty"]
-            }
-          ]
-        }
-      }
-    })
-  end
-
   defp service(repository, clock, identifier, things) do
     Service.new(
       repository: {EtsRepository, repository},
@@ -979,9 +913,9 @@ defmodule WotexLabWorkbench.Room do
     end)
   end
 
-  defp transport_opts(things, token) do
+  defp transport_opts(things, token, specs) do
     profiles =
-      Enum.map(@things, fn %{role: role, scheme: scheme} ->
+      Enum.map(specs, fn %{role: role, scheme: scheme} ->
         {:ok, profile} =
           BindingProfile.new(id: role, schemes: [scheme], operations: Wotex.Runtime.operations())
 

@@ -147,6 +147,7 @@ defmodule WotexLabWorkbench.MixProject do
   defp aliases do
     [
       check: [&WotexLabWorkbench.CheckRunner.run/1],
+      seed: ["wotex_lab.seed"],
       setup: ["deps.get", "deps.compile", "assets.setup"],
       "assets.setup": ["cmd pnpm install --frozen-lockfile"],
       "assets.build": ["cmd pnpm run build"],

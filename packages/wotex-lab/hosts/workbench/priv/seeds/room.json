@@ -1,0 +1,175 @@
+{
+  "schema": "wotex-lab-room-seed/v1",
+  "things": [
+    {
+      "document": {
+        "@context": "https://www.w3.org/2022/wot/td/v1.1",
+        "id": "urn:wotex:lab:workbench:thermostat",
+        "properties": {
+          "temperature": {
+            "forms": [
+              {
+                "href": "sim-thermostat://thermostat/temperature",
+                "op": [
+                  "readproperty",
+                  "observeproperty",
+                  "unobserveproperty"
+                ]
+              }
+            ],
+            "observable": true,
+            "readOnly": true,
+            "type": "number",
+            "unit": "Cel"
+          }
+        },
+        "security": [
+          "nosec_sc"
+        ],
+        "securityDefinitions": {
+          "nosec_sc": {
+            "scheme": "nosec"
+          }
+        },
+        "title": "Simulated thermostat"
+      },
+      "key": "thermostat",
+      "scheme": "sim-thermostat",
+      "state": {
+        "temperature": 21.5
+      }
+    },
+    {
+      "document": {
+        "@context": "https://www.w3.org/2022/wot/td/v1.1",
+        "id": "urn:wotex:lab:workbench:meter",
+        "properties": {
+          "power": {
+            "forms": [
+              {
+                "href": "sim-meter://meter/power",
+                "op": [
+                  "readproperty",
+                  "observeproperty",
+                  "unobserveproperty"
+                ]
+              }
+            ],
+            "observable": true,
+            "readOnly": true,
+            "type": "number",
+            "unit": "W"
+          }
+        },
+        "security": [
+          "nosec_sc"
+        ],
+        "securityDefinitions": {
+          "nosec_sc": {
+            "scheme": "nosec"
+          }
+        },
+        "title": "Simulated energy meter"
+      },
+      "key": "meter",
+      "scheme": "sim-meter",
+      "state": {
+        "power": 2.5e3
+      }
+    },
+    {
+      "document": {
+        "@context": "https://www.w3.org/2022/wot/td/v1.1",
+        "actions": {
+          "setTarget": {
+            "forms": [
+              {
+                "href": "loopback://room/set-target",
+                "security": [
+                  "bearer_sc"
+                ]
+              }
+            ],
+            "input": {
+              "maximum": 35,
+              "minimum": 5,
+              "type": "number",
+              "unit": "Cel"
+            }
+          }
+        },
+        "events": {
+          "alarm": {
+            "data": {
+              "type": "string"
+            },
+            "forms": [
+              {
+                "href": "loopback://room/alarm"
+              }
+            ]
+          }
+        },
+        "id": "urn:wotex:lab:room:1",
+        "properties": {
+          "label": {
+            "forms": [
+              {
+                "href": "loopback://room/label"
+              }
+            ],
+            "type": "string"
+          },
+          "target": {
+            "forms": [
+              {
+                "href": "loopback://room/target",
+                "security": [
+                  "bearer_sc"
+                ]
+              }
+            ],
+            "maximum": 35,
+            "minimum": 5,
+            "type": "number",
+            "unit": "Cel"
+          },
+          "temperature": {
+            "forms": [
+              {
+                "href": "loopback://room/temperature",
+                "op": [
+                  "readproperty",
+                  "observeproperty",
+                  "unobserveproperty"
+                ]
+              }
+            ],
+            "observable": true,
+            "readOnly": true,
+            "type": "number",
+            "unit": "Cel"
+          }
+        },
+        "security": [
+          "nosec_sc"
+        ],
+        "securityDefinitions": {
+          "bearer_sc": {
+            "scheme": "bearer"
+          },
+          "nosec_sc": {
+            "scheme": "nosec"
+          }
+        },
+        "title": "Lab room"
+      },
+      "key": "actuator",
+      "scheme": "loopback",
+      "state": {
+        "target": 21.0,
+        "temperature": 20.0
+      }
+    }
+  ]
+}

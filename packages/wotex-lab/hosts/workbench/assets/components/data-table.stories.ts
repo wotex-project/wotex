@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { storyFixture } from "../catalogue/index.js"
+import { componentStory, storyFixture } from "../catalogue/index.js"
 import DataTable from "./data-table.svelte"
 
 const meta: Meta = {
@@ -13,33 +13,8 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 export const Populated: Story = {
-  args: {
-    caption: "Example records",
-    columns: [
-      {
-        key: "name",
-        label: "Name",
-      },
-      {
-        key: "state",
-        label: "State",
-      },
-    ],
-    rows: [
-      {
-        key: "one",
-        values: {
-          name: "First",
-          state: "Ready",
-        },
-      },
-    ],
-  },
+  args: componentStory("data-table", "Populated"),
 }
 export const Empty: Story = {
-  args: {
-    caption: "Example records",
-    columns: [],
-    rows: [],
-  },
+  args: componentStory("data-table", "Empty"),
 }

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { storyFixture } from "../catalogue/index.js"
+import { componentStory, storyFixture } from "../catalogue/index.js"
 import Panel from "./panel.svelte"
 
 const meta: Meta = {
@@ -13,7 +13,5 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 export const Default: Story = {
-  args: {
-    title: "Summary",
-  },
+  args: componentStory("panel", "Default"),
 }

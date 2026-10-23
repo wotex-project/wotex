@@ -5,6 +5,7 @@ defmodule WotexLabWorkbench.CheckRunner do
     {:deps_get, "mix", ["deps.get", "--check-locked"], "test"},
     {:frontend_dependencies, "mix", ["assets.setup"], "test"},
     {:compiler, "mix", ["compile", "--warnings-as-errors"], "test"},
+    {:seed_data, "mix", ["seed", "--check"], "test"},
     {:frontend, "mix", ["assets.check"], "test"},
     {:formatter, "mix", ["format", "--check-formatted"], "test"},
     {:credo, "mix", ["credo", "--strict"], "test"},

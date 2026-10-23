@@ -39,12 +39,12 @@ defmodule Wotex.Lab.BuildArtifacts do
   ]
   @workbench_patterns ~w(.check.exs .credo.exs .dockerignore .formatter.exs Dockerfile
                           README.md .storybook/**/* bin/**/* config/**/* lib/**/* mix_tasks/**/*
-                          priv/static/**/* test/**/* mix.exs mix.lock assets/**/* package.json
+                          priv/static/**/* priv/seeds.exs priv/seeds/**/* test/**/* mix.exs mix.lock assets/**/* package.json
                           pnpm-lock.yaml pnpm-workspace.yaml biome.jsonc tsconfig.json vite.config.ts)
   @nerves_patterns ~w(.check.exs .credo.exs .formatter.exs README.md config/**/* lib/**/*
                        test/**/* mix.exs mix.lock)
   @oci_patterns ~w(.dockerignore Dockerfile README.md config/**/* lib/**/* mix_tasks/**/*
-                    priv/static/**/* mix.exs mix.lock assets/**/*)
+                    priv/static/**/* priv/seeds.exs priv/seeds/**/* mix.exs mix.lock assets/**/*)
 
   @spec run([String.t()]) :: :ok
   def run(argv) do

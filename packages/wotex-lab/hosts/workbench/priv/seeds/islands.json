@@ -1,0 +1,146 @@
+{
+  "canvas": {
+    "connected": {
+      "edges": [
+        {
+          "id": "temperature",
+          "kind": "input",
+          "label": "temperature · °C",
+          "source": "thing-thermostat",
+          "target": "process-smart-room",
+          "target_handle": "temperature"
+        }
+      ],
+      "label": "Connected Things",
+      "nodes": [
+        {
+          "detail": "Storybook sample",
+          "id": "thing-thermostat",
+          "identity": "urn:wotex:lab:workbench:thermostat",
+          "kind": "thing",
+          "status": "Read",
+          "title": "Thermostat",
+          "unit": "°C",
+          "value": "21.5",
+          "x": 160,
+          "y": 235
+        },
+        {
+          "detail": "",
+          "id": "process-smart-room",
+          "identity": "smart_room",
+          "kind": "process",
+          "status": "Idle",
+          "title": "Smart room",
+          "unit": "",
+          "value": "",
+          "x": 520,
+          "y": 365
+        }
+      ]
+    },
+    "empty": {
+      "edges": [],
+      "label": "Connected Things",
+      "nodes": []
+    }
+  },
+  "chart": {
+    "connected": {
+      "points": [
+        {
+          "key": "one",
+          "label": "09:00",
+          "values": {
+            "temperature": 20.4
+          }
+        },
+        {
+          "key": "two",
+          "label": "10:00",
+          "values": {
+            "temperature": 21.1
+          }
+        },
+        {
+          "key": "three",
+          "label": "11:00",
+          "values": {
+            "temperature": 20.8
+          }
+        }
+      ],
+      "series": [
+        {
+          "id": "temperature",
+          "label": "Temperature °C"
+        }
+      ],
+      "title": "Room temperature"
+    },
+    "empty": {
+      "points": [],
+      "series": [],
+      "title": "Room temperature"
+    }
+  },
+  "data-grid": {
+    "connected": {
+      "columns": [
+        {
+          "key": "name",
+          "label": "Thing"
+        },
+        {
+          "key": "protocol",
+          "label": "Protocol"
+        }
+      ],
+      "label": "Discovered Things",
+      "rows": [
+        {
+          "key": "sensor",
+          "values": {
+            "name": "Lab sensor",
+            "protocol": "CoAP"
+          }
+        },
+        {
+          "key": "relay",
+          "values": {
+            "name": "Bench relay",
+            "protocol": "Modbus"
+          }
+        }
+      ]
+    },
+    "empty": {
+      "columns": [],
+      "label": "Discovered Things",
+      "rows": []
+    }
+  },
+  "tabs": {
+    "connected": {
+      "label": "Run evidence",
+      "selected": "metrics",
+      "tabs": [
+        {
+          "content": "Bounded measurements",
+          "id": "metrics",
+          "label": "Metrics"
+        },
+        {
+          "content": "Structured runtime events",
+          "id": "logs",
+          "label": "Logs"
+        },
+        {
+          "content": "Causal operation spans",
+          "id": "traces",
+          "label": "Traces"
+        }
+      ]
+    }
+  }
+}

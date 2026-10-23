@@ -24,12 +24,13 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     {:wotex_binding_mqtt, "wotex-binding-mqtt"},
     {:wotex_lab, "wotex-lab"}
   ]
-  @source_entries ~w(config lib mix_tasks priv/static README.md mix.exs mix.lock)
+  @source_entries ~w(config lib mix_tasks priv/static priv/seeds priv/seeds.exs README.md mix.exs mix.lock)
   @native_packages ~w(baml_elixir ex_maude explorer)a
   @deadline_ms 900_000
   @cohort ~w(hosts/workbench/config/**/* hosts/workbench/lib/**/*
              hosts/workbench/bin/serve_documentation_browser_fixture.exs
              hosts/workbench/mix_tasks/**/* hosts/workbench/priv/static/**/*
+             hosts/workbench/priv/seeds.exs hosts/workbench/priv/seeds/**/*
              hosts/workbench/README.md hosts/workbench/mix.exs hosts/workbench/mix.lock
              hosts/workbench/package.json hosts/workbench/pnpm-lock.yaml
              bin/check_workbench_archive.exs bin/support/archive_repository.exs

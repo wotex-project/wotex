@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { storyFixture } from "../catalogue/index.js"
+import { componentStory, storyFixture } from "../catalogue/index.js"
 import State from "./state.svelte"
 
 const meta: Meta = {
@@ -13,11 +13,7 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 export const Disconnected: Story = {
-  args: {
-    title: "Disconnected",
-    message: "Reconnect to resume.",
-    state: "disconnected",
-  },
+  args: componentStory("state", "Disconnected"),
 }
 const ErrorState: Story = {
   args: {

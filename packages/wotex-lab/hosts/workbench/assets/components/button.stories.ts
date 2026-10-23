@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
-import { storyFixture } from "../catalogue/index.js"
+import { componentStory, storyFixture } from "../catalogue/index.js"
 import Button from "./button.svelte"
 
 const meta: Meta = {
@@ -13,25 +13,14 @@ const meta: Meta = {
 export default meta
 type Story = StoryObj
 export const Primary: Story = {
-  args: {
-    label: "Primary action",
-  },
+  args: componentStory("button", "Primary"),
 }
 export const Loading: Story = {
-  args: {
-    label: "Loading",
-    loading: true,
-  },
+  args: componentStory("button", "Loading"),
 }
 export const Disabled: Story = {
-  args: {
-    label: "Unavailable",
-    disabled: true,
-  },
+  args: componentStory("button", "Disabled"),
 }
 export const Danger: Story = {
-  args: {
-    label: "Delete",
-    variant: "danger",
-  },
+  args: componentStory("button", "Danger"),
 }

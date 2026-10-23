@@ -1,5 +1,30 @@
+import componentSeeds from "../../priv/seeds/components.json"
+import seedData from "../../priv/seeds/islands.json"
 import { componentDescriptors, componentDigest } from "../components/descriptors.js"
 import type { IslandTransport, JsonValue } from "../islands/types.js"
+
+export const islandStory = (component: keyof typeof seedData, state = "connected") => {
+  const states: Record<string, Record<string, JsonValue>> = seedData[component]
+  const payload = states[state]
+  if (!payload) {
+    throw new Error(`unknown island story: ${component}/${state}`)
+  }
+  return structuredClone(payload)
+}
+
+export const componentStory = <
+  Component extends keyof typeof componentSeeds,
+  State extends keyof (typeof componentSeeds)[Component] & string,
+>(
+  component: Component,
+  state: State,
+) => {
+  const args = componentSeeds[component][state]
+  if (!args) {
+    throw new Error(`unknown component story: ${component}/${state}`)
+  }
+  return structuredClone(args)
+}
 
 export interface RecordedStoryEvent {
   event: string
