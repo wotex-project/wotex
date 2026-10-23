@@ -116,6 +116,52 @@ defmodule WotexLabWorkbench.SessionsRoomTest do
     assert {:ok, _} = Room.start_run(session.room, experiment.id, params)
   end
 
+  test "an expired decision needs explicit cancellation before a fresh smart-room run", %{
+    registry: registry
+  } do
+    {:ok, session} = Sessions.open(registry)
+    {:ok, session} = Sessions.admit(registry, session.token, :run)
+    {:ok, experiment} = Experiments.fetch("smart_room")
+    {:ok, params} = Experiments.admit(experiment, %{"ttl_ms" => "10"})
+    {:ok, run} = Room.start_run(session.room, experiment.id, params)
+    decision = run.decision
+
+    approval = %{
+      "decision_id" => decision["id"],
+      "proposal_digest" => decision["proposal_digest"],
+      "revision" => Integer.to_string(decision["state_revision"]),
+      "expires_at" => Integer.to_string(decision["expires_at"])
+    }
+
+    before = Enum.find(Room.things(session.room), &(&1.key == "actuator")).stats
+    wait_ms = max(decision["expires_at"] - System.monotonic_time(:millisecond) + 1, 0)
+    assert wait_ms <= 11
+    Process.sleep(wait_ms)
+
+    assert {:error, %Error{code: :expired}} = Room.approve(session.room, run.id, approval)
+
+    assert {:error, %Error{code: :pending_decision}} =
+             Room.start_run(session.room, experiment.id, params)
+
+    assert {:ok, cancelled} = Room.cancel_run(session.room, run.id)
+    assert cancelled.status == :cancelled and is_nil(cancelled.decision)
+    assert is_nil(cancelled.dispatch) and is_nil(cancelled.effect)
+    assert cancelled.proposal == run.proposal
+    assert is_binary(cancelled.record_digest)
+    assert {:ok, ^cancelled} = Room.fetch_run(session.room, run.id)
+    after_cancel = Enum.find(Room.things(session.room), &(&1.key == "actuator")).stats
+    assert after_cancel.handler_calls == before.handler_calls
+    assert after_cancel.state == before.state
+
+    {:ok, fresh_params} = Experiments.admit(experiment, %{"ttl_ms" => "120000"})
+    assert {:ok, fresh} = Room.start_run(session.room, experiment.id, fresh_params)
+    assert fresh.id != run.id and fresh.decision["id"] != decision["id"]
+    assert fresh.status == :awaiting_approval and is_nil(fresh.effect)
+
+    assert {:error, %Error{code: :approval_mismatch}} =
+             Room.approve(session.room, fresh.id, approval)
+  end
+
   test "Thing reads, inert registration, dataset export and reports stay bounded", %{
     registry: registry
   } do
