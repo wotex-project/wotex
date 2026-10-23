@@ -68,13 +68,22 @@ defmodule WotexLabWorkbenchWeb.Layouts do
         <meta name="csrf-token" content={get_csrf_token()} />
         <title>WoTEx documentation</title>
         <link rel="stylesheet" href={"/css/tokens.css?v=#{@token_version}"} />
-        <link rel="stylesheet" href={@documentation_assets["doc-shell.css"]} />
+        <link
+          :if={@documentation_assets["doc-shell.css"]}
+          rel="stylesheet"
+          href={@documentation_assets["doc-shell.css"]}
+        />
         <link rel="stylesheet" href={@documentation_assets["documentation.css"]} />
         <script nonce={@nonce} src="/js/phoenix/phoenix.min.js">
         </script>
         <script nonce={@nonce} src="/js/live_view/phoenix_live_view.min.js">
         </script>
-        <script nonce={@nonce} type="module" src={@documentation_assets["doc-shell-browser.js"]}>
+        <script
+          :if={@documentation_assets["doc-shell-browser.js"]}
+          nonce={@nonce}
+          type="module"
+          src={@documentation_assets["doc-shell-browser.js"]}
+        >
         </script>
         <.vite_assets entry="assets/documentation.ts" nonce={@nonce} />
       </head>
@@ -100,7 +109,7 @@ defmodule WotexLabWorkbenchWeb.Layouts do
 
     case WotexLabWorkbench.Documentation.asset(name) do
       {:ok, _, _, "sha256:" <> digest} -> path <> "?v=" <> digest
-      {:error, _} -> path
+      {:error, _} -> nil
     end
   end
 end
