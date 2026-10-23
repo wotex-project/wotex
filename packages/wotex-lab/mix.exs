@@ -98,10 +98,10 @@ defmodule WotexLab.MixProject do
         end
 
       {_, nil} ->
-        {:doc_shell, "== 0.5.0", only: [:dev, :test, :docs], runtime: false}
+        {:doc_shell, "== 1.0.0", only: [:dev, :test, :docs], runtime: false}
 
       {_, ""} ->
-        {:doc_shell, "== 0.5.0", only: [:dev, :test, :docs], runtime: false}
+        {:doc_shell, "== 1.0.0", only: [:dev, :test, :docs], runtime: false}
 
       _ ->
         raise "DOC_SHELL_CANDIDATE requires WOTEX_PATH_DEPS=1"

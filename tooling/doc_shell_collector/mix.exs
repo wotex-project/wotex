@@ -7,7 +7,7 @@ defmodule Wotex.DocShellCollector.MixProject do
       version: "0.1.0",
       elixir: "~> 1.18",
       deps: [
-        {:doc_shell, "== 0.5.0", runtime: false}
+        {:doc_shell, "== 1.0.0", runtime: false}
       ]
     ]
   end

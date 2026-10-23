@@ -1,7 +1,17 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.5.1. Contract: accepted. Implementation status:
+Specification version: 0.6.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+The documentation cohort pins published DocShell 1.0.0 across the family
+build dependencies, isolated collector and Workbench. Producer and consumer
+locks move together; no override hides a mixed 0.5/1.0 cohort. Navigation
+contains only member id, title, anchor and kind references. The module corpus
+retains member prose and signatures, and Lab derives its API pages from that
+corpus. The public extraction/projection regression checks both sides of this
+handoff. Existing document identities, routes, Action authority and optional
+artifact-capability selection are unchanged. Historical collection and renderer
+evidence is not transferred to the new dependency cohort.
 
 ## Implemented source and evidence boundary
 
@@ -53,11 +63,14 @@ name/arity title as source-derived query terms. Both readers and
 `search-records.json` consume that same corpus; punctuation in a signature must
 not prevent a query for its bare name from finding the member page.
 
-This composition requires DocShell's 0.5 presentation API and the Phoenix
+This composition requires DocShell's 1.0 presentation API and the Phoenix
 Assets PHA.01 0.3 inline-search seam. The inspected Phoenix Assets 1.2.1 Hex
 archive does not supply that inline seam; an explicitly supplied source candidate can be
-qualified separately. A successful source-candidate build cannot establish
-published-renderer availability. The historical 0.3.2 evidence below does
+qualified separately. Its declared DocShell requirement also excludes 1.0;
+the existing explicit source-candidate switch can test API compatibility but
+does not establish archive resolution. Published renderer adoption requires
+both the inline seam and a requirement admitting the selected DocShell. A
+successful source-candidate build cannot establish published-renderer availability. The historical 0.3.2 evidence below does
 not qualify the changed reader, assets or scope tags. Fresh reader browser,
 publication and archive checks remain required before the 0.4.0 evidence can
 be declared complete. Member projection has separate source and browser checks;

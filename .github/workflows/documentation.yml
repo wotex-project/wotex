@@ -39,11 +39,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Checkout DocShell candidate
+      - name: Checkout released DocShell source for renderer qualification
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: futhr/doc_shell
-          ref: 43e2740069abf3f02ba14431ea8fd1cdde35ec7c
+          ref: 493e7e9399e72095a8efa684b32da9aa08443df8 # v1.0.0
           path: .candidates/doc_shell
           persist-credentials: false
 
@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: futhr/phoenix-assets
-          ref: c76b626104e938d1c6601b73ed8c4d9d7aa4feb3
+          ref: 23fe311734fed26337c3b919341852342f691831
           path: .candidates/phoenix-assets
           persist-credentials: false
 
@@ -70,7 +70,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
         with:
-          version: 10.33.0
+          version: 12.11.2
           run_install: false
 
       - name: Install the pinned Phoenix Assets frontend graph
@@ -91,8 +91,8 @@ jobs:
           DOC_SHELL_CANDIDATE: ${{ github.workspace }}/.candidates/doc_shell
           PHOENIX_ASSETS_CANDIDATE: ${{ github.workspace }}/.candidates/phoenix-assets
         run: |
-          # These two dependencies come from pinned candidate paths. Remove
-          # their Hex entries before resolving, preserving every other lock.
+          # This is source qualification of the renderer against DocShell 1.0.
+          # The renderer's archive requirement does not admit that release yet.
           mix deps.unlock doc_shell phoenix_assets
           mix deps.get --check-locked
 

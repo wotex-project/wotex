@@ -3,9 +3,7 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
 
   use ExUnit.Case, async: false
 
-  alias DocShell.Generate.Collection
-  alias Wotex.Lab.Docs.Catalogue
-  alias WotexLabWorkbench.Documentation.{Build, DesignContract}
+  alias WotexLabWorkbench.Documentation.Build
 
   test "canonical origin excludes the deployment path" do
     origin = "https://wotex-project.github.io/wotex"
@@ -19,6 +17,9 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
 
   if Code.ensure_loaded?(DocShell.Presentation.SiteProjector) and
        Code.ensure_loaded?(PhoenixAssets.DocShell.StaticRenderer) do
+    alias DocShell.Generate.Collection
+    alias Wotex.Lab.Docs.Catalogue
+
     @tag timeout: 120_000
     test "one model renders complete root and repository-subpath static sites" do
       {:ok, catalogue} = Catalogue.load()
@@ -119,151 +120,152 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
         assert Enum.any?(Map.values(hosted.pages), &(&1.route == member_route))
         assert built.site.redirects[base_path] == base_path <> "start/"
         assert built.manifest["base_path"] == base_path
-        assert {:ok, contract} = DesignContract.current()
+        assert {:ok, contract} = WotexLabWorkbench.Documentation.DesignContract.current()
         assert built.site.metadata["design_system"] == contract
       end
     end
-  end
 
-  defp collections do
-    for id <- Catalogue.source_ids(), do: collection(String.replace(id, "-", "_"))
-  end
+    defp collections do
+      for id <- Catalogue.source_ids(), do: collection(String.replace(id, "-", "_"))
+    end
 
-  defp collection(id) do
-    documents = if id == "wotex", do: [document(id), module_document()], else: [document(id)]
+    defp collection(id) do
+      documents = if id == "wotex", do: [document(id), module_document()], else: [document(id)]
 
-    {:ok, descriptor} =
-      Collection.new(%{
-        id: id,
-        title: id,
-        version: "0.1.0",
-        revision: revision(),
-        tree_digest: "sha256:" <> String.duplicate("b", 64),
-        artifact_dir: temporary_path(id),
-        source_url: source_url(id),
-        edit_base_url: "https://github.com/wotex-project/wotex/edit/main",
-        license: "Apache-2.0"
-      })
+      {:ok, descriptor} =
+        Collection.new(%{
+          id: id,
+          title: id,
+          version: "0.1.0",
+          revision: revision(),
+          tree_digest: "sha256:" <> String.duplicate("b", 64),
+          artifact_dir: temporary_path(id),
+          source_url: source_url(id),
+          edit_base_url: "https://github.com/wotex-project/wotex/edit/main",
+          license: "Apache-2.0"
+        })
 
-    %{
-      descriptor: descriptor,
-      generation_id: "generation-#{id}",
-      content_digest: Collection.digest(documents),
-      artifacts: %{},
-      sources: [],
-      documents: documents
-    }
-  end
-
-  defp document("family_docs" = id) do
-    id
-    |> guide("readme", "docs/README.md")
-    |> Map.update!("ast", fn ast ->
-      [
-        %{
-          "tag" => "p",
-          "attrs" => %{},
-          "content" => [
-            %{
-              "tag" => "a",
-              "attrs" => %{"href" => "../packages/wotex-runtime/README.md"},
-              "content" => ["Runtime"],
-              "meta" => %{}
-            },
-            " and ",
-            %{
-              "tag" => "a",
-              "attrs" => %{"href" => "catalogue.yaml"},
-              "content" => ["catalogue"],
-              "meta" => %{}
-            },
-            " or ",
-            %{
-              "tag" => "a",
-              "attrs" => %{"href" => "mailto:hello@wotex.example"},
-              "content" => ["hello@wotex.example"],
-              "meta" => %{}
-            },
-            " or ",
-            %{
-              "tag" => "a",
-              "attrs" => %{"href" => "../CONTRIBUTING.md#command-reference"},
-              "content" => ["commands"],
-              "meta" => %{}
-            }
-          ],
-          "meta" => %{}
-        }
-        | ast
-      ]
-    end)
-  end
-
-  defp document("wotex_runtime" = id),
-    do: guide(id, "overview", "packages/wotex-runtime/README.md")
-
-  defp document("wotex_dot" = id), do: guide(id, "governance", "CONTRIBUTING.md")
-  defp document(id), do: guide(id, "overview", "README.md")
-
-  defp module_document do
-    content = [node("p", ["Core Thing Description API."])]
-
-    %{
-      "id" => "wotex:Wotex.ThingDescription",
-      "collection_id" => "wotex",
-      "document_id" => "Wotex.ThingDescription",
-      "kind" => "module",
-      "title" => "Wotex.ThingDescription",
-      "ast" => content,
-      "meta" => %{
-        "moduledoc" => "present",
-        "members" => [
-          %{
-            "kind" => "function",
-            "name" => "decode",
-            "arity" => 1,
-            "signatures" => ["decode(document)"],
-            "doc" => "Decode one Thing Description. See [Runtime](doc:wotex_runtime:overview).",
-            "metadata" => %{}
-          },
-          %{
-            "kind" => "function",
-            "name" => "hidden_member",
-            "arity" => 0,
-            "signatures" => [],
-            "doc" => "",
-            "metadata" => %{}
-          }
-        ]
+      %{
+        descriptor: descriptor,
+        generation_id: "generation-#{id}",
+        content_digest: Collection.digest(documents),
+        artifacts: %{},
+        sources: [],
+        documents: documents
       }
-    }
-  end
+    end
 
-  defp guide(id, document_id, source_path) do
-    %{
-      "id" => "#{id}:#{document_id}",
-      "collection_id" => id,
-      "document_id" => document_id,
-      "kind" => "guide",
-      "title" => if(id == "family_docs", do: "Portable Wotex documentation", else: id),
-      "ast" => [node("p", ["Portable Wotex documentation for #{id}."])],
-      "meta" => %{"source_path" => source_path}
-    }
-  end
+    defp document("family_docs" = id) do
+      id
+      |> guide("readme", "docs/README.md")
+      |> Map.update!("ast", fn ast ->
+        [
+          %{
+            "tag" => "p",
+            "attrs" => %{},
+            "content" => [
+              %{
+                "tag" => "a",
+                "attrs" => %{"href" => "../packages/wotex-runtime/README.md"},
+                "content" => ["Runtime"],
+                "meta" => %{}
+              },
+              " and ",
+              %{
+                "tag" => "a",
+                "attrs" => %{"href" => "catalogue.yaml"},
+                "content" => ["catalogue"],
+                "meta" => %{}
+              },
+              " or ",
+              %{
+                "tag" => "a",
+                "attrs" => %{"href" => "mailto:hello@wotex.example"},
+                "content" => ["hello@wotex.example"],
+                "meta" => %{}
+              },
+              " or ",
+              %{
+                "tag" => "a",
+                "attrs" => %{"href" => "../CONTRIBUTING.md#command-reference"},
+                "content" => ["commands"],
+                "meta" => %{}
+              }
+            ],
+            "meta" => %{}
+          }
+          | ast
+        ]
+      end)
+    end
 
-  defp node(tag, content),
-    do: %{"tag" => tag, "attrs" => %{}, "content" => content, "meta" => %{}}
+    defp document("wotex_runtime" = id),
+      do: guide(id, "overview", "packages/wotex-runtime/README.md")
 
-  defp pagefind_executable do
-    Path.expand("../../node_modules/.bin/pagefind", __DIR__)
+    defp document("wotex_dot" = id), do: guide(id, "governance", "CONTRIBUTING.md")
+    defp document(id), do: guide(id, "overview", "README.md")
+
+    defp module_document do
+      content = [node("p", ["Core Thing Description API."])]
+
+      %{
+        "id" => "wotex:Wotex.ThingDescription",
+        "collection_id" => "wotex",
+        "document_id" => "Wotex.ThingDescription",
+        "kind" => "module",
+        "title" => "Wotex.ThingDescription",
+        "ast" => content,
+        "meta" => %{
+          "moduledoc" => "present",
+          "members" => [
+            %{
+              "kind" => "function",
+              "name" => "decode",
+              "arity" => 1,
+              "signatures" => ["decode(document)"],
+              "doc" => "Decode one Thing Description. See [Runtime](doc:wotex_runtime:overview).",
+              "metadata" => %{}
+            },
+            %{
+              "kind" => "function",
+              "name" => "hidden_member",
+              "arity" => 0,
+              "signatures" => [],
+              "doc" => "",
+              "metadata" => %{}
+            }
+          ]
+        }
+      }
+    end
+
+    defp guide(id, document_id, source_path) do
+      %{
+        "id" => "#{id}:#{document_id}",
+        "collection_id" => id,
+        "document_id" => document_id,
+        "kind" => "guide",
+        "title" => if(id == "family_docs", do: "Portable Wotex documentation", else: id),
+        "ast" => [node("p", ["Portable Wotex documentation for #{id}."])],
+        "meta" => %{"source_path" => source_path}
+      }
+    end
+
+    defp node(tag, content),
+      do: %{"tag" => tag, "attrs" => %{}, "content" => content, "meta" => %{}}
+
+    defp pagefind_executable do
+      Path.expand("../../node_modules/.bin/pagefind", __DIR__)
+    end
+
+    defp revision, do: String.duplicate("a", 40)
+    defp source_url("wotex_dot"), do: "https://github.com/wotex-project/.github/tree/#{revision()}"
+    defp source_url(_), do: "https://github.com/wotex-project/wotex/tree/#{revision()}"
   end
 
   defp temporary_path(name) do
     Path.join(System.tmp_dir!(), "wotex-doc-#{name}-#{token()}")
   end
 
-  defp revision, do: String.duplicate("a", 40)
-  defp source_url("wotex_dot"), do: "https://github.com/wotex-project/.github/tree/#{revision()}"
-  defp source_url(_), do: "https://github.com/wotex-project/wotex/tree/#{revision()}"
   defp token, do: Base.url_encode64(:crypto.strong_rand_bytes(12), padding: false)
 end

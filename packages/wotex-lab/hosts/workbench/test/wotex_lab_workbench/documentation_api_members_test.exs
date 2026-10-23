@@ -75,6 +75,20 @@ defmodule WotexLabWorkbench.Documentation.ApiMembersTest do
 
   test "public BEAM extraction feeds the member projection without reading source files" do
     assert {:ok, extracted} = DocShell.Generate.ExDoc.extract_module(Wotex.Lab)
+    assert {:ok, indexes} = DocShell.Presentation.StaticGenerator.project(entries: [extracted])
+    assert [navigation] = indexes.navigation
+    references = navigation.meta["members"]
+
+    assert Enum.all?(references, fn reference ->
+             Enum.sort(Map.keys(reference)) == ~w(anchor id kind title)
+           end)
+
+    assert Enum.find(references, &(&1["id"] == "function:child_spec/1")) == %{
+             "id" => "function:child_spec/1",
+             "title" => "child_spec/1",
+             "anchor" => "child_spec/1",
+             "kind" => "function"
+           }
 
     document =
       Map.merge(extracted, %{

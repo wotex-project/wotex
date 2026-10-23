@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.15.3. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.16.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -59,6 +59,13 @@ working directory, and rejects symbolic input paths.
 Version 1.15.3 gives Workbench and Phoenix Storybook separate frontend gate
 input scopes. The Lab gate still checks both with the shared rules; extracted
 Workbench frontend commands require no sibling checkout or rule exemption.
+
+Version 1.16 adopts published DocShell 1.0.0 as one producer/consumer
+documentation cohort. Member navigation carries references while module
+artifacts retain prose and signatures for API pages. The accepted compact
+reader still needs its separately published Phoenix Assets inline-search seam;
+the renderer must also declare support for the 1.0 dependency. The DocShell
+upgrade does not close renderer, archive or accessibility claims.
 
 ## Delivery status
 

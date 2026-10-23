@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.12. Contract: accepted. Source status: the workspace
+Specification version: 0.9.13. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -19,6 +19,13 @@ rpi4 firmware project, exact Nerves
 system/toolchain lock, inert host smoke and source gate are implemented under
 `hosts/nerves/`; the local cross-build reaches firmware assembly but cannot
 finish without the operator-installed `fwup` prerequisite.
+
+Version 0.9.13 pins published DocShell 1.0.0 consistently in the family
+documentation producers, isolated collector and Workbench. Build-only library
+dependencies retain their existing environments and do not enter production
+runtime closure. Navigation member references replace duplicated member prose;
+module artifacts remain the API-page source. The dependency cohort requires
+fresh qualification; old artifact and renderer receipts stay historical.
 
 Version 0.9.12 makes the extracted Workbench's frontend commands independent
 of a sibling live catalogue. Each host keeps its own frontend input scope;
