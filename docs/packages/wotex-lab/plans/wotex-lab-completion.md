@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.15.1. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.15.2. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -50,6 +50,11 @@ Version 1.15.1 corrects CSS container ownership for embedded workbenches.
 Browser boundary-pair regressions preserve empty state, connection drafts,
 keyboard focus and pending Action scope independently of viewport width. The
 complete task/state/Storybook and assistive-technology cohorts remain open.
+
+Version 1.15.2 retains frontend gate modules and plugins in the Workbench
+source archive and its input digest. WLB.08's shared archiver reads explicit
+source paths for plain and gzip artifacts, independently of the caller's
+working directory, and rejects symbolic input paths.
 
 ## Delivery status
 

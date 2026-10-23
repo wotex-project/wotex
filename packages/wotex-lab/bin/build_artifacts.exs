@@ -12,11 +12,19 @@ Code.require_file("support/archive_repository.exs", __DIR__)
 Code.require_file("support/child_environment.exs", __DIR__)
 Code.require_file("support/distribution.exs", __DIR__)
 Code.require_file("support/reference_inputs.exs", __DIR__)
+Code.require_file("support/source_archive.exs", __DIR__)
 
 defmodule Wotex.Lab.BuildArtifacts do
   @moduledoc false
 
-  alias Wotex.Lab.Check.{ArchiveRepository, ChildEnvironment, Distribution, ReferenceInputs}
+  alias Wotex.Lab.Check.{
+    ArchiveRepository,
+    ChildEnvironment,
+    Distribution,
+    ReferenceInputs,
+    SourceArchive
+  }
+
   alias Wotex.Lab.Evidence.Digest
 
   @packages [
@@ -37,10 +45,6 @@ defmodule Wotex.Lab.BuildArtifacts do
     {:wotex_conformance, "wotex-conformance"},
     {:wotex_lab, "wotex-lab"}
   ]
-  @workbench_patterns ~w(.check.exs .credo.exs .dockerignore .formatter.exs Dockerfile
-                          README.md .storybook/**/* bin/**/* config/**/* lib/**/* mix_tasks/**/*
-                          priv/static/**/* priv/seeds.exs priv/seeds/**/* test/**/* mix.exs mix.lock assets/**/* package.json
-                          pnpm-lock.yaml pnpm-workspace.yaml biome.jsonc tsconfig.json vite.config.ts)
   @nerves_patterns ~w(.check.exs .credo.exs .formatter.exs README.md config/**/* lib/**/*
                        test/**/* mix.exs mix.lock)
   @oci_patterns ~w(.dockerignore Dockerfile README.md config/**/* lib/**/* mix_tasks/**/*
@@ -58,19 +62,19 @@ defmodule Wotex.Lab.BuildArtifacts do
 
     ArchiveRepository.build_archives!(root, @packages, hex)
 
-    archive!(
+    SourceArchive.create!(
       Path.join(root, "hosts/workbench"),
-      @workbench_patterns,
+      SourceArchive.workbench_patterns(),
       Path.join(source, "wotex-lab-workbench.tar")
     )
 
-    archive!(
+    SourceArchive.create!(
       Path.join(root, "hosts/workbench"),
       @oci_patterns,
       Path.join(source, "wotex-lab-oci-context.tar")
     )
 
-    archive!(
+    SourceArchive.create!(
       Path.join(root, "hosts/nerves"),
       @nerves_patterns,
       Path.join(source, "wotex-lab-nerves-rpi4.tar")
@@ -137,38 +141,6 @@ defmodule Wotex.Lab.BuildArtifacts do
       :ok -> File.chmod!(output, 0o700)
       {:error, reason} -> abort("cannot create artifact output: #{:file.format_error(reason)}")
     end
-  end
-
-  defp archive!(root, patterns, output) do
-    files = source_files(root, patterns)
-    relative = Enum.map(files, &Path.relative_to(&1, root))
-
-    {log, status} =
-      System.cmd("tar", ["-cf", output, "-C", root | relative],
-        env: [{"COPYFILE_DISABLE", "1"} | ChildEnvironment.scrubbed()],
-        stderr_to_stdout: true
-      )
-
-    status == 0 || abort("source artifact failed (#{status}):\n#{log}")
-    File.regular?(output) || abort("source artifact was not created")
-  end
-
-  defp source_files(root, patterns) do
-    files =
-      patterns
-      |> Enum.flat_map(&Path.wildcard(Path.join(root, &1), match_dot: true))
-      |> Enum.filter(&File.regular?/1)
-      |> Enum.uniq()
-      |> Enum.sort()
-
-    files == [] && abort("source artifact would be empty")
-
-    Enum.each(files, fn path ->
-      match?({:ok, %File.Stat{type: :symlink}}, File.lstat(path)) &&
-        abort("source artifact refuses symlink #{Path.relative_to(path, root)}")
-    end)
-
-    files
   end
 
   defp npm!(root, output) do
@@ -264,21 +236,15 @@ defmodule Wotex.Lab.BuildArtifacts do
     ]
 
     run!("mix", args, host, "static documentation build", env)
-    archive_tree!(destination, Path.join(static, "wotex-lab-documentation.tar.gz"))
+
+    SourceArchive.create!(
+      destination,
+      ["**/*"],
+      Path.join(static, "wotex-lab-documentation.tar.gz"),
+      true
+    )
+
     File.rm_rf!(temporary)
-  end
-
-  defp archive_tree!(root, output) do
-    files = source_files(root, ["**/*"])
-    relative = Enum.map(files, &Path.relative_to(&1, root))
-
-    case :erl_tar.create(String.to_charlist(output), Enum.map(relative, &String.to_charlist/1), [
-           :compressed,
-           {:cwd, String.to_charlist(root)}
-         ]) do
-      :ok -> :ok
-      {:error, reason} -> abort("static documentation archive failed: #{inspect(reason)}")
-    end
   end
 
   defp revision_timestamp!(root, revision) do
@@ -311,7 +277,9 @@ defmodule Wotex.Lab.BuildArtifacts do
   end
 
   defp combined_source_digest(root, lab_digest) do
-    {:ok, workbench} = Digest.tree(Path.join(root, "hosts/workbench"), @workbench_patterns)
+    {:ok, workbench} =
+      Digest.tree(Path.join(root, "hosts/workbench"), SourceArchive.workbench_patterns())
+
     {:ok, nerves} = Digest.tree(Path.join(root, "hosts/nerves"), @nerves_patterns)
     Digest.bytes(Enum.join([lab_digest, workbench, nerves], "\n"))
   end

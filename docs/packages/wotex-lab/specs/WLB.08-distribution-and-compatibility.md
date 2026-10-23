@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.10. Contract: accepted. Source status: the workspace
+Specification version: 0.9.11. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -19,6 +19,17 @@ rpi4 firmware project, exact Nerves
 system/toolchain lock, inert host smoke and source gate are implemented under
 `hosts/nerves/`; the local cross-build reaches firmware assembly but cannot
 finish without the operator-installed `fwup` prerequisite.
+
+Version 0.9.11 includes the Workbench's `tools/lint/` modules, regression
+tests, Biome plugins and the host's configured ignore file in its source artifact
+and source digest. The standalone ignore file covers generated dependencies,
+builds and caches, so the unchanged Biome configuration runs outside Git. One shared
+source archiver maps relative member names to explicit source paths, so plain
+and gzip archives do not depend on the caller's working directory. It refuses
+empty selections and symbolic files or parent directories. Compressed static
+sites retain their hidden hosted metadata and exact member bytes. The source
+archive tests unpack actual Workbench inputs and exercise a separate static
+site root; these checks do not establish published artifact adoption.
 
 The repository-wide [native artifact foundation](https://github.com/wotex-project/wotex/blob/main/docs/architecture/native-artifact-contract.md)
 owns verification, safe local adoption, target dependency closure and exact

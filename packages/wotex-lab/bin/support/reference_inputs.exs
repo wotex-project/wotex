@@ -20,6 +20,7 @@ defmodule Wotex.Lab.Check.ReferenceInputs do
                bin/support/compatibility_review.exs
                bin/support/distribution.exs
                bin/support/reference_inputs.exs bin/support/reference_runner.exs
+               bin/support/source_archive.exs
                bin/support/reference_summary.exs
                bin/support/work_directory.exs .check.exs .formatter.exs mix.exs mix.lock
                README.md LICENSE NOTICE CHANGELOG.md SECURITY.md CONTRIBUTING.md)
