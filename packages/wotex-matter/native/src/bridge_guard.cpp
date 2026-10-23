@@ -73,7 +73,7 @@ CHIP_ERROR SceneFields(TLVReader reader) {
     ReturnErrorOnFailure(pairs.EnterContainer(nested));
     CHIP_ERROR pair;
     while ((pair = pairs.Next()) == CHIP_NO_ERROR) {
-      std::uint16_t mask;
+      std::uint16_t mask = 0;
       ReturnErrorOnFailure(Fields(pairs, 1, &mask));
       const auto choices = static_cast<unsigned>(mask & 0x1FEU);
       if (choices == 0 || (choices & (choices - 1)) != 0) return InvalidCommand;
@@ -259,6 +259,8 @@ CHIP_ERROR SdkBridgeInvokeGuard::ValidateArguments(const BridgeRequestMetadata &
       return Decode<Identify::Commands::Identify::DecodableType>(arguments, fabric, 1);
     case 64:
       return Decode<Identify::Commands::TriggerEffect::DecodableType>(arguments, fabric, 3);
+    default:
+      break;
     }
     break;
   case Groups::Id:
@@ -275,6 +277,8 @@ CHIP_ERROR SdkBridgeInvokeGuard::ValidateArguments(const BridgeRequestMetadata &
       return Decode<Groups::Commands::RemoveAllGroups::DecodableType>(arguments, fabric, 0);
     case 5:
       return Decode<Groups::Commands::AddGroupIfIdentifying::DecodableType>(arguments, fabric, 3);
+    default:
+      break;
     }
     break;
   case OnOff::Id:
@@ -291,6 +295,8 @@ CHIP_ERROR SdkBridgeInvokeGuard::ValidateArguments(const BridgeRequestMetadata &
       return Decode<OnOff::Commands::OnWithRecallGlobalScene::DecodableType>(arguments, fabric, 0);
     case 66:
       return Decode<OnOff::Commands::OnWithTimedOff::DecodableType>(arguments, fabric, 7);
+    default:
+      break;
     }
     break;
   case ScenesManagement::Id:
@@ -313,7 +319,11 @@ CHIP_ERROR SdkBridgeInvokeGuard::ValidateArguments(const BridgeRequestMetadata &
                                                                                    fabric, 1);
     case 64:
       return Decode<ScenesManagement::Commands::CopyScene::DecodableType>(arguments, fabric, 31);
+    default:
+      break;
     }
+    break;
+  default:
     break;
   }
   return CHIP_IM_GLOBAL_STATUS(UnsupportedCommand);

@@ -516,55 +516,15 @@ defmodule Wotex.Matter.SoftwareBuildTest do
   end
 
   test "WMA-B01 receipts reject changed binaries logs source and duplicate members", %{root: root} do
-    source = Path.join(root, "source")
-    workspace = Path.join(root, "workspace")
-    File.mkdir!(source)
-    File.mkdir!(workspace)
-    File.mkdir!(Path.join(workspace, "bin"))
-    File.mkdir!(Path.join(workspace, "logs"))
-    binary = Path.join(workspace, "bin/wotex-matter-host")
-    File.write!(binary, "fixture binary")
-    File.write!(binary <> "-sanitized", "fixture sanitizer binary")
-    log = Path.join(workspace, "logs/test.log")
-    File.write!(log, "fixture execution")
-    identity = SoftwareManifest.identity(source)
-
-    native = %{
-      "schema" => "wotex.native-build",
-      "version" => 1,
-      "package" => "wotex_matter",
-      "source_files" => identity["source_files_sha256"],
-      "logs" => %{"logs/test.log" => SoftwareManifest.digest(log)}
-    }
-
-    SoftwareManifest.write(Path.join(workspace, "native-manifest.json"), native)
-
-    contract = Path.join(workspace, "bin/wotex-matter-contract-driver")
-    File.write!(contract, "fixture contract")
-    File.write!(contract <> "-sanitized", "fixture sanitized contract")
-
-    bridge_artifacts =
-      for graph <- ["build-bridge", "build-bridge-sanitized"],
-          binary <- ["wotex-matter-bridge-host", "wotex-matter-sdk-bridge-bootstrap-test"],
-          do: graph <> "/obj/examples/wotex-matter-host/bin/" <> binary
-
-    for name <- bridge_artifacts do
-      path = Path.join(workspace, name)
-      File.mkdir_p!(Path.dirname(path))
-      File.write!(path, "fixture SDK executable")
-    end
-
-    receipt = %{
-      "schema" => "wotex.matter.software-workspace@1",
-      "status" => "ready",
-      "mode" => "native",
-      "sdk_revision" => SoftwareManifest.sdk_revision(),
-      "sdk_archive_sha256" => SoftwareManifest.sdk_sha256(),
-      "container_image" => SoftwareManifest.image(),
-      "target" => "x86_64-linux-gnu",
-      "source" => identity,
-      "files" => SoftwareManifest.file_hashes(workspace, "native")
-    }
+    %{
+      source: source,
+      workspace: workspace,
+      binary: binary,
+      log: log,
+      receipt: receipt,
+      contract: contract,
+      bridge_artifacts: bridge_artifacts
+    } = native_workspace(root)
 
     assert SoftwareManifest.verify_local(source, workspace, receipt, :native) == receipt
 
@@ -671,6 +631,42 @@ defmodule Wotex.Matter.SoftwareBuildTest do
     invalid = Path.join(root, "invalid.json")
     File.write!(invalid, ~s({"status":"failed","status":"ready"}))
     assert_raise Mix.Error, "invalid_manifest", fn -> SoftwareManifest.read(invalid) end
+  end
+
+  test "native receipts retain all expanded bridge logs within a finite bound", %{root: root} do
+    %{source: source, workspace: workspace, receipt: receipt} = native_workspace(root)
+
+    logs =
+      for index <- 1..512, into: %{} do
+        name = "logs/case-#{index}.log"
+        path = Path.join(workspace, name)
+        File.write!(path, "fixture case #{index}")
+        {name, SoftwareManifest.digest(path)}
+      end
+
+    native = SoftwareManifest.read(Path.join(workspace, "native-manifest.json"))
+
+    for count <- [256, 257, 314, 512] do
+      receipt =
+        native_logs(workspace, native, receipt, Map.take(logs, Enum.take(Map.keys(logs), count)))
+
+      assert SoftwareManifest.verify_local(source, workspace, receipt, :native) == receipt
+    end
+
+    for invalid <- [%{}, Map.put(logs, "logs/extra.log", SoftwareManifest.hash("extra"))] do
+      receipt = native_logs(workspace, native, receipt, invalid)
+
+      assert_raise Mix.Error, "native_manifest_mismatch", fn ->
+        SoftwareManifest.verify_local(source, workspace, receipt, :native)
+      end
+    end
+
+    receipt = native_logs(workspace, native, receipt, logs)
+    File.write!(Path.join(workspace, "logs/case-512.log"), "altered case")
+
+    assert_raise Mix.Error, "artifact_hash_mismatch", fn ->
+      SoftwareManifest.verify_local(source, workspace, receipt, :native)
+    end
   end
 
   test "software execution rejects absent or mismatched build receipts before acquiring resources",
@@ -863,6 +859,73 @@ defmodule Wotex.Matter.SoftwareBuildTest do
       end
 
     [read, put_in(read, ["principal", "auth_mode"], "group")] ++ writes ++ invokes
+  end
+
+  defp native_workspace(root) do
+    source = Path.join(root, "source")
+    workspace = Path.join(root, "workspace")
+    File.mkdir!(source)
+    File.mkdir!(workspace)
+    File.mkdir!(Path.join(workspace, "bin"))
+    File.mkdir!(Path.join(workspace, "logs"))
+    binary = Path.join(workspace, "bin/wotex-matter-host")
+    File.write!(binary, "fixture binary")
+    File.write!(binary <> "-sanitized", "fixture sanitizer binary")
+    log = Path.join(workspace, "logs/test.log")
+    File.write!(log, "fixture execution")
+    identity = SoftwareManifest.identity(source)
+
+    native = %{
+      "schema" => "wotex.native-build",
+      "version" => 1,
+      "package" => "wotex_matter",
+      "source_files" => identity["source_files_sha256"],
+      "logs" => %{"logs/test.log" => SoftwareManifest.digest(log)}
+    }
+
+    SoftwareManifest.write(Path.join(workspace, "native-manifest.json"), native)
+
+    contract = Path.join(workspace, "bin/wotex-matter-contract-driver")
+    File.write!(contract, "fixture contract")
+    File.write!(contract <> "-sanitized", "fixture sanitized contract")
+
+    bridge_artifacts =
+      for graph <- ["build-bridge", "build-bridge-sanitized"],
+          binary <- ["wotex-matter-bridge-host", "wotex-matter-sdk-bridge-bootstrap-test"],
+          do: graph <> "/obj/examples/wotex-matter-host/bin/" <> binary
+
+    for name <- bridge_artifacts do
+      path = Path.join(workspace, name)
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, "fixture SDK executable")
+    end
+
+    receipt = %{
+      "schema" => "wotex.matter.software-workspace@1",
+      "status" => "ready",
+      "mode" => "native",
+      "sdk_revision" => SoftwareManifest.sdk_revision(),
+      "sdk_archive_sha256" => SoftwareManifest.sdk_sha256(),
+      "container_image" => SoftwareManifest.image(),
+      "target" => "x86_64-linux-gnu",
+      "source" => identity,
+      "files" => SoftwareManifest.file_hashes(workspace, "native")
+    }
+
+    %{
+      source: source,
+      workspace: workspace,
+      binary: binary,
+      log: log,
+      receipt: receipt,
+      contract: contract,
+      bridge_artifacts: bridge_artifacts
+    }
+  end
+
+  defp native_logs(workspace, native, receipt, logs) do
+    SoftwareManifest.write(Path.join(workspace, "native-manifest.json"), %{native | "logs" => logs})
+    %{receipt | "files" => SoftwareManifest.file_hashes(workspace, "native")}
   end
 
   defp codec_output(frames) do

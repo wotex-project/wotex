@@ -71,8 +71,10 @@ Action SdkBridgeLightCluster::ReadAttribute(
     const chip::app::DataModel::ReadAttributeRequest &request,
     chip::app::AttributeValueEncoder &encoder) {
   impl_->Healthy();
-  if (request.path.mAttributeId == 0)
-    return impl_->approved ? encoder.Encode(*impl_->approved) : Action(Status::Failure);
+  if (request.path.mAttributeId == 0) {
+    const auto approved = impl_->approved;
+    return approved ? encoder.Encode(*approved) : Action(Status::Failure);
+  }
   if (request.path.mAttributeId == 0x4003) return encoder.Encode(ConfiguredStartup(impl_->startup));
   return Base::ReadAttribute(request, encoder);
 }
@@ -96,17 +98,19 @@ CHIP_ERROR SdkBridgeLightCluster::SerializeSave(chip::EndpointId endpoint, chip:
                                                 chip::MutableByteSpan &serialized) {
   impl_->Healthy();
   if (endpoint != impl_->endpoint || cluster != 6) return CHIP_ERROR_INVALID_ARGUMENT;
-  if (!impl_->approved) return CHIP_ERROR_READ_FAILED;
+  const auto approved = impl_->approved;
+  if (!approved) return CHIP_ERROR_READ_FAILED;
   using Pair = chip::app::Clusters::ScenesManagement::Structs::AttributeValuePairStruct::Type;
   Pair value;
   value.attributeID = 0;
-  value.valueUnsigned8.SetValue(*impl_->approved ? 1 : 0);
+  value.valueUnsigned8.SetValue(*approved ? 1 : 0);
   return EncodeAttributeValueList(chip::app::DataModel::List<Pair>(&value, 1), serialized);
 }
 void SdkBridgeLightCluster::Observed() {
   impl_->Healthy();
-  if (!impl_->approved) return;
-  mOnOff = *impl_->approved;
+  const auto approved = impl_->approved;
+  if (!approved) return;
+  mOnOff = *approved;
   if (impl_->scenes.MakeSceneInvalidForAllFabrics() != CHIP_NO_ERROR)
     std::_Exit(SdkBridgeServerBinding::kStartupFailureExit);
   NotifyAttributeChanged(0);

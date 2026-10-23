@@ -272,7 +272,7 @@ class Fixture final : public BridgeSdkProcessReceiver {
   }
   CHIP_ERROR Attach(SdkBridgeBootstrap &runtime, BridgeConsumerHandoff &shared,
                     BridgeHandoffOwner &owner, BridgeOutputOwner &output,
-                    SdkBridgeObservationOwner &observations) noexcept override {
+                    SdkBridgeObservationOwner &observations) noexcept override try {
     provider = runtime.provider();
     endpoints = runtime.endpoints();
     storage = &chip::Server::GetInstance().GetPersistentStorage();
@@ -336,12 +336,14 @@ class Fixture final : public BridgeSdkProcessReceiver {
            renderer.Attach(*endpoints) == CHIP_ERROR_INCORRECT_STATE);
     handler.refuse_data = mode == "encoding";
     return core.Attach(runtime, shared, owner, output, observations);
+  } catch (...) {
+    return CHIP_ERROR_INTERNAL;
   }
   bool ResultReady(const BridgeConsumerHandoff::Ticket &ticket) noexcept override {
     return core.ResultReady(ticket);
   }
   bool Retire() noexcept override { return core.Retire(); }
-  CHIP_ERROR Finish() noexcept override {
+  CHIP_ERROR Finish() noexcept override try {
     assert(handler.held == 0);
     if (removed || mode == "unavailable") assert(!ReadOnOff().has_value());
     else assert(ReadOnOff() == (mode == "observations"));
@@ -350,6 +352,8 @@ class Fixture final : public BridgeSdkProcessReceiver {
     BridgeInvocation none;
     assert(renderer.Completed(handler, none) == CHIP_ERROR_INCORRECT_STATE);
     return status;
+  } catch (...) {
+    return CHIP_ERROR_INTERNAL;
   }
   Action Read(BridgeRequestMetadata request, chip::app::AttributeValueEncoder &encoder) override {
     return core.Read(request, encoder);

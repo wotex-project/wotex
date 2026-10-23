@@ -136,9 +136,9 @@ void VerifyBridgeCommandArguments(SdkBridgeInvokeGuard &guard,
   request.cluster = 6;
   request.member = 66;
   assert(Check(guard, request, {U(0, 1), U(1, 65534), U(2, 65534)}) == CHIP_NO_ERROR);
-  for (auto fields : {std::vector<Field>{U(0, 2), U(1, 1), U(2, 1)},
-                      std::vector<Field>{U(0, 0), U(1, 65535), U(2, 1)},
-                      std::vector<Field>{U(0, 0), U(1, 1), U(2, 65535)}})
+  for (const auto &fields : {std::vector<Field>{U(0, 2), U(1, 1), U(2, 1)},
+                             std::vector<Field>{U(0, 0), U(1, 65535), U(2, 1)},
+                             std::vector<Field>{U(0, 0), U(1, 1), U(2, 65535)}})
     assert(Check(guard, request, fields) == CHIP_IM_GLOBAL_STATUS(ConstraintError));
   // The pinned generated decoder alone accepts missing fields as zero defaults.
   // This baseline makes the extra admission requirement independently observable.
@@ -190,8 +190,11 @@ void VerifyBridgeCommandArguments(SdkBridgeInvokeGuard &guard,
   changed = scene;
   changed[4] = A(4, {O(anonymous, {U(0, 6), A(1, {O(anonymous, {U(0, 0), S(1)})})})});
   assert(Check(guard, request, changed) == CHIP_ERROR_WRONG_TLV_TYPE);
-  request.member = 127;
-  assert(Check(guard, request, {}) == CHIP_IM_GLOBAL_STATUS(UnsupportedCommand));
+  for (const auto cluster : {0, 3, 4, 6, 98}) {
+    request.cluster = cluster;
+    request.member = 127;
+    assert(Check(guard, request, {}) == CHIP_IM_GLOBAL_STATUS(UnsupportedCommand));
+  }
   request.operation = BridgeRequestMetadata::Operation::Read;
   assert(Check(guard, request, {}) == CHIP_ERROR_INVALID_ARGUMENT);
   assert(mandatory == 35);

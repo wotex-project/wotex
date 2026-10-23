@@ -64,16 +64,16 @@ class Receiver final : public BridgeSdkProcessReceiver {
   }
   chip::app::DataModel::ActionReturnStatus Read(
       BridgeRequestMetadata request, chip::app::AttributeValueEncoder &encoder) override {
-    return consumer_.Read(std::move(request), encoder);
+    return consumer_.Read(request, encoder);
   }
   chip::app::DataModel::ActionReturnStatus Write(
       BridgeRequestMetadata request, chip::app::AttributeValueDecoder &decoder) override {
-    return consumer_.Write(std::move(request), decoder);
+    return consumer_.Write(request, decoder);
   }
   std::optional<chip::app::DataModel::ActionReturnStatus> Invoke(
       BridgeRequestMetadata request, chip::TLV::TLVReader &arguments,
       chip::app::CommandHandler *handler) override {
-    return consumer_.Invoke(std::move(request), arguments, handler);
+    return consumer_.Invoke(request, arguments, handler);
   }
   void ListNotification(const chip::app::ConcreteAttributePath &path,
                         chip::app::DataModel::ListWriteOperation operation,

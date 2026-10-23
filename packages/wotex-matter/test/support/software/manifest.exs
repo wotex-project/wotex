@@ -4,6 +4,9 @@ defmodule Wotex.Matter.SoftwareManifest do
   @sdk_revision "250a9e6c50ee2068107f3c4808b680f5f2925415"
   @sdk_sha256 "83032f0c98b02c8c16defc6e70ebe288c127ef3661153feca32839fb65b33628"
   @image "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0"
+  # Normal and sanitizer bridge profiles alone produce 314 case logs.
+  # Keep admission finite while retaining every build and execution digest.
+  @max_native_logs 512
   @patterns [
     "lib/**/*.ex",
     "native/**/*",
@@ -149,7 +152,7 @@ defmodule Wotex.Matter.SoftwareManifest do
              native["source_files"] == identity(root)["source_files_sha256"],
            do: fail(:native_manifest_mismatch)
 
-    unless is_map(native["logs"]) and map_size(native["logs"]) in 1..256,
+    unless is_map(native["logs"]) and map_size(native["logs"]) in 1..@max_native_logs,
       do: fail(:native_manifest_mismatch)
 
     verify_logs!(workspace, native["logs"])
