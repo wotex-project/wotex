@@ -29,7 +29,7 @@ defmodule WotexLabWorkbench.Run do
           cleanup: %{status: :ok | :failed, details: map()},
           proposal: map() | nil,
           decision: map() | nil,
-          dispatch: map() | nil,
+          dispatch: [String.t() | map()] | nil,
           effect: term(),
           record: Wotex.Lab.Evidence.Record.t() | nil,
           record_digest: String.t() | nil,

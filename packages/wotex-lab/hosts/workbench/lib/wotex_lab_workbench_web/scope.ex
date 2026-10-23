@@ -38,7 +38,8 @@ defmodule WotexLabWorkbenchWeb.Scope do
   end
 
   @doc "Re-verifies the scope for a command and returns the live session."
-  @spec admit(Phoenix.LiveView.Socket.t(), atom()) :: {:ok, scope()} | {:error, Error.t()}
+  @spec admit(Phoenix.LiveView.Socket.t(), atom() | {:start_room, String.t()}) ::
+          {:ok, scope()} | {:error, Error.t()}
   def admit(%{assigns: %{scope: %{token: token}}}, command) do
     with {:ok, live} <- Sessions.admit(token, command), do: {:ok, scope(token, live)}
   end

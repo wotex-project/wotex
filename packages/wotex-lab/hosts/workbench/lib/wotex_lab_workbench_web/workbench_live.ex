@@ -67,6 +67,7 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       |> assign(:experiment_forms, experiment_forms())
       |> assign(:runs, [])
       |> assign(:things, [])
+      |> assign(:room_profiles, [])
       |> assign(:connection_state, Connections.new([]))
       |> assign(:connection_draft, nil)
       |> assign(:connection_room, nil)
@@ -350,6 +351,27 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
       {:noreply, assign(socket, :scope, scope)}
     else
       nil -> {:noreply, deny(socket, Error.new(:denied, :session, "no session scope"))}
+      {:error, error} -> reject_event(socket, error)
+    end
+  end
+
+  def handle_event("start_room", %{"profile" => id}, socket) do
+    command(socket, {:start_room, id}, fn scope -> {:ok, scope, nil} end)
+  end
+
+  def handle_event("end_room", _, socket) do
+    with {:ok, scope} <- Scope.verify(socket),
+         {:ok, session} <- Sessions.end_room(scope.token, socket.assigns.scope.room) do
+      socket =
+        socket
+        |> stop_observations()
+        |> cancel_investigation_on_navigation()
+        |> assign(:scope, %{scope | room: session.room})
+        |> refresh()
+        |> revise_islands()
+
+      {:noreply, socket}
+    else
       {:error, error} -> reject_event(socket, error)
     end
   end
@@ -891,6 +913,17 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
             <img class="wl-menu-icon" src="/icons/search.svg" alt="" width="16" height="16" />
             <span>Search board</span><kbd>⌘ / Ctrl K</kbd>
           </button>
+          <button
+            :for={profile <- @room_profiles}
+            :if={is_nil(@scope.room) && profile.id != "loopback"}
+            type="button"
+            phx-click="start_room"
+            phx-value-profile={profile.id}
+            disabled={!profile.available}
+          >
+            Start {profile.title}
+          </button>
+          <button :if={@scope.room} id="wl-end-room" type="button" phx-click="end_room">End room</button>
           <button type="button" phx-click="open_connections">Connections</button>
           <button type="button" phx-click="import_thing">Add Thing Description</button>
           <.link :if={@scope.room} patch="/evidence" class="wl-nav-link">Session report</.link>
@@ -2965,7 +2998,10 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
 
   defp refresh(%{assigns: %{scope: %{room: room, session_id: session_id}}} = socket)
        when is_pid(room) do
-    socket = load_board(socket)
+    socket =
+      socket
+      |> load_board()
+      |> load_room_profiles()
 
     if Process.alive?(room) do
       runs = safe(fn -> Room.runs(room) end, [])
@@ -2990,7 +3026,27 @@ defmodule WotexLabWorkbenchWeb.WorkbenchLive do
     end
   end
 
-  defp refresh(socket), do: empty_room(load_board(socket))
+  defp refresh(socket) do
+    socket
+    |> load_board()
+    |> load_room_profiles()
+    |> empty_room()
+  end
+
+  defp load_room_profiles(%{assigns: %{scope: %{token: token}}} = socket) do
+    profiles = safe(fn -> Sessions.room_profiles(token) end, {:ok, []})
+
+    assign(
+      socket,
+      :room_profiles,
+      case profiles do
+        {:ok, choices} -> choices
+        _ -> []
+      end
+    )
+  end
+
+  defp load_room_profiles(socket), do: assign(socket, :room_profiles, [])
 
   defp empty_room(socket) do
     socket

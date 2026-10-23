@@ -53,6 +53,7 @@ defmodule WotexLabWorkbench.MixProject do
       wotex_dependency(:wotex_continuum, "wotex-continuum"),
       wotex_dependency(:wotex_binding_http, "wotex-binding-http"),
       wotex_dependency(:wotex_binding_mqtt, "wotex-binding-mqtt"),
+      wotex_dependency(:wotex_modbus, "wotex-modbus"),
       {:ex_maude, "== 0.5.0"},
       {:nx, "~> 0.13.1"},
       {:explorer, "~> 0.12.0"},
@@ -69,6 +70,10 @@ defmodule WotexLabWorkbench.MixProject do
       {:bandit, "~> 1.13.1"},
       {:jason, "~> 1.4"},
       {:req, "~> 0.5"},
+      {:testcontainers, "== 2.4.0", only: :test, runtime: false},
+      # Testcontainers 2.4 still requests Hackney 1.x; use the qualified fixed
+      # client cohort also selected by the Lab's independent device suite.
+      {:hackney, "== 4.8.5", only: :test, runtime: false, override: true},
       {:lazy_html, "~> 0.1.13", only: :test},
       {:phoenix_test_playwright, "== 0.19.0", only: :test, runtime: false},
       {:playwright_ex, "== 0.15.0", only: :test, runtime: false},

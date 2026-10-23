@@ -2,9 +2,9 @@ defmodule WotexLabWorkbench.Room do
   @moduledoc """
   One session's disposable room under the host's Lab instance.
 
-  A room starts three loopback Reference Things (thermostat, energy meter
-  and the actuator from the Lab fixture) under the instance's `:things` role,
-  a session Directory, a continuum channel with a simulated cloud host, and
+  A room starts three explicitly selected Thing owners (thermostat, energy meter
+  and actuator), using Reference Things or an admitted Modbus room profile,
+  under the instance's `:things` role. It also starts a session Directory, a continuum channel with a simulated cloud host, and
   a smart-room policy that allows the `operator` principal only. Every run,
   granted decision, dataset export and formal result lives here and vanishes
   when the room stops. The room dispatches nothing on its own: a granted
@@ -44,7 +44,9 @@ defmodule WotexLabWorkbench.Room do
     Experiments,
     Formal,
     Metrics,
+    ModbusThing,
     Provenance,
+    RoomProfiles,
     Run,
     Runs,
     Seeds,
@@ -77,7 +79,7 @@ defmodule WotexLabWorkbench.Room do
     }
   end
 
-  @doc "Starts a room with `:id` (the session id) and `:lab` (the instance)."
+  @doc "Starts a room with `:id`, `:lab`, optional admitted `:profile` and owning `:registry`."
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts)
 
@@ -85,6 +87,10 @@ defmodule WotexLabWorkbench.Room do
   @spec start_run(pid(), String.t(), keyword()) :: {:ok, Run.t()} | {:error, Error.t()}
   def start_run(room, experiment_id, params),
     do: GenServer.call(room, {:run, experiment_id, params}, @run_timeout)
+
+  @doc "Returns the exact Lab children to retire if the room exits without cleanup."
+  @spec owned_children(pid()) :: [{:things | :sessions, pid()}]
+  def owned_children(room), do: GenServer.call(room, :owned_children)
 
   @doc "Every run, newest first."
   @spec runs(pid()) :: [Run.t()]
@@ -187,21 +193,30 @@ defmodule WotexLabWorkbench.Room do
     Process.flag(:trap_exit, true)
     Process.put(:room_owned_lab, [])
     Process.put(:room_owned_local, [])
+    Process.put(:room_owned_monitors, %{})
     lab = Keyword.fetch!(opts, :lab)
     epoch = DateTime.utc_now()
     token = Base.url_encode64(:crypto.strong_rand_bytes(16), padding: false)
     instance = "room-" <> Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
 
-    with {:ok, specs} <- Seeds.room(),
-         {:ok, things} <- start_things(lab, token, specs),
+    profile = Keyword.get(opts, :profile, :loopback)
+
+    registry_ref =
+      case Keyword.get(opts, :registry) do
+        registry when is_pid(registry) -> Process.monitor(registry)
+        _ -> nil
+      end
+
+    with {:ok, seed_specs} <- Seeds.room(),
+         {:ok, specs} <- RoomProfiles.specs(profile, seed_specs),
+         {:ok, things} <- start_things(lab, token, specs, profile),
          {:ok, repository} <- managed(lab, :things, {EtsRepository, id: :directory}),
          {:ok, clock} <- local(Clock.start_link(epoch)),
          {:ok, identifier} <- local(Identifier.start_link()),
          {:ok, service} <- service(repository, clock, identifier, things),
          context <- Context.new!(:operator),
          :ok <- register_all(service, context, things),
-         {:ok, consumed} <-
-           Scenario.discover(service, context, transport_opts(things, token, specs)),
+         {:ok, consumed} <- consume_things(service, context, things, token, specs, profile),
          {:ok, channel} <-
            local(Channel.start_link(id: :room_channel, clock: fn -> epoch end, capacity: 64)),
          {:ok, host} <-
@@ -222,6 +237,7 @@ defmodule WotexLabWorkbench.Room do
                limits: %{"setTarget" => %{min: 5, max: 35}}
              )
            ),
+         :ok <- bind_policy(things, policy),
          {:ok, observations} <-
            local(DynamicSupervisor.start_link(strategy: :one_for_one, max_children: 8)),
          {:ok, collector} <- local(Collector.start_link(attribute_to: self())),
@@ -239,6 +255,8 @@ defmodule WotexLabWorkbench.Room do
       {:ok,
        %{
          id: Keyword.fetch!(opts, :id),
+         registry_ref: registry_ref,
+         owned_monitors: take_owned(:room_owned_monitors),
          lab: lab,
          epoch: epoch,
          things: things,
@@ -370,18 +388,19 @@ defmodule WotexLabWorkbench.Room do
          {:ok, outcome} <- SmartRoom.dispatch(run, approval, state) do
       run = %{
         run
-        | status: :dispatched,
+        | status: outcome.status,
           dispatch: outcome.dispatch,
           effect: outcome.effect,
-          assertions: Enum.map(run.assertions, &dispatched_assertion/1),
+          error: if(outcome.error, do: error_view(outcome.error)),
+          assertions: Enum.map(run.assertions, &dispatched_assertion(&1, outcome.status)),
           summary:
             Enum.concat(run.summary, [
-              {"Effect", "target read back as #{Runs.plain(outcome.effect)} Cel"}
+              {"Effect", effect_summary(outcome.effect)}
             ])
       }
 
       run = with_record(run, state)
-      record_metric(state.id, :policy, :dispatch, 0, :dispatched)
+      record_metric(state.id, :policy, :dispatch, 0, outcome.status)
 
       {:reply, {:ok, run},
        sample_history(%{
@@ -400,6 +419,8 @@ defmodule WotexLabWorkbench.Room do
     end
   end
 
+  def handle_call(:owned_children, _, state), do: {:reply, state.owned_lab, state}
+
   def handle_call(:things, _, state) do
     listed =
       Enum.map(state.specs, fn %{key: key, scheme: scheme} ->
@@ -413,7 +434,7 @@ defmodule WotexLabWorkbench.Room do
           transport: scheme,
           consumable: true,
           owner: "session #{state.id}; Lab instance workbench, role things",
-          stats: Thing.stats(thing.pid)
+          stats: thing.backend.stats(thing.pid)
         }
       end)
 
@@ -638,6 +659,12 @@ defmodule WotexLabWorkbench.Room do
   end
 
   @impl GenServer
+  def handle_info({:DOWN, ref, :process, _, _}, %{registry_ref: ref} = state)
+      when is_reference(ref), do: {:stop, :normal, state}
+
+  def handle_info({:DOWN, ref, :process, _, _}, state)
+      when is_map_key(state.owned_monitors, ref), do: {:stop, :normal, state}
+
   def handle_info({:wotex_continuum, "edge", delivery_id, _}, state) do
     _ = Channel.ack(state.channel, delivery_id)
     {:noreply, state}
@@ -754,7 +781,7 @@ defmodule WotexLabWorkbench.Room do
 
   defp with_record(%Run{record: %{} = record} = run, _) do
     extras = %{
-      outcomes: Map.merge(record.outcomes, %{decision: :dispatched, effect: run.effect}),
+      outcomes: Map.merge(record.outcomes, %{decision: run.status, effect: run.effect}),
       inputs: record.inputs,
       seed: record.seed,
       budgets: record.budgets
@@ -763,10 +790,16 @@ defmodule WotexLabWorkbench.Room do
     with_record(run, extras)
   end
 
-  defp dispatched_assertion(%{id: "room:dispatch-once"} = assertion),
+  defp effect_summary(nil), do: "Unconfirmed"
+  defp effect_summary(value), do: "target read back as #{Runs.plain(value)} Cel"
+
+  defp dispatched_assertion(%{id: "room:dispatch-once"} = assertion, :dispatched),
     do: %{assertion | status: :pass, note: "policy dispatched the decision exactly once"}
 
-  defp dispatched_assertion(assertion), do: assertion
+  defp dispatched_assertion(%{id: "room:dispatch-once"} = assertion, :failed),
+    do: %{assertion | status: :fail, note: "one dispatch attempt failed; no retry"}
+
+  defp dispatched_assertion(assertion, _), do: assertion
 
   defp fetch_run_state(state, id) when is_binary(id) do
     Map.fetch(state.runs, id) |> known(:unknown_run, "run is not in this room")
@@ -835,7 +868,31 @@ defmodule WotexLabWorkbench.Room do
   defp error_code(list) when is_list(list), do: :invalid
   defp error_code(_), do: :error
 
-  defp start_things(lab, token, specs) do
+  defp start_things(lab, _, specs, profile) when is_map(profile) do
+    Enum.reduce_while(specs, {:ok, %{}}, fn spec, {:ok, acc} ->
+      case managed(lab, :things, {ModbusThing, owner: self()}) do
+        {:ok, pid} ->
+          thing = %{
+            key: spec.key,
+            consumable: true,
+            title: ThingDescription.to_map(spec.td)["title"],
+            pid: pid,
+            td: spec.td,
+            id: spec.id,
+            document: ThingDescription.to_map(spec.td),
+            scheme: spec.scheme,
+            backend: ModbusThing
+          }
+
+          {:cont, {:ok, Map.put(acc, spec.key, thing)}}
+
+        error ->
+          {:halt, error}
+      end
+    end)
+  end
+
+  defp start_things(lab, token, specs, :loopback) do
     Enum.reduce_while(specs, {:ok, %{}}, fn spec, {:ok, acc} ->
       td = spec.td
       document = ThingDescription.to_map(td)
@@ -864,7 +921,8 @@ defmodule WotexLabWorkbench.Room do
               td: td,
               id: document["id"],
               document: document,
-              scheme: spec.scheme
+              scheme: spec.scheme,
+              backend: Thing
             })}}
 
         {:error, reason} ->
@@ -892,7 +950,36 @@ defmodule WotexLabWorkbench.Room do
     end)
   end
 
-  defp transport_opts(things, token, specs) do
+  defp bind_policy(things, policy) do
+    Enum.reduce_while(things, :ok, fn
+      {_, %{backend: ModbusThing, pid: pid}}, :ok ->
+        case ModbusThing.bind_policy(pid, policy) do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
+
+      _, :ok ->
+        {:cont, :ok}
+    end)
+  end
+
+  defp consume_things(_, _, things, _, _, profile) when is_map(profile) do
+    Enum.reduce_while(things, {:ok, %{}}, fn {_, thing}, {:ok, acc} ->
+      case ConsumedThing.new(thing.td,
+             profiles: [Wotex.Modbus.profile()],
+             transports: %{modbus: {ModbusThing, thing.pid}},
+             credentials: {Wotex.Lab.Adapters.Runtime.NoSec, nil}
+           ) do
+        {:ok, consumed} -> {:cont, {:ok, Map.put(acc, thing.id, consumed)}}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp consume_things(service, context, things, token, specs, :loopback),
+    do: Scenario.discover(service, context, transport_opts(things, token, specs, :loopback))
+
+  defp transport_opts(things, token, specs, :loopback) do
     profiles =
       Enum.map(specs, fn %{role: role, scheme: scheme} ->
         {:ok, profile} =
@@ -911,9 +998,13 @@ defmodule WotexLabWorkbench.Room do
   end
 
   defp managed(lab, role, child) do
-    case Wotex.Lab.start_child(lab, role, child) do
+    spec = Supervisor.child_spec(child, restart: :temporary)
+
+    case Wotex.Lab.start_child(lab, role, spec) do
       {:ok, pid} = started ->
         Process.put(:room_owned_lab, [{role, pid} | Process.get(:room_owned_lab, [])])
+        monitor = Process.monitor(pid)
+        Process.put(:room_owned_monitors, Map.put(Process.get(:room_owned_monitors), monitor, pid))
         started
 
       error ->

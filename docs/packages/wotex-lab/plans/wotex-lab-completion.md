@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.13.1. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.14.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -33,6 +33,10 @@ Version 1.13.1 aligns WLB.11 with the accepted inline-handler rule:
 expression bodies are allowed; block bodies require named script handlers.
 The frontend standard and executable gate retain the same distinction.
 
+Version 1.14 adds explicit host-configured Modbus rooms and simulator-backed
+Workbench browser acceptance under WLB.11. Endpoint leases, actual transport
+receipts and Action approval remain server-owned.
+
 ## Delivery status
 
 This table summarizes the existing work packages; the specification catalogue
@@ -42,9 +46,9 @@ every environment or historical artifact has been requalified.
 | Scope | Built | Remaining acceptance |
 | --- | --- | --- |
 | C01–C06, C09 | Isolated Lab instances, runner, numerical lanes, Runtime/transport adapters, stores, smart-room decision flow and optional formal verification | Source evidence is complete in the owning catalogue; qualification applies to the selected dependency/environment cohort. |
-| Software devices / C04 | HTTP/SSE thermostat, MQTT energy meter and independent Testcontainers Modbus controller; typed reads, writes, Action, bounds, reconnect/reset, exceptions, isolation and cleanup | The Modbus controller is a test peer, not a selectable Workbench device or thermal plant. Physical hardware is outside the default baseline. |
+| Software devices / C04 | HTTP/SSE thermostat, MQTT energy meter and independent Testcontainers Modbus controller; typed reads, writes, Action, bounds, reconnect/reset, exceptions, isolation and cleanup | The independent controller also backs the selectable WLB.11 Modbus room profile. It models register behavior rather than a thermal plant. Physical hardware is outside the default baseline. |
 | C07, C08, C10–C12 | Evidence/containment, cookbooks/graph, artifact builders, compatibility inputs, metrics/history and optional investigations | Catalogue evidence remains partial; historical manifests do not establish new source/artifact or hosted adoption. Release/API decisions remain with the maintainer. |
-| C13 | Backend-owned rooms, Things, experiments, metrics, pins, captures and evidence; frontend units, static/live catalogues and Elixir browser journeys | Complete accessibility and the full environment/browser matrix remain qualification work. The independent Modbus peer does not back these UI journeys; they exercise the room's loopback Things. |
+| C13 | Backend-owned rooms, Things, experiments, metrics, pins, captures and evidence; frontend units, static/live catalogues and Elixir browser journeys | Complete accessibility and the full environment/browser matrix remain qualification work. The independent Modbus peer backs explicit room selection, Property reads, approved dispatch/readback, failure and isolation browser journeys. |
 | C14 | Documentation collections, API member projection, search and static/hosted builders | The accepted compact reader depends on a maintainer-published renderer seam; candidate-source results do not close published adoption. |
 | C15–C16 | Editable brand and Lab design drafts | Accepted identity, complete native component/state coverage, connected prototypes with executed Play and independent native archive restore remain open in the design contract. |
 

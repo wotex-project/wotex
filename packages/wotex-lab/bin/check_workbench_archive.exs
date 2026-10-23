@@ -18,6 +18,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
     {:wotex, "wotex"},
     {:wotex_nx, "wotex-nx"},
     {:wotex_runtime, "wotex-runtime"},
+    {:wotex_modbus, "wotex-modbus"},
     {:wotex_directory, "wotex-directory"},
     {:wotex_continuum, "wotex-continuum"},
     {:wotex_binding_http, "wotex-binding-http"},

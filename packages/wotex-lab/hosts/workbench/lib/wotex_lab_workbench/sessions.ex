@@ -15,12 +15,12 @@ defmodule WotexLabWorkbench.Sessions do
   use GenServer
 
   alias Wotex.Lab.Error
-  alias WotexLabWorkbench.{Board, Observability.Panels, Presentation, Room}
+  alias WotexLabWorkbench.{Board, Observability.Panels, Presentation, Room, RoomProfiles}
 
   @commands ~w(start_room run cancel approve read observe configure register query export verify ask)a
   @themes ~w(system light dark contrast)
   @token_bytes 32
-  @option_keys ~w(lab ttl_ms sweep_ms max_sessions name)a
+  @option_keys ~w(lab ttl_ms sweep_ms max_sessions name room_profiles)a
 
   @type session :: %{
           id: String.t(),
@@ -31,7 +31,8 @@ defmodule WotexLabWorkbench.Sessions do
           dashboard_panels: [String.t()],
           board: map(),
           presentation: map() | nil,
-          room: pid() | nil
+          room: pid() | nil,
+          room_profile: String.t() | nil
         }
 
   @doc "Commands that may reach a room; every other event is refused."
@@ -42,7 +43,7 @@ defmodule WotexLabWorkbench.Sessions do
   @spec themes() :: [String.t()]
   def themes, do: @themes
 
-  @doc "Starts the registry with `:lab`, `:ttl_ms`, `:sweep_ms` and `:max_sessions`."
+  @doc "Starts with `:lab`, session bounds and optional closed `:room_profiles`."
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
     with :ok <- validate_options(opts) do
@@ -59,9 +60,20 @@ defmodule WotexLabWorkbench.Sessions do
   def verify(server \\ __MODULE__, token), do: GenServer.call(server, {:verify, token})
 
   @doc "Admits a command for a token; a room is started for commands that need one."
-  @spec admit(GenServer.server(), term(), atom()) :: {:ok, session()} | {:error, Error.t()}
+  @spec admit(GenServer.server(), term(), atom() | {:start_room, String.t()}) ::
+          {:ok, session()} | {:error, Error.t()}
   def admit(server \\ __MODULE__, token, command),
     do: GenServer.call(server, {:admit, token, command})
+
+  @doc "Lists configured room choices without allocating a room or probing a device."
+  @spec room_profiles(GenServer.server(), term()) :: {:ok, [map()]} | {:error, Error.t()}
+  def room_profiles(server \\ __MODULE__, token),
+    do: GenServer.call(server, {:room_profiles, token})
+
+  @doc "Ends the expected room and releases its endpoint after owned cleanup."
+  @spec end_room(GenServer.server(), term(), pid() | nil) :: {:ok, session()} | {:error, Error.t()}
+  def end_room(server \\ __MODULE__, token, room),
+    do: GenServer.call(server, {:end_room, token, room}, 10_000)
 
   @doc "Stores the theme choice for a session."
   @spec put_theme(GenServer.server(), term(), term()) :: {:ok, session()} | {:error, Error.t()}
@@ -106,7 +118,11 @@ defmodule WotexLabWorkbench.Sessions do
 
   @impl GenServer
   def init(opts) do
+    {:ok, profiles} = RoomProfiles.new(Keyword.get(opts, :room_profiles, []))
+
     state = %{
+      profiles: profiles,
+      profile_leases: %{},
       lab: Keyword.fetch!(opts, :lab),
       ttl_ms: Keyword.fetch!(opts, :ttl_ms),
       max_sessions: Keyword.fetch!(opts, :max_sessions),
@@ -137,7 +153,8 @@ defmodule WotexLabWorkbench.Sessions do
         dashboard_panels: Panels.defaults(),
         board: Board.empty(),
         presentation: nil,
-        room: nil
+        room: nil,
+        room_profile: nil
       }
 
       {:reply, {:ok, session}, %{state | sessions: Map.put(state.sessions, token, session)}}
@@ -212,6 +229,49 @@ defmodule WotexLabWorkbench.Sessions do
       {:reply, {:error, Error.new(:invalid_presentation, :workbench, "Unknown restore mode")},
        state}
 
+  def handle_call({:room_profiles, token}, _, state) do
+    case live(state, token) do
+      {:ok, session, state} ->
+        {:reply, {:ok, RoomProfiles.choices(state.profiles, state.profile_leases, session.room)},
+         state}
+
+      {:error, error, state} ->
+        {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call({:end_room, token, room}, _, state) do
+    case live(state, token) do
+      {:ok, %{room: ^room} = session, state} ->
+        case stop_room(state, session) do
+          :ok ->
+            {session, state} = forget_room(state, session)
+            {:reply, {:ok, session}, state}
+
+          {:error, error} ->
+            {:reply, {:error, error}, state}
+        end
+
+      {:ok, _, state} ->
+        {:reply, {:error, Error.new(:room_changed, :room, "Room identity changed")}, state}
+
+      {:error, error, state} ->
+        {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call({:admit, token, {:start_room, id}}, _, state) do
+    with {:ok, session, state} <- live(state, token),
+         {:ok, profile} <- RoomProfiles.fetch(state.profiles, id),
+         {:ok, session, state} <- start_profile_room(state, session, id, profile) do
+      session = %{session | expires_at: now_ms() + state.ttl_ms}
+      {:reply, {:ok, session}, put_in(state, [:sessions, token], session)}
+    else
+      {:error, %Error{} = error} -> {:reply, {:error, error}, state}
+      {:error, error, state} -> {:reply, {:error, error}, state}
+    end
+  end
+
   def handle_call({:admit, token, command}, _, state) when command in @commands do
     with {:ok, session, state} <- live(state, token),
          {:ok, session, state} <- room_for(state, session, command) do
@@ -274,27 +334,30 @@ defmodule WotexLabWorkbench.Sessions do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, monitor, :process, _, _}, state) do
+  def handle_info({:DOWN, monitor, :process, pid, _}, state) do
     case Map.pop(state.monitors, monitor) do
       {nil, _} ->
         {:noreply, state}
 
-      {token, monitors} ->
-        sessions =
+      {{token, ^pid, children}, monitors} ->
+        if Process.alive?(pid) do
+          {:noreply, state}
+        else
+          stop_children(state.lab, children)
+
           case Map.fetch(state.sessions, token) do
-            {:ok, session} ->
-              Map.put(state.sessions, token, %{
-                session
-                | room: nil,
-                  board: Board.clear_results(session.board),
-                  presentation: nil
-              })
+            {:ok, %{room: ^pid} = session} ->
+              {_, state} = forget_room(%{state | monitors: monitors}, session)
+              {:noreply, state}
 
-            :error ->
-              state.sessions
+            _ ->
+              state = release_profile(%{state | monitors: monitors}, pid)
+              {:noreply, state}
           end
+        end
 
-        {:noreply, %{state | monitors: monitors, sessions: sessions}}
+      _ ->
+        {:noreply, state}
     end
   end
 
@@ -302,6 +365,7 @@ defmodule WotexLabWorkbench.Sessions do
     case Map.fetch(state.sessions, token) do
       {:ok, session} ->
         if session.expires_at > now_ms() do
+          {session, state} = reconcile_room(state, session)
           {:ok, session, state}
         else
           {:error, Error.new(:expired_session, :session, "session expired"), drop(state, session)}
@@ -352,16 +416,51 @@ defmodule WotexLabWorkbench.Sessions do
   defp room_for(state, %{room: pid} = session, _) when is_pid(pid),
     do: {:ok, session, state}
 
-  defp room_for(state, session, command) when command in [:start_room, :run, :read, :verify] do
-    case Wotex.Lab.start_child(state.lab, :sessions, {Room, id: session.id, lab: state.lab}) do
+  defp room_for(state, session, command) when command in [:start_room, :run, :read, :verify],
+    do: start_profile_room(state, session, "loopback", :loopback)
+
+  defp room_for(state, _, _),
+    do: {:error, Error.new(:no_room, :session, "start a room first"), state}
+
+  defp start_profile_room(state, %{room: pid, room_profile: id} = session, id, _)
+       when is_pid(pid), do: {:ok, session, state}
+
+  defp start_profile_room(state, %{room: pid}, _, _) when is_pid(pid),
+    do:
+      {:error,
+       Error.new(:room_exists, :room, "End the current room before choosing another profile"),
+       state}
+
+  defp start_profile_room(state, session, id, profile) do
+    if Map.has_key?(state.profile_leases, id),
+      do: {:error, Error.new(:room_profile_busy, :room, "Room profile is in use"), state},
+      else: start_room(state, session, id, profile)
+  end
+
+  defp start_room(state, session, id, profile) do
+    case Wotex.Lab.start_child(
+           state.lab,
+           :sessions,
+           {Room, id: session.id, lab: state.lab, profile: profile, registry: self()}
+         ) do
       {:ok, pid} ->
+        children = Room.owned_children(pid)
         monitor = Process.monitor(pid)
-        session = %{session | room: pid}
+        session = %{session | room: pid, room_profile: id}
 
         {:ok, session,
          %{
            state
-           | monitors: Map.put(state.monitors, monitor, session.token),
+           | profile_leases:
+               if(id == "loopback",
+                 do: state.profile_leases,
+                 else:
+                   Map.put(state.profile_leases, id, %{
+                     room: pid,
+                     children: children
+                   })
+               ),
+             monitors: Map.put(state.monitors, monitor, {session.token, pid, children}),
              sessions: Map.put(state.sessions, session.token, session)
          }}
 
@@ -373,9 +472,6 @@ defmodule WotexLabWorkbench.Sessions do
     end
   end
 
-  defp room_for(state, _, _),
-    do: {:error, Error.new(:no_room, :session, "start a room first"), state}
-
   defp drop(state, session) do
     if is_pid(session.room) do
       _ = Wotex.Lab.stop_child(state.lab, :sessions, session.room)
@@ -383,10 +479,66 @@ defmodule WotexLabWorkbench.Sessions do
 
     monitors =
       state.monitors
-      |> Enum.reject(fn {_, token} -> token == session.token end)
+      |> Enum.reject(fn {_, {token, pid, _}} ->
+        token == session.token and not Process.alive?(pid)
+      end)
       |> Map.new()
 
-    %{state | sessions: Map.delete(state.sessions, session.token), monitors: monitors}
+    {_, state} = forget_room(%{state | monitors: monitors}, session)
+    %{state | sessions: Map.delete(state.sessions, session.token)}
+  end
+
+  defp stop_room(state, %{room: room}) when is_pid(room) do
+    if Process.alive?(room), do: Wotex.Lab.stop_child(state.lab, :sessions, room)
+
+    if Process.alive?(room),
+      do: {:error, Error.new(:cleanup_unconfirmed, :room, "Room cleanup is unconfirmed")},
+      else: :ok
+  catch
+    :exit, _ -> {:error, Error.new(:cleanup_unconfirmed, :room, "Room cleanup is unconfirmed")}
+  end
+
+  defp stop_room(_, _), do: :ok
+
+  defp forget_room(state, session) do
+    state = release_profile(state, session.room)
+
+    session = %{
+      session
+      | room: nil,
+        room_profile: nil,
+        board: Board.clear_results(session.board),
+        presentation: nil
+    }
+
+    {session, %{state | sessions: Map.put(state.sessions, session.token, session)}}
+  end
+
+  defp reconcile_room(state, %{room: room} = session) when is_pid(room) do
+    if Process.alive?(room), do: {session, state}, else: forget_room(state, session)
+  end
+
+  defp reconcile_room(state, session), do: {session, state}
+
+  defp release_profile(state, room) do
+    leases =
+      Map.reject(state.profile_leases, fn {_, lease} ->
+        if lease.room == room and not Process.alive?(room) do
+          stop_children(state.lab, lease.children)
+        else
+          false
+        end
+      end)
+
+    %{state | profile_leases: leases}
+  end
+
+  defp stop_children(lab, children) do
+    Enum.each(children, fn {role, pid} ->
+      if Process.alive?(pid), do: Wotex.Lab.stop_child(lab, role, pid)
+    end)
+
+    Enum.all?(children, fn {_, pid} -> not Process.alive?(pid) end)
   end
 
   defp reason_code(%{code: code}) when is_atom(code), do: code
@@ -402,7 +554,8 @@ defmodule WotexLabWorkbench.Sessions do
   defp validate_keyword_options(opts) do
     keys = Keyword.keys(opts)
 
-    if unique_known_keys?(keys) and valid_required_options?(opts) do
+    if unique_known_keys?(keys) and valid_required_options?(opts) and
+         match?({:ok, _}, RoomProfiles.new(Keyword.get(opts, :room_profiles, []))) do
       :ok
     else
       invalid_options()

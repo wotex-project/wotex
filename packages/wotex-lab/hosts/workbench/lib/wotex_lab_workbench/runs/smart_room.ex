@@ -10,7 +10,8 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
   approval and nothing is dispatched. `dispatch/3` executes one approved
   decision through `Wotex.Lab.SmartRoom.Policy.dispatch/4`, which refuses a
   replayed, expired, revoked or stale approval, records the result on the
-  channel and reads the simulated effect afterwards.
+  channel and reads the target afterwards. An attempted dispatch is terminal
+  even if recording or readback fails; its Action cannot be retried.
   """
 
   alias Wotex.{DataSchema, ThingDescription}
@@ -18,7 +19,7 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
   alias Wotex.Lab.Error
   alias Wotex.Lab.SmartRoom.{Policy, Scenario}
   alias Wotex.Nx.{ActionProposal, Decoder, Encoder, Feature, Observation, OutputSchema, Row, Schema}
-  alias Wotex.Runtime.{ConsumedThing, Context}
+  alias Wotex.Runtime.{ConsumedThing, Context, Result}
   alias WotexLabWorkbench.{Canvas, Connections, Preview, Runs}
 
   @backend Nx.BinaryBackend
@@ -126,33 +127,57 @@ defmodule WotexLabWorkbench.Runs.SmartRoom do
                  context("decision:" <> decision["id"], now)
                )
              end
-           ),
-         {:ok, result} <-
-           Wire.result_from_runtime(
-             outcome,
-             "room-result-" <> run.proposal["id"],
-             run.proposal["id"],
-             room.scope,
-             DateTime.add(room.epoch, now, :millisecond)
-           ),
-         {:ok, _} <- Channel.send_value(room.channel, "edge", "cloud", result),
-         {:ok, effect} <-
-           ConsumedThing.read_property(target.consumed, "target", context("effect", now)) do
-      {:ok, %{dispatch: Runs.plain(outcome), effect: effect.payload}}
+           ) do
+      {:ok, complete_dispatch(outcome, run, room, target, now)}
     else
       {:error, %Error{} = error} ->
         {:error, error}
-
-      {:error, other} ->
-        {:error,
-         Error.new(:dispatch_failed, :dispatch, "dispatch failed",
-           details: %{reason: Runs.plain(other)}
-         )}
     end
   end
 
   def dispatch(_, _, _),
     do: {:error, Error.new(:no_decision, :dispatch, "run has no granted decision")}
+
+  defp complete_dispatch(outcome, run, room, target, now) do
+    completed =
+      with {:ok, result} <-
+             Wire.result_from_runtime(
+               wire_outcome(outcome),
+               "room-result-" <> run.proposal["id"],
+               run.proposal["id"],
+               room.scope,
+               DateTime.add(room.epoch, now, :millisecond)
+             ),
+           {:ok, _} <- Channel.send_value(room.channel, "edge", "cloud", result),
+           :ok <- successful_dispatch(outcome),
+           {:ok, effect} <-
+             ConsumedThing.read_property(target.consumed, "target", context("effect", now)) do
+        %{status: :dispatched, effect: effect.payload, error: nil}
+      else
+        {:error, reason} ->
+          %{
+            status: :failed,
+            effect: nil,
+            error:
+              Error.new(:dispatch_failed, :dispatch, "Dispatch or readback failed; no retry",
+                details: %{reason: Runs.plain(reason)}
+              )
+          }
+      end
+
+    {status, result} = outcome
+    Map.put(completed, :dispatch, [Atom.to_string(status), Runs.plain(result)])
+  end
+
+  defp wire_outcome({:ok, %Result{payload: :written} = result}),
+    do: {:ok, %{result | payload: "written"}}
+
+  defp wire_outcome(outcome), do: outcome
+
+  defp successful_dispatch({:ok, %Result{status: status}}) when status in [:ok, :accepted],
+    do: :ok
+
+  defp successful_dispatch({:error, reason}), do: {:error, reason}
 
   defp match(decision, approval) do
     expected = %{

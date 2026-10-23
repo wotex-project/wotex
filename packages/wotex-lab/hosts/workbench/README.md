@@ -44,6 +44,44 @@ parsing model text or re-querying. Unavailable providers leave the question
 editable and expose Build query. Questions survive panel changes and failures;
 navigation cancels running investigations.
 
+## Modbus rooms
+
+The host can offer up to four explicitly configured Modbus TCP endpoints:
+
+```elixir
+config :wotex_lab_workbench,
+  room_profiles: [
+    %{id: "zone", title: "Zone controller", host: {127, 0, 0, 1}, port: 5020, unit_id: 1}
+  ]
+```
+
+The board menu lists these choices. Start selects one; End room releases it
+without resetting the device. An endpoint belongs to one room at a time.
+Opening a page, listing profiles and starting a room perform no network reads.
+Inputs are closed and validated before startup; the browser supplies only a
+configured id. Classic Modbus TCP has no authentication or encryption, so the
+host owns endpoint trust and network access.
+
+This reference profile reads big-endian float32 temperature from Input Registers
+0–1, power from Input Registers 2–3 and target from Holding Registers 0–1
+(zero-based offsets). `setTarget` writes the target through function 16 after
+the existing separate approval. Values come from transport results; the profile
+does not seed the device. It offers explicit reads and no observation or Event
+capability. Each request opens and closes its own connection with a 1000 ms
+maximum. Failed reads preserve the last timestamped reading with an error.
+Ending, revoking or expiring a room discards its pending decisions and results;
+transport workers must stop before the endpoint can be reused.
+
+The Elixir browser lane boots the independent PyModbus Testcontainers peer:
+
+```sh
+WOTEX_LAB_E2E=1 WOTEX_LAB_SIMULATORS=1 mix test test/e2e
+```
+
+It checks reads, approval, actual register readback, peer failure, endpoint
+isolation and cleanup. Docker is required only for the explicitly selected
+simulator lane. The peer and Testcontainers remain test dependencies.
+
 ## Development
 
 From this directory:

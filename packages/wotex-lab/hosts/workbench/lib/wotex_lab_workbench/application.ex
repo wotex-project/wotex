@@ -2,9 +2,10 @@ defmodule WotexLabWorkbench.Application do
   @moduledoc """
   Explicit supervision for the workbench host.
 
-  Children in order: PubSub, one named `Wotex.Lab` instance, the bounded
+  Children in order: PubSub, the session registry, one named `Wotex.Lab` instance, the bounded
   telemetry ring, the optional formal profile (only when the operator
-  configured an engine), the session registry and the endpoint. Nothing else
+  configured an engine) and the endpoint. The rest-for-one tree retires the
+  Lab and its rooms before restarting a failed session registry. Nothing else
   starts implicitly and no child starts an experiment. Explicit `promex_enabled`
   configuration prepends the host-owned custom metric collector/relay supervisor.
   Separate `metrics_history_enabled` activation adds bounded operator history
@@ -36,6 +37,7 @@ defmodule WotexLabWorkbench.Application do
 
   alias WotexLabWorkbench.Investigation.Config, as: InvestigationConfig
   alias WotexLabWorkbench.Observability.Otlp
+  alias WotexLabWorkbench.RoomProfiles
 
   @impl Application
   def start(_, _) do
@@ -45,21 +47,23 @@ defmodule WotexLabWorkbench.Application do
     children = [
       {Phoenix.PubSub, name: WotexLabWorkbench.PubSub},
       PhoenixAssets.child_specs(),
+      {WotexLabWorkbench.Sessions,
+       lab: lab,
+       ttl_ms: Keyword.fetch!(env, :session_ttl_ms),
+       sweep_ms: Keyword.fetch!(env, :session_sweep_ms),
+       max_sessions: Keyword.fetch!(env, :max_sessions),
+       room_profiles: Keyword.get(env, :room_profiles, [])},
       Wotex.Lab.child_spec(
         id: "workbench",
         name: lab,
         max_children: Keyword.fetch!(env, :lab_max_children)
       ),
       {WotexLabWorkbench.Metrics, capacity: Keyword.fetch!(env, :metrics_capacity)},
-      {WotexLabWorkbench.Formal, lab: lab, engine: Keyword.get(env, :formal_engine)},
-      {WotexLabWorkbench.Sessions,
-       lab: lab,
-       ttl_ms: Keyword.fetch!(env, :session_ttl_ms),
-       sweep_ms: Keyword.fetch!(env, :session_sweep_ms),
-       max_sessions: Keyword.fetch!(env, :max_sessions)}
+      {WotexLabWorkbench.Formal, lab: lab, engine: Keyword.get(env, :formal_engine)}
     ]
 
-    with {:ok, observability} <- observability(env),
+    with {:ok, _} <- RoomProfiles.new(Keyword.get(env, :room_profiles, [])),
+         {:ok, observability} <- observability(env),
          {:ok, control} <- control(Keyword.get(env, :control_mutations, false)),
          {:ok, otlp} <- otlp(Keyword.get(env, :metrics_otlp, false)) do
       Supervisor.start_link(
@@ -70,7 +74,7 @@ defmodule WotexLabWorkbench.Application do
           otlp,
           [WotexLabWorkbenchWeb.Endpoint]
         ]),
-        strategy: :one_for_one,
+        strategy: :rest_for_one,
         name: WotexLabWorkbench.Supervisor
       )
     end

@@ -57,7 +57,7 @@ run the complete Elixir browser suite from the repository root:
 
 ```sh
 pnpm --dir packages/wotex-lab/hosts/workbench run storybook:build
-WOTEX_LAB_E2E=1 mix pkg wotex-lab cmd --cd hosts/workbench mix test test/e2e
+WOTEX_LAB_E2E=1 WOTEX_LAB_SIMULATORS=1 mix pkg wotex-lab cmd --cd hosts/workbench mix test test/e2e
 ```
 
 The browser suite owns ephemeral loopback listeners and contexts. It covers
@@ -65,10 +65,13 @@ backend journeys, state/focus/reconnect behavior, responsive profiles and
 server fallbacks. The Storybook suite renders every emitted story in light
 and dark themes and requires no accessibility-addon violations. These scans
 and Chromium journeys are source evidence, not WCAG certification, a
-cross-browser qualification or native Figma acceptance. The independent
-Modbus suite is a separate transport boundary; no browser story fabricates a
-successful Modbus operation. CI explicitly selects both suites on the current
-Lab lane after its source gate.
+cross-browser qualification or native Figma acceptance. The explicitly selected
+Modbus browser cohort starts its own independent Testcontainers peer and checks
+configured room selection, actual Property reads, separate Action approval and
+register readback, peer loss, isolation and endpoint release. The separate
+protocol suite covers lower-level register, exception, reset and bounds cases.
+CI selects both on the current Lab lane after its source gate; ordinary tests
+start neither Docker nor a browser.
 
 ## Candidate artifacts
 

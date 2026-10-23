@@ -94,6 +94,22 @@ defmodule WotexLabWorkbenchWeb.MetricsAskTest do
     assert Room.runs(scope.room) == []
   end
 
+  test "ending a room cancels its view-owned investigation and discards its results", %{conn: conn} do
+    start_tree(:block)
+    conn = get(conn, "/") |> track_session()
+    token = get_session(conn, SessionToken.key())
+    {:ok, view, _} = live(recycle(conn), "/metrics")
+    render_click(element(view, "button[phx-click='start_room']"))
+    render_submit(element(view, "#investigation"), %{"prompt" => "Inspect this room"})
+    assert_receive {:fake_investigation_started, worker, _}, 1_000
+    monitor = Process.monitor(worker)
+    render_click(element(view, "#wl-end-room"))
+    assert_receive {:DOWN, ^monitor, :process, ^worker, _}, 1_000
+    assert {:ok, %{room: nil}} = Sessions.verify(token)
+    refute has_element?(view, "#investigation-metric-0")
+    refute has_element?(view, "button[phx-click='cancel_investigation']")
+  end
+
   defp until_result(view, attempts \\ 100) do
     if has_element?(view, "#investigation-metric-0") do
       render(view)

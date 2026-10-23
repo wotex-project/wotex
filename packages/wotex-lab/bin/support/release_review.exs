@@ -2,7 +2,7 @@ defmodule Wotex.Lab.Check.ReleaseReview do
   @moduledoc false
 
   @direct ~w(wotex_lab wotex wotex_nx wotex_runtime wotex_directory wotex_continuum
-             wotex_binding_http wotex_binding_mqtt ex_maude nx explorer telemetry
+             wotex_binding_http wotex_binding_mqtt wotex_modbus ex_maude nx explorer telemetry
              telemetry_metrics prom_ex beamlens phoenix phoenix_assets doc_shell phoenix_html phoenix_live_view
              phoenix_pubsub bandit jason req)
 

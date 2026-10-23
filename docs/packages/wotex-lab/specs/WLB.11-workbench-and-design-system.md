@@ -1,7 +1,78 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.31.1. Contract: accepted. Implementation status:
+Specification version: 0.32.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.32 adds explicitly selected host-configured Modbus room profiles.
+The session registry admits up to four closed IPv4 endpoint profiles and
+exclusively leases each remote endpoint to one live room. Built-in loopback
+rooms retain their existing defaults. Browser input selects only a configured
+profile id; it cannot supply an address, module, credentials or executable.
+
+## Configured Modbus room profile
+
+The host's `room_profiles` option defaults to `[]`. Each list member is an
+atom-keyed map containing exactly `id`, `title`, `host`, `port` and `unit_id`.
+`id` is 1–32 ASCII lowercase letters, digits or hyphens, begins with a letter
+and differs from the reserved `loopback` id. `title` is nonempty valid UTF-8
+of at most 64 bytes without control characters. `host` is a four-element IPv4
+tuple with octets 0–255, `port` is 1–65535 and `unit_id` is 1–247. Duplicate ids
+or host/port pairs, unknown keys and malformed limits refuse host startup
+before any transport or room starts. Endpoint selection is trusted host input;
+classic Modbus TCP supplies no transport authentication or encryption.
+
+Opening or verifying a browser session lists only ids/titles/availability and
+starts no room or network activity. Explicit Start chooses a profile; an
+unknown id or leased endpoint returns a typed error without acquiring a child.
+Repeated Start for the same live session/profile returns its existing room;
+changing profile requires the old room to end. Session expiry, revocation,
+startup rollback or room death releases only that room's lease after its
+transport actors have stopped. A stale DOWN
+notification cannot release a replacement room's lease. Room-owned Lab
+children are temporary and monitored: a failed child retires its room rather
+than silently recreating state. The registry retains their exact identities
+and reaps them even if the room dies without running its cleanup. Rooms monitor their
+registry. The host supervises the registry before its Lab instance using
+rest-for-one, so registry loss retires existing rooms before replacement
+admission becomes reachable. Explicit End room atomically checks the view's
+expected room identity, refuses stale replacement views, revokes pending local work,
+confirms room cleanup and releases its lease; it performs no device reset.
+
+A Modbus room owns the same three reference roles and graph as the default
+room. Temperature reads two Input Registers at zero-based offset 0; power
+reads two Input Registers at offset 2; target reads two Holding Registers at
+offset 0. Values use the existing WMB float32 big-endian mapping and Cel/W
+units. The explicit `setTarget` Action writes the target's two Holding
+Registers through `writeMultipleHoldingRegisters`, bounded to 5–35 Cel.
+These mappings describe this Lab reference profile, not a global device model.
+Descriptions and presentation defaults come from backend seed ownership;
+returned values come only from actual Runtime transport results.
+
+Each room-owned transport actor monitors its room, delegates bounded requests
+to the public Modbus transport with a maximum 1000 ms request timeout. Only
+the owning room and its explicitly bound policy (Actions only) may call it.
+It retains
+only actual read receipts and operation counters, and closes with the room.
+The standard transport owns and closes each TCP exchange. No observation or
+Event capability, polling loop, automatic reconnect, command replay or cached
+success is invented. A peer failure remains a typed operation error. Loss of a transport actor
+during a mutating request reports unknown effect, never a confirmed refusal.
+Repeated
+explicit reads may open a fresh connection. Smart-room Runs retain the existing
+separate exact-scope Action approval, cancellation and at-most-once dispatch.
+The host projects the Modbus `:written` acknowledgement to the JSON string
+`"written"` at its Continuum boundary. No physical effect is inferred from it.
+Once a policy accepts a dispatch attempt, transport, record or readback failure
+makes the Run terminally failed, with retained dispatch outcome and no confirmed
+effect. It cannot expose approval or cancellation as if the attempt were still
+pending, and cannot replay the Action.
+
+WLB-V11-19 covers pure profile refusal, no-start listing, source selection,
+exclusive leases and stale/dead room cleanup. An Elixir browser cohort boots
+the independent PyModbus peer through Testcontainers, verifies actual reads,
+separate approval and target readback, unavailable observation, reconnect/peer
+loss and subsequent room release. The test peer stays outside production and
+ordinary host startup. Native design and broader qualification remain partial.
 
 Version 0.31.1 permits expression-bodied inline handlers in event attributes,
 `on…` callback props and legacy `on:` directives. Calls, assignments, toggles
@@ -1029,6 +1100,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-S11-16 | Deliver the editable Lab page/state/profile inventory and connected task flows defined by WLB-C16, with source-aligned components, adjacent briefs and explicit approval/recovery boundaries. |
 | WLB-S11-17 | Author reference-room, component and island-story sample data in the backend Mix seed source; validate generated room input, reject stale generated outputs, and exclude Storybook sample payloads from production browser code. |
 | WLB-S11-18 | Use typed Svelte 5 runes, arrow functions and closure controllers, expression-bodied inline handlers or named script handlers for block bodies, primitive composition, bounded components, transitive load ordering, consistent spacing and alias-based `.ts` imports. Colocate every primitive/composed component with its stories and keep island adapters thin. Enforce the source contract in the frontend gate. |
+| WLB-S11-19 | Admit host-configured Modbus room profiles with explicit browser selection, exclusive endpoint custody, real Runtime exchanges and unchanged Action approval; no fabricated observations or frontend seed values. |
 
 ## Executable vectors
 
@@ -1052,6 +1124,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-V11-16 | Inspect native Lab components and all required page/state/profile mappings, execute named Play journeys including back/cancel/expiry/reconnect, compare with the pinned source and independently restore the native prototype and component links. |
 | WLB-V11-17 | Repeated Mix seeding produces identical bytes without allocating browser state; check-only detects missing or stale output without writes; room admission rejects malformed, duplicate and oversized seeds; a fresh browser renders no Things, readings, Runs, pins or evidence before explicit backend operations. |
 | WLB-V11-18 | AST and installed-Biome vectors accept arrows, accessors, aliases, expression-bodied inline handlers and named Svelte handlers and reject classes outside the documented platform exemptions, function/method declarations, `.js`/relative imports, inline block handlers, raw domain controls, oversized components, eager forward calls and missing spacing. Every production component has colocated rendered stories; callback-context isolation, enabled-menu navigation and single native activation pass unit/browser regressions. |
+| WLB-V11-19 | Configured room profiles pass malformed/duplicate/unknown/busy and owner-loss vectors; the independent container peer drives an Elixir browser journey through graph inspection, read, approved Run dispatch, target readback and failure/release without replay. |
 
 ## Completion boundary
 
