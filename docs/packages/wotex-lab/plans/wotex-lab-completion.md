@@ -1,7 +1,13 @@
 # Wotex Lab completion contract
 
-Plan version: 1.10.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.10.1. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
+
+The default Lab runs against simulated devices over real local transports.
+Physical-device qualification is an optional deployment claim, not unfinished
+Lab work. The [qualification runbook](qualification.md) separates that claim
+from the [software simulator baseline](../labs/simulators.md). This
+clarification changes no package API or existing acceptance obligation.
 
 The Workbench additionally requires backend-owned Mix seed definitions,
 deterministic generated data checks and an empty initial browser with no

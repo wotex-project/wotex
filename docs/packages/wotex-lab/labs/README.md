@@ -2,10 +2,12 @@
 id: lab-catalogue
 ---
 
-# WoTEx physical lab catalogue
+# WoTEx lab catalogue
 
-This directory indexes repeatable physical interoperability labs across the
-WoTEx protocol family.
+The default Lab uses [simulated devices over real local transports](simulators.md).
+This directory also indexes optional physical interoperability labs across the
+WoTEx protocol family. Physical hardware is not a completion prerequisite for
+the simulated Lab.
 
 The programme extends beyond the hardware currently on one bench. It tests
 whether the same Thing semantics survive different protocol implementations,

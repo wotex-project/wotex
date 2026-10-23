@@ -144,6 +144,9 @@ Tests by area, all under `test/wotex/lab/`:
   `otlp_*_test.exs`. Design system: `design_system_test.exs`.
 - Release tooling: `reference_inputs_test.exs`, `reference_summary_test.exs`,
   `check_work_directory_test.exs`, `dependency_security_test.exs`.
+- Independent software devices: `modbus_simulator_test.exs`. Elixir
+  Testcontainers owns the PyModbus peer; its Python launcher is a test-only
+  server, not a Lab runtime dependency.
 
 No package depends on Lab, so a Lab change needs only Lab's gate. Before
 changing a public function, still list its callers with
@@ -155,7 +158,8 @@ Explicit-only lanes, run inside `packages/wotex-lab` and only when asked (the
 README's Development section lists prerequisites): tagged suites behind
 `WOTEX_LAB_INTEGRATION=1` (conformance source suite with Rust, cookbook
 execution, evidence manifests, source cohort), `WOTEX_LAB_BROKER=1`,
-`WOTEX_LAB_GREPTIME=1`, `WOTEX_LAB_MAUDE=<path>` and `WOTEX_LAB_CONTAINER=1`;
+`WOTEX_LAB_GREPTIME=1`, `WOTEX_LAB_MAUDE=<path>`, `WOTEX_LAB_CONTAINER=1` and
+`WOTEX_LAB_SIMULATORS=1`;
 `elixir bin/check_native_containment.exs`,
 `elixir bin/check_linux_containment.exs`,
 `elixir bin/check_source_cohort.exs`, and

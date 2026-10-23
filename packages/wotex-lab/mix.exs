@@ -54,6 +54,7 @@ defmodule WotexLab.MixProject do
       wotex_dependency(:wotex_binding_http, "wotex-binding-http", optional: true),
       wotex_dependency(:wotex_binding_mqtt, "wotex-binding-mqtt", optional: true),
       wotex_dependency(:wotex_conformance, "wotex-conformance", only: [:dev, :test]),
+      wotex_dependency(:wotex_modbus, "wotex-modbus", only: :test),
       wotex_dependency(:wotex_continuum, "wotex-continuum", optional: true),
       {:nx, "~> 0.13.1"},
       {:explorer, "~> 0.12.0", optional: true},
@@ -64,6 +65,9 @@ defmodule WotexLab.MixProject do
       {:req, "~> 0.7.4", optional: true},
       {:ex_maude, "== 0.5.0", optional: true},
       {:bandit, "~> 1.13.1", only: :test},
+      {:testcontainers, "== 2.4.0", only: :test, runtime: false},
+      # Testcontainers 2.4 pins Hackney 1.x; Tesla supports the patched 4.x API.
+      {:hackney, "== 4.8.5", only: :test, runtime: false, override: true},
       {:plug, "~> 1.18", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.5", only: :dev, runtime: false},
@@ -179,6 +183,7 @@ defmodule WotexLab.MixProject do
         [
           "README.md",
           "../../docs/packages/wotex-lab/security.md",
+          "../../docs/packages/wotex-lab/labs/simulators.md",
           {"CHANGELOG.md", [title: "Changelog"]},
           {"LICENSE", [title: "License"]},
           {"NOTICE", [title: "Notices"]}
@@ -190,6 +195,7 @@ defmodule WotexLab.MixProject do
         "Completion contract": ~r/wotex-lab\/plans/,
         Decisions: ~r/wotex-lab\/decisions/,
         Provenance: ~r/wotex-lab\/provenance/,
+        "Software labs": ~r/wotex-lab\/labs/,
         Benchmarks: ~r/bench\/output/
       ],
       source_ref: "wotex-lab-v#{@version}",

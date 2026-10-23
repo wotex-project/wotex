@@ -25,7 +25,7 @@ batch, a model result and an inert Action proposal with traceable provenance.
 
 This package supplies the library foundation, not the complete laboratory.
 Physical interoperability work is organized in the
-[hardware lab catalogue](../../docs/packages/wotex-lab/labs/README.md). It
+[protocol lab catalogue](../../docs/packages/wotex-lab/labs/README.md). It
 separates the current home-bench cohort from the wider protocol test programme.
 Hardware runs remain distinct from software and simulator evidence and do not
 set source implementation status.
@@ -349,6 +349,7 @@ when asked, inside `packages/wotex-lab`.
 | GreptimeDB ingestion (`:greptime`) | `WOTEX_PATH_DEPS=1 WOTEX_LAB_GREPTIME=1 mix test test/wotex/lab/greptime_bridge_test.exs` | Docker, `greptime/greptimedb:v1.1.4` |
 | Formal profile (`:maude`) | `elixir bin/provision_maude.exs`, then `WOTEX_PATH_DEPS=1 WOTEX_LAB_MAUDE=tmp/maude/maude mix check --no-retry` | network for the pinned Maude 3.5.1 download |
 | Kernel containment (`:container`) | `WOTEX_PATH_DEPS=1 WOTEX_LAB_CONTAINER=1 mix test test/wotex/lab/kernel_containment_lane_test.exs` | Docker with the pinned `hexpm/elixir` image already present locally |
+| Independent Modbus device (`:simulator`) | `WOTEX_PATH_DEPS=1 WOTEX_LAB_SIMULATORS=1 mix test test/wotex/lab/modbus_simulator_test.exs` | Docker; Elixir Testcontainers starts and removes the pinned PyModbus peer |
 | Native containment helper tests | `elixir bin/check_native_containment.exs` | Rust/Cargo 1.85+ |
 | Linux Bubblewrap containment | `elixir bin/check_linux_containment.exs` | Docker; sibling package directories without uncommitted changes |
 | Source-cohort drift guard | `elixir bin/check_source_cohort.exs` | every source owner in `packages/` |
