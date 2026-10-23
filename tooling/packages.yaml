@@ -1235,6 +1235,7 @@ packages:
       - wotex-binding-mqtt
       - wotex-continuum
       - wotex-conformance
+      - wotex-modbus
     native: true
     native_artifacts:
       - {profile: nerves-rpi4, descriptor: priv/native-artifacts/nerves-rpi4.json}

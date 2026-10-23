@@ -98,9 +98,9 @@ Tests by area, under `test/wotex/modbus/` unless noted:
 - Software-lane tasks and command guardian: `test/software/`.
 - Package contents or `mix.exs` `package`: the full gate (archive check).
 
-No sibling package depends on `wotex-modbus`; it uses only the public APIs of
-`wotex` and `wotex-runtime`. Consumers call its public API, so list callers
-with `mix refs Wotex.Modbus.Module fun` and the tests to run with
+Lab consumes `wotex-modbus` in its test-only simulator profile. Modbus uses only
+the public APIs of `wotex` and `wotex-runtime`. Consumers call its public API,
+so list callers with `mix refs Wotex.Modbus.Module fun` and the tests to run with
 `mix impact Wotex.Modbus.Module fun` before changing a public function.
 
 Explicit-only lanes, never part of a bounded change:
