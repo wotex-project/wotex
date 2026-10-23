@@ -529,3 +529,17 @@ fixes malicious indexed-source-map denial of service.
 of the frontend gate. A clean audit is dated dependency evidence, not a claim
 that future advisories cannot match. Component/browser behavior and production
 asset budgets are qualified separately against the replacement lock.
+
+### Crypto argument-error redaction
+
+Observation date: 2026-10-23. Hex reported `EEF-CVE-2026-105963` against
+the locked `plug_crypto` 2.2.0: wrong-typed arguments could expose the secret
+key base in a function-clause stack trace. The root tooling, Lab, Workbench
+and Phoenix Storybook locks now select the upstream
+[2.2.1 patch](https://github.com/elixir-plug/plug_crypto/releases/tag/v2.2.1).
+No advisory exemption is added. The Workbench dependency-security regression
+passes malformed salt/options to all four public token operations and checks
+the formatted exception and stack trace for synthetic key/salt canaries. Valid
+sign/verify and encrypt/decrypt round trips still pass. The normal host audits
+and browser session journeys qualify this lock change alongside the frontend
+refactor; earlier receipts retain their original dependency cohort.

@@ -21,4 +21,35 @@ defmodule WotexLabWorkbench.DependencySecurityTest do
     on_exit(fn -> if Process.alive?(task.pid), do: Process.exit(task.pid, :kill) end)
     assert {:ok, _} = Task.yield(task, 1_000)
   end
+
+  test "wrong-typed crypto arguments expose no key material through errors or stack traces" do
+    assert Application.spec(:plug_crypto, :vsn) == ~c"2.2.1"
+    secret = String.duplicate("secret-canary-", 8)
+    salt = "salt-canary-in-security-test"
+
+    for operation <- [:sign, :encrypt, :verify, :decrypt],
+        arguments <- [
+          [secret, {:invalid, salt}, :payload, []],
+          [secret, "salt", :payload, %{secret => salt}]
+        ] do
+      formatted =
+        try do
+          apply(Plug.Crypto, operation, arguments)
+          flunk("wrong-typed arguments must be refused")
+        rescue
+          error in ArgumentError -> Exception.format(:error, error, __STACKTRACE__)
+        end
+
+      refute formatted =~ secret
+      refute formatted =~ salt
+    end
+
+    value = %{"scope" => "test"}
+
+    assert {:ok, ^value} =
+             Plug.Crypto.verify(secret, "salt", Plug.Crypto.sign(secret, "salt", value))
+
+    assert {:ok, ^value} =
+             Plug.Crypto.decrypt(secret, "salt", Plug.Crypto.encrypt(secret, "salt", value))
+  end
 end
