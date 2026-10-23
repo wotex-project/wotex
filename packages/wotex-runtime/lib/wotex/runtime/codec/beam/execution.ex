@@ -3,6 +3,7 @@ defmodule Wotex.Runtime.Codec.Beam.Execution do
 
   alias Wotex.Runtime.Implementation.Error
 
+  @doc "Executes trusted decoder work under one deadline and bounded task cleanup."
   @spec run(pid(), pos_integer(), non_neg_integer(), (-> term()), (term() -> term())) :: term()
   def run(supervisor, budget, cleanup_ms, work, accept) do
     owner = self()
@@ -233,6 +234,7 @@ defmodule Wotex.Runtime.Codec.Beam.Execution do
   defp outcome(%{closing: nil, returned: returned}), do: returned
   defp outcome(state), do: failure(state.closing)
 
+  @spec abandon(map()) :: no_return()
   defp abandon(state) do
     Process.exit(state.starter, :kill)
     if state.worker != nil, do: Process.exit(state.worker, :kill)
