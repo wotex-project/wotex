@@ -1,6 +1,6 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.6.1. Contract: accepted. Implementation status:
+Specification version: 0.6.2. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 The documentation cohort pins published DocShell 1.0.0 across the family
@@ -167,6 +167,13 @@ They have no Mix application and are collected through the same Markdown
 extractor with an empty module set.
 
 ## Source generation
+
+Each lane initializes a fresh Git repository and fetches the exact admitted
+40-character revision without configuring remotes, fetching tags or recursing
+into submodules. Mutable or malformed revisions and credential-bearing source
+URLs fail before Git runs. Missing commits fail during fetch and remove only
+the newly allocated checkout. Explicit local transport overrides preserve the
+selected revision and the caller's repository configuration.
 
 Each package is extracted in an isolated work directory with its own lock and
 toolchain lane. A package runs `mix doc_shell.build --no-start` in

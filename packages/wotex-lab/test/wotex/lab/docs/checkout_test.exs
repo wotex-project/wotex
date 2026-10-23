@@ -1,4 +1,6 @@
 defmodule Wotex.Lab.Docs.CheckoutTest do
+  @moduledoc false
+
   use ExUnit.Case, async: true
 
   alias Wotex.Lab.Docs.Checkout
@@ -20,6 +22,8 @@ defmodule Wotex.Lab.Docs.CheckoutTest do
     assert File.read!(Path.join(destination, "README.md")) == "committed\n"
     assert String.trim(git!(destination, ["rev-parse", "HEAD"])) == revision
     assert String.trim(git!(destination, ["branch", "--show-current"])) == ""
+    assert git!(destination, ["remote"]) == ""
+    assert git!(repository, ["remote"]) == ""
   end
 
   test "refuses mutable, missing and occupied checkout inputs" do
@@ -44,13 +48,37 @@ defmodule Wotex.Lab.Docs.CheckoutTest do
     destination = temporary_path("missing")
     on_exit(fn -> File.rm_rf!(destination) end)
 
-    assert {:error, {:git_operation_failed, :checkout, _, _}} =
+    assert {:error, {:git_operation_failed, :fetch, _, _}} =
              Checkout.open(missing, destination, repository: repository)
 
     refute File.exists?(destination)
 
     assert {:error, {:invalid_checkout_origin, "git@example.invalid:repo"}} =
              Checkout.open(source, temporary_path("origin"), repository: "git@example.invalid:repo")
+  end
+
+  test "malformed identities, mutable revisions and credential-bearing URLs fail before Git" do
+    source = %{
+      "repository_url" => "https://github.com/wotex-project/example",
+      "revision" => String.duplicate("a", 40)
+    }
+
+    invalid = [
+      nil,
+      [],
+      %{},
+      %{source | "revision" => "main"},
+      %{source | "revision" => "--help"},
+      %{source | "revision" => String.duplicate("a", 64)},
+      %{source | "repository_url" => "https://credential@github.com/wotex-project/example"},
+      %{source | "repository_url" => "https://github.com/wotex-project/example?token=canary"}
+    ]
+
+    for value <- invalid do
+      destination = temporary_path("invalid")
+      assert {:error, :invalid_checkout_source} = Checkout.open(value, destination)
+      refute File.exists?(destination)
+    end
   end
 
   defp fixture_repository do

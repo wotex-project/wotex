@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.16.1. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.16.2. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -71,6 +71,11 @@ Version 1.16.1 moves hosted/static documentation browser acceptance into
 Elixir and shares the existing backend fixture between its tests and the
 archive builder. Source-candidate API compatibility, archive resolution and
 published adoption remain separate qualification states.
+
+Version 1.16.2 fetches exact documentation revisions into disposable detached
+checkouts without configuring remotes. Invalid identities and credential-bearing
+URLs fail before checkout; missing objects fail during fetch. Runtime routes,
+source membership and Action authority are unchanged.
 
 ## Delivery status
 

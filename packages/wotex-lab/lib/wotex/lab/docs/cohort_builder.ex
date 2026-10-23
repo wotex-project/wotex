@@ -2,7 +2,7 @@ defmodule Wotex.Lab.Docs.CohortBuilder do
   @moduledoc """
   Builds the closed documentation cohort without sharing dependency state.
 
-  Each source is cloned and built through `CollectionBuilder` in its own lane.
+  Each source is checked out and built through `CollectionBuilder` in its own lane.
   Only validated portable artifacts cross back into the aggregate process. The
   caller owns the new workspace and can publish it only after projection,
   rendering and the remaining site gates succeed.

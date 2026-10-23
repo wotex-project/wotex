@@ -188,8 +188,7 @@ defmodule Wotex.Lab.Docs.CollectionBuilder do
     case System.cmd(executable, args,
            cd: workdir,
            env: CommandEnvironment.scrubbed(env),
-           stderr_to_stdout: true,
-           env: CommandEnvironment.scrubbed()
+           stderr_to_stdout: true
          ) do
       {_, 0} -> :ok
       {output, status} -> {:error, {:documentation_command_failed, phase, status, tail(output)}}
