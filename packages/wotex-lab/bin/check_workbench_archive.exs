@@ -31,6 +31,7 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
              hosts/workbench/bin/serve_documentation_browser_fixture.exs
              hosts/workbench/mix_tasks/**/* hosts/workbench/priv/static/**/*
              hosts/workbench/README.md hosts/workbench/mix.exs hosts/workbench/mix.lock
+             hosts/workbench/package.json hosts/workbench/pnpm-lock.yaml
              bin/check_workbench_archive.exs bin/support/archive_repository.exs
              bin/support/child_environment.exs bin/support/release_review.exs
              bin/support/work_directory.exs priv/provenance/workbench-bom.cdx.json
@@ -130,8 +131,8 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
 
   defp build_documentation_fixture!(work, host_source, candidates) do
     destination = Path.join(work, "documentation-fixture")
-    pagefind = Path.join(candidates.phoenix_assets, "npm/doc-shell/node_modules/.bin/pagefind")
-    File.regular?(pagefind) || abort("Pagefind is absent from the Phoenix Assets candidate")
+    pagefind = Path.join(host_source, "node_modules/.bin/pagefind")
+    File.regular?(pagefind) || abort("Pagefind is absent from the Workbench asset toolchain")
 
     environment = [
       {"MIX_ENV", "test"},

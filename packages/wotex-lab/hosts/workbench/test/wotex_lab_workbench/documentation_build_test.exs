@@ -1,4 +1,6 @@
 defmodule WotexLabWorkbench.Documentation.BuildTest do
+  @moduledoc false
+
   use ExUnit.Case, async: false
 
   alias DocShell.Generate.Collection
@@ -253,9 +255,7 @@ defmodule WotexLabWorkbench.Documentation.BuildTest do
     do: %{"tag" => tag, "attrs" => %{}, "content" => content, "meta" => %{}}
 
   defp pagefind_executable do
-    Mix.Project.deps_paths()
-    |> Map.fetch!(:phoenix_assets)
-    |> Path.join("npm/doc-shell/node_modules/.bin/pagefind")
+    Path.expand("../../node_modules/.bin/pagefind", __DIR__)
   end
 
   defp temporary_path(name) do

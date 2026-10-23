@@ -244,6 +244,8 @@ defmodule Wotex.Lab.BuildArtifacts do
       "--offline",
       "--phoenix-assets-source",
       candidates.phoenix_assets,
+      "--pagefind-executable",
+      Path.join(host, "node_modules/.bin/pagefind"),
       "--storybook-source",
       host,
       "--base-path",

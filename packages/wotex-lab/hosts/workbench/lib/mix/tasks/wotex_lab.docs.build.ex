@@ -125,8 +125,11 @@ defmodule Mix.Tasks.WotexLab.Docs.Build do
 
   defp pagefind(opts, phoenix_assets) do
     Keyword.get(opts, :pagefind_executable) ||
-      if phoenix_assets,
-        do: Path.join(phoenix_assets, "npm/doc-shell/node_modules/.bin/pagefind")
+      if phoenix_assets do
+        Path.join(phoenix_assets, "npm/doc-shell/node_modules/.bin/pagefind")
+      else
+        Path.expand("node_modules/.bin/pagefind", Path.dirname(Mix.Project.project_file()))
+      end
   end
 
   defp workspace(opts) do

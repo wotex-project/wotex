@@ -1,9 +1,16 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.5.0. Contract: accepted. Implementation status:
+Specification version: 0.5.1. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 ## Implemented source and evidence boundary
+
+The Workbench pins its own Pagefind 1.5.2 build tool. A documentation build
+without an explicit builder or legacy renderer-source option uses the local
+Workbench executable. Fixture tests and artifact builders use that same pinned
+executable instead of requiring an upstream checkout's `node_modules` tree.
+The builder is not a release runtime dependency. This source change does not
+renew historical publication, browser, accessibility or archive evidence.
 
 The compact reader composes public Phoenix Assets components within one
 Lab-owned shell for hosted and static output. It uses Lab semantic theme
@@ -47,7 +54,10 @@ name/arity title as source-derived query terms. Both readers and
 not prevent a query for its bare name from finding the member page.
 
 This composition requires DocShell's 0.5 presentation API and the Phoenix
-Assets PHA.01 0.3 inline-search seam. The historical 0.3.2 evidence below does
+Assets PHA.01 0.3 inline-search seam. The inspected Phoenix Assets 1.2.1 Hex
+archive does not supply that inline seam; an explicitly supplied source candidate can be
+qualified separately. A successful source-candidate build cannot establish
+published-renderer availability. The historical 0.3.2 evidence below does
 not qualify the changed reader, assets or scope tags. Fresh reader browser,
 publication and archive checks remain required before the 0.4.0 evidence can
 be declared complete. Member projection has separate source and browser checks;

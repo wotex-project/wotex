@@ -53,6 +53,15 @@ projections; semantic HEEx/SVG fallbacks remain available if an island fails.
 Assets are built locally with the pinned pnpm/Vite toolchain. The running
 Elixir release starts no Node process and loads no remote browser runtime.
 
+The development toolchain also pins Pagefind 1.5.2 for documentation builds.
+`pnpm install --frozen-lockfile` installs the local builder at
+`node_modules/.bin/pagefind`; a default documentation build uses that executable.
+An explicit `--pagefind-executable` overrides it. The legacy
+`--phoenix-assets-source` option still selects that source's builder when supplied.
+Generated indexes ship as static assets; the running release starts no search
+builder. The accepted inline reader still needs the renderer candidate API;
+published renderer availability and its archive qualification remain separate.
+
 Biome owns frontend formatting and linting, including Svelte scripts and markup.
 The pinned configuration uses two-space indentation, a 100-column line width,
 semicolon-free JavaScript/TypeScript, braces on control flow, sorted imports and
