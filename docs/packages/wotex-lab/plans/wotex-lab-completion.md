@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.15.2. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.15.3. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -55,6 +55,10 @@ Version 1.15.2 retains frontend gate modules and plugins in the Workbench
 source archive and its input digest. WLB.08's shared archiver reads explicit
 source paths for plain and gzip artifacts, independently of the caller's
 working directory, and rejects symbolic input paths.
+
+Version 1.15.3 gives Workbench and Phoenix Storybook separate frontend gate
+input scopes. The Lab gate still checks both with the shared rules; extracted
+Workbench frontend commands require no sibling checkout or rule exemption.
 
 ## Delivery status
 

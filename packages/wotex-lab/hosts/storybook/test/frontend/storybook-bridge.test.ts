@@ -5,7 +5,7 @@ import { runInNewContext } from "node:vm"
 import { createLiveViewHook } from "$lib/live-view-hook.ts"
 
 const source = readFileSync(
-  new URL("../../../storybook/priv/static/contract-assets/storybook-loader.js", import.meta.url),
+  new URL("../../priv/static/contract-assets/storybook-loader.js", import.meta.url),
   "utf8",
 )
 

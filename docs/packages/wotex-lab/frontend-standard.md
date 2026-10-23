@@ -97,8 +97,15 @@ pnpm --dir packages/wotex-lab/hosts/workbench run lint:style assets/components/c
 
 [Biome configuration](../../../packages/wotex-lab/hosts/workbench/biome.jsonc)
 pins 2.6.2; the standalone Storybook host extends it and runs Biome in its
-own host directory through `tools/lint/biome-host.ts`. Plugin resolution stays
-relative to the declaring configuration. Its installed schema defines `style/noParameterAssign`,
+own host directory through `tools/lint/biome-host.ts <host-directory>`.
+Workbench lint, format and unit tests use only Workbench inputs, including in
+an extracted source archive. The Lab gate
+[`storybook_host`](../../../packages/wotex-lab/.check.exs) separately runs the
+shared Biome runner, read-only AST gate and strict TypeScript check on the
+live host before its Mix checks. Missing explicitly selected host inputs fail;
+no rule or host scope is skipped. Portable plugin tests and the actual live-host
+regression cover both entry points. Plugin resolution stays relative to the
+declaring configuration. Its installed schema defines `style/noParameterAssign`,
 `style/noNestedTernary`, `nursery/useConsistentFunctionStyle` with expression
 style, `nursery/noThisOutsideOfClass` and `complexity/useArrowFunction`.
 The existing rule groups, complexity limit and formatter settings remain.

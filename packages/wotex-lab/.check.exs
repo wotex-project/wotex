@@ -64,6 +64,11 @@
      command:
        "mix do deps.get --check-locked + " <>
          "cmd --cd ../workbench mix seed --check --storybook-output ../storybook/priv/fixtures + " <>
+         "cmd --cd ../workbench node --experimental-strip-types tools/lint/biome-host.ts " <>
+         "../storybook check --error-on-warnings . + " <>
+         "cmd --cd ../workbench node --experimental-strip-types tools/lint/check.ts " <>
+         "../storybook/priv/static/contract-assets ../storybook/test/frontend + " <>
+         "cmd --cd ../workbench pnpm exec tsc6 --project ../storybook/tsconfig.json + " <>
          "check --no-retry",
      cd: "hosts/storybook",
      deps: [:workbench]},

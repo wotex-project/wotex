@@ -2,6 +2,11 @@
   "$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
   "extends": ["../workbench/biome.jsonc"],
   "files": {
-    "includes": ["priv/static/contract-assets/*.js", "biome.jsonc"]
+    "includes": [
+      "priv/static/contract-assets/*.js",
+      "test/frontend/*.ts",
+      "biome.jsonc",
+      "tsconfig.json"
+    ]
   }
 }

@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.11. Contract: accepted. Source status: the workspace
+Specification version: 0.9.12. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -19,6 +19,12 @@ rpi4 firmware project, exact Nerves
 system/toolchain lock, inert host smoke and source gate are implemented under
 `hosts/nerves/`; the local cross-build reaches firmware assembly but cannot
 finish without the operator-installed `fwup` prerequisite.
+
+Version 0.9.12 makes the extracted Workbench's frontend commands independent
+of a sibling live catalogue. Each host keeps its own frontend input scope;
+the complete Lab gate separately enforces the unchanged shared rules on both.
+The source archive retains the same tools and ignore configuration as the
+checkout. This portability fix adds no dependency fallback or rule exemption.
 
 Version 0.9.11 includes the Workbench's `tools/lint/` modules, regression
 tests, Biome plugins and the host's configured ignore file in its source artifact

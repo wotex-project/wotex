@@ -1,7 +1,16 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.33.1. Contract: accepted. Implementation status:
+Specification version: 0.33.2. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.33.2 separates frontend gate ownership by host. Workbench lint,
+format and unit tests no longer read or write a sibling project. The Lab's
+Phoenix Storybook gate explicitly checks that host with the same Biome plugins
+and AST rules before its Mix checks. Its own TypeScript configuration checks
+the relocated bridge test with the existing strict compiler settings.
+Portable plugin vectors and a live-host regression preserve enforcement at
+both entry points. Missing selected paths
+still fail. UI behavior, rule severity and production APIs are unchanged.
 
 Version 0.33.1 makes the workbench shell, rather than `body`, the CSS
 container for its floating chrome and panels. A workbench embedded in a narrower

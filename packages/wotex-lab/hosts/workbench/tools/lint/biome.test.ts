@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
-import { randomUUID } from "node:crypto"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { resolve } from "node:path"
 import test from "node:test"
 import { hostRoot } from "./files.ts"
@@ -101,14 +101,31 @@ test("area selection is read-only and formatting never runs the style gate", () 
   }
 })
 
-test("the standalone Storybook host inherits and executes the same plugins", () => {
-  const relative = `priv/static/contract-assets/style-probe-${randomUUID()}.js`
-  const file = resolve(hostRoot, "../storybook", relative)
+test("an explicit independent host inherits and executes the same plugins", () => {
+  const directory = mkdtempSync(resolve(tmpdir(), "wotex-biome-host-"))
+  const relative = "priv/static/contract-assets/probe.js"
+  const file = resolve(directory, relative)
   try {
+    mkdirSync(resolve(directory, "priv/static/contract-assets"), { recursive: true })
+    writeFileSync(resolve(directory, ".gitignore"), "node_modules/\n")
+    writeFileSync(
+      resolve(directory, "biome.jsonc"),
+      JSON.stringify({
+        extends: [resolve(hostRoot, "biome.jsonc")],
+        files: { includes: ["priv/static/contract-assets/*.js"] },
+      }),
+    )
     writeFileSync(file, "class State {}\n")
     const result = spawnSync(
       process.execPath,
-      ["--experimental-strip-types", "tools/lint/biome-host.ts", "lint", "--only=plugin", relative],
+      [
+        "--experimental-strip-types",
+        "tools/lint/biome-host.ts",
+        directory,
+        "lint",
+        "--only=plugin",
+        relative,
+      ],
       { cwd: hostRoot, encoding: "utf8" },
     )
     assert.notEqual(result.status, 0)
@@ -117,6 +134,6 @@ test("the standalone Storybook host inherits and executes the same plugins", () 
       result.stdout + result.stderr,
     )
   } finally {
-    rmSync(file)
+    rmSync(directory, { recursive: true })
   }
 })
