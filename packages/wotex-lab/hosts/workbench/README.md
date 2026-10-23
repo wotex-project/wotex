@@ -104,7 +104,10 @@ errors and runs formatting, strict Credo (the Lab's `.credo.exs` plus this
 host's), unused-dependency and advisory audits, Dialyzer, Doctor, docs, the
 tests with the 90% coverage floor of `coveralls.json` and the boundary scan.
 It also installs the locked frontend dependencies and runs Svelte/TypeScript
-diagnostics, layout/graph tests, Vite and production asset-budget checks.
+diagnostics, layout/graph/protocol units, Vite, production asset-budget checks
+and the static Storybook build. `pnpm run audit:dependencies` checks the full
+frontend lock and fails on advisories of any severity; it is part of
+`pnpm run check`.
 The Lab's full gate (`mix pkg wotex-lab check --no-retry`) runs it as its
 `workbench` tool. The host uses a small native check runner because its
 accepted location is two levels below another Mix project, a shape that
@@ -116,19 +119,26 @@ the now-unmatched advisory waiver are documented in the Lab's
 protected by the host's own locked-version and bounded-parser regression.
 
 End-to-end journeys live in `test/e2e/` as Elixir ExUnit tests using
-PhoenixTest.Playwright. From the repository root, run the connection journey:
+PhoenixTest.Playwright. From the repository root, run the complete suite:
 
 ```sh
-WOTEX_LAB_E2E=1 mix pkg wotex-lab cmd --cd hosts/workbench mix test test/e2e/connections_test.exs
+pnpm --dir packages/wotex-lab/hosts/workbench run build
+pnpm --dir packages/wotex-lab/hosts/workbench run storybook:build
+WOTEX_LAB_E2E=1 mix pkg wotex-lab cmd --cd hosts/workbench mix test test/e2e
 ```
 
-Build the assets first with `pnpm --dir packages/wotex-lab/hosts/workbench run build`.
 The suite requires the locked Playwright installation and its Chromium browser;
 it does not download either. It starts an ephemeral loopback endpoint and owns
 disposable sessions, rooms and browser contexts. Normal `mix test` excludes
 the `e2e` tag and starts no browser or HTTP listener. The connection suite checks
 keyboard focus, retained drafts, Apply/Remove, concurrent stale edits, replaced
-edges and layout boundaries. Asset tests cover frontend units separately.
+edges and layout boundaries. Other journeys cover backend metric pins,
+captures/downloads, Action review/cancel/approval, observations, reconnect,
+search and no-JavaScript fallbacks. Static Storybook runs on an owned loopback
+server: every story renders in light/dark themes and passes the accessibility
+addon, with keyboard regressions for component and island controls. Asset tests
+cover frontend units separately. The current Lab CI lane explicitly installs
+Chromium and runs these journeys; ordinary local checks do not download browsers.
 
 ## Interactive charts and browser evidence
 

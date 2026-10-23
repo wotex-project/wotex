@@ -10,7 +10,8 @@
     "storybook:build": "storybook build --quiet",
     "check:browser:documentation": "node bin/check_documentation_browser.mjs",
     "check:browser:islands": "node bin/check_islands_browser.mjs",
-    "check": "pnpm run lint && pnpm run typecheck && pnpm run test:layout && pnpm run build && node bin/check_assets.mjs",
+    "check": "pnpm run lint && pnpm run audit:dependencies && pnpm run typecheck && pnpm run test:layout && pnpm run build && node bin/check_assets.mjs",
+    "audit:dependencies": "pnpm audit --audit-level low",
     "test:layout": "node --experimental-strip-types --test assets/layout-profile.test.ts assets/islands/canvas-model.test.ts assets/islands/metric-plot.test.ts assets/islands/protocol.test.ts",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "format": "biome format --write .",
@@ -23,16 +24,16 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.2",
-    "@storybook/addon-a11y": "10.6.0",
-    "@storybook/svelte-vite": "10.6.0",
+    "@storybook/addon-a11y": "10.6.2",
+    "@storybook/svelte-vite": "10.6.2",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@types/node": "26.6.3",
     "pagefind": "1.5.2",
     "playwright": "1.63.0",
-    "storybook": "10.6.0",
+    "storybook": "10.6.2",
     "svelte-check": "4.7.7",
     "typescript": "6.0.3",
-    "vite": "8.3.1"
+    "vite": "8.3.3"
   },
   "engines": {
     "node": "^22.12.0 || >=24.0.0"

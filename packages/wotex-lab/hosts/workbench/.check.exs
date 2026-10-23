@@ -3,7 +3,11 @@
   skipped: false,
   tools: [
     {:deps_get, command: "mix deps.get --check-locked"},
+    {:frontend_dependencies, command: "mix assets.setup"},
     {:compiler, command: "mix compile --warnings-as-errors"},
+    {:seed_data, command: "mix seed --check"},
+    {:frontend, command: "mix assets.check"},
+    {:storybook, command: "pnpm run storybook:build"},
     {:formatter, command: "mix format --check-formatted"},
     {:credo, command: "mix credo --strict"},
     {:unused_deps, command: "mix deps.unlock --check-unused"},

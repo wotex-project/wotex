@@ -18,12 +18,12 @@
 
   let activeRow = $state(0)
   let activeColumn = $state(0)
-  let gridRoot: HTMLElement
+  let gridRoot = $state<HTMLElement>()
 
   const focusCell = async () => {
     await tick()
     gridRoot
-      .querySelector<HTMLElement>(`[data-wotex-grid-cell="${activeRow}:${activeColumn}"]`)
+      ?.querySelector<HTMLElement>(`[data-wotex-grid-cell="${activeRow}:${activeColumn}"]`)
       ?.focus()
   }
 
@@ -62,47 +62,49 @@
   }
 </script>
 
-<!-- biome-ignore lint/a11y/useSemanticElements: Explicit ARIA grid semantics preserve the roving-cell interaction model. -->
-<div
-  bind:this={gridRoot}
-  class="wl-grid"
-  role="grid"
-  aria-label={label}
-  aria-rowcount={rows.length + 1}
-  aria-colcount={columns.length}
-  style={`--wotex-grid-columns:${Math.max(1, columns.length)}`}
->
-  <!-- biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: The ARIA grid keeps roving focus on cells rather than rows and column headers. -->
-  <div role="row" class="wl-grid-row wl-grid-header">
-    {#each columns as column (column.key)}
-      <!-- biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: The ARIA grid keeps roving focus on cells rather than rows and column headers. -->
-      <div role="columnheader">{column.label}</div>
-    {/each}
-  </div>
-  {#each rows as row, rowIndex (row.key)}
+{#if columns.length === 0 || rows.length === 0}
+  <p role="status">No rows</p>
+{:else}
+  <!-- biome-ignore lint/a11y/useSemanticElements: Explicit ARIA grid semantics preserve the roving-cell interaction model. -->
+  <div
+    bind:this={gridRoot}
+    class="wl-grid"
+    role="grid"
+    aria-label={label}
+    aria-rowcount={rows.length + 1}
+    aria-colcount={columns.length}
+    style={`--wotex-grid-columns:${Math.max(1, columns.length)}`}
+  >
     <!-- biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: The ARIA grid keeps roving focus on cells rather than rows and column headers. -->
-    <div role="row" class="wl-grid-row" aria-rowindex={rowIndex + 2}>
-      {#each columns as column, columnIndex (column.key)}
-        <!-- svelte-ignore a11y_no_static_element_interactions (ARIA grid roving focus) -->
-        <!-- biome-ignore lint/a11y/useSemanticElements: Explicit ARIA grid semantics preserve the roving-cell interaction model. -->
-        <div
-          role="gridcell"
-          aria-colindex={columnIndex + 1}
-          tabindex={activeRow === rowIndex && activeColumn === columnIndex ? 0 : -1}
-          data-wotex-grid-cell={`${rowIndex}:${columnIndex}`}
-          onfocus={() => {
-            activeRow = rowIndex
-            activeColumn = columnIndex
-            onselect?.(row.key)
-          }}
-          onkeydown={(event) => move(event, rowIndex, columnIndex)}
-          ondblclick={() => onactivate?.(row.key)}
-        >
-          {row.values[column.key] ?? ""}
-        </div>
+    <div role="row" class="wl-grid-row wl-grid-header">
+      {#each columns as column (column.key)}
+        <!-- biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: The ARIA grid keeps roving focus on cells rather than rows and column headers. -->
+        <div role="columnheader">{column.label}</div>
       {/each}
     </div>
-  {:else}
-    <p role="status">No rows</p>
-  {/each}
-</div>
+    {#each rows as row, rowIndex (row.key)}
+      <!-- biome-ignore lint/a11y/useFocusableInteractive lint/a11y/useSemanticElements: The ARIA grid keeps roving focus on cells rather than rows and column headers. -->
+      <div role="row" class="wl-grid-row" aria-rowindex={rowIndex + 2}>
+        {#each columns as column, columnIndex (column.key)}
+          <!-- svelte-ignore a11y_no_static_element_interactions (ARIA grid roving focus) -->
+          <!-- biome-ignore lint/a11y/useSemanticElements: Explicit ARIA grid semantics preserve the roving-cell interaction model. -->
+          <div
+            role="gridcell"
+            aria-colindex={columnIndex + 1}
+            tabindex={activeRow === rowIndex && activeColumn === columnIndex ? 0 : -1}
+            data-wotex-grid-cell={`${rowIndex}:${columnIndex}`}
+            onfocus={() => {
+              activeRow = rowIndex
+              activeColumn = columnIndex
+              onselect?.(row.key)
+            }}
+            onkeydown={(event) => move(event, rowIndex, columnIndex)}
+            ondblclick={() => onactivate?.(row.key)}
+          >
+            {row.values[column.key] ?? ""}
+          </div>
+        {/each}
+      </div>
+    {/each}
+  </div>
+{/if}

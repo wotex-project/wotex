@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/svelte-vite"
 import { componentStory, storyFixture } from "../catalogue/index.js"
-import Tooltip from "./tooltip.svelte"
+import Tooltip from "../catalogue/tooltip-example.svelte"
 
 const meta: Meta = {
   id: "overlays-tooltip",

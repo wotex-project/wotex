@@ -3,8 +3,9 @@ defmodule WotexLabWorkbenchWeb.E2E.EmptyWorkbenchTest do
 
   use PhoenixTest.Playwright.Case, async: false
 
+  alias PhoenixTest.Playwright.{Case, Config}
   alias PlaywrightEx.Frame
-  alias WotexLabWorkbench.Sessions
+  alias WotexLabWorkbench.{Room, Sessions}
   alias WotexLabWorkbenchWeb.{Endpoint, Plugs.SessionToken}
 
   @moduletag :e2e
@@ -54,5 +55,39 @@ defmodule WotexLabWorkbenchWeb.E2E.EmptyWorkbenchTest do
     |> assert_has("#doc-main")
 
     assert {:ok, %{room: nil}} = Sessions.verify(session.token)
+  end
+
+  test "without JavaScript the server fallback remains readable and navigation has no effects",
+       context do
+    {:ok, session} = Sessions.open()
+    on_exit(fn -> Sessions.revoke(session.token) end)
+    {:ok, %{room: room}} = Sessions.admit(session.token, :start_room)
+    before = Enum.map(Room.things(room), &{&1.id, &1.stats.handler_calls})
+
+    conn =
+      Config.global()
+      |> Keyword.put(:browser_context_opts, java_script_enabled: false)
+      |> Case.new_session(context)
+      |> add_session_cookie(
+        [value: %{SessionToken.key() => session.token}],
+        Endpoint.session_options()
+      )
+
+    for route <- ["/", "/things", "/experiments", "/metrics", "/evidence"] do
+      conn
+      |> visit(route)
+      |> assert_has("[data-wotex-island-fallback] [aria-label='Connected Things']",
+        text: "Thermostat"
+      )
+      |> refute_has("[data-wotex-island-mount] > *")
+      |> refute_has(".svelte-flow__node")
+    end
+
+    conn
+    |> visit("/docs/start/")
+    |> assert_has("#doc-main")
+
+    assert Room.runs(room) == []
+    assert Enum.map(Room.things(room), &{&1.id, &1.stats.handler_calls}) == before
   end
 end

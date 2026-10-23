@@ -1,7 +1,26 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.28.0. Contract: accepted. Implementation status:
+Specification version: 0.29.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.29 adds the static Storybook build to the Workbench gate and its
+rendered catalogue to the Elixir browser suite. Every published story is
+rendered in light and dark themes and scanned by the installed accessibility
+addon; component and island keyboard controls and empty-grid semantics have
+browser regressions. Unreadable dark-theme controls, token-swatch text and
+empty-grid ARIA structure are corrected. A no-JavaScript journey checks that
+server-rendered Things remain readable and navigation performs no operations.
+The current Lab CI lane installs Chromium explicitly and runs all Elixir
+browser journeys after the source gate. This adds verification obligations;
+island schemas, backend state, Action authority and production dependencies
+are unchanged. Automated scans do not establish WCAG certification, complete
+native Figma acceptance or published renderer adoption.
+
+The frontend gate also audits the complete pnpm lock at every advisory
+severity. Storybook and its framework/addon move together to 10.6.2, Vite to
+8.3.3 and the transitive `source-map-js` to 1.2.2. No advisory is suppressed;
+future matching records fail the gate. These are build/catalogue dependency
+updates, not a new browser authority seam.
 
 Version 0.28.0 retains session-measurement filters across refresh and freeze.
 The query builder and session-measurement disclosures retain their browser
@@ -274,7 +293,7 @@ keyboard operation, reflow, zoom, themes, contrast, reduced motion and asset
 failure. Asset inspection rejects remote runtime dependencies, source maps,
 runtime compilation and Storybook manager code in the production graph.
 
-The existing host gate compiles with warnings as errors, formats, runs strict Credo,
+The existing host gate builds static Storybook, compiles with warnings as errors, formats, runs strict Credo,
 unused-dependency and security audits, Dialyzer, Doctor, ExDoc, the boundary
 scan and the host suite with at least 90% line coverage. Those tests cover empty and
 denied states, themes/sidebar semantics, reflow/reduced-motion source rules,
@@ -311,7 +330,7 @@ starts a room from the keyboard, runs the thermal experiment twice and freezes
 the retained measurements between the runs: the live sample count grows while
 the frozen dataset in the report stays identical, and a formal verification
 request without an engine reports the unavailable engine. It is not part of the
-twelve-check `mix check` host gate and requires an operator-owned server plus an
+normal `mix check` host gate and requires an operator-owned server plus an
 explicitly installed Playwright/Chromium toolchain. Its recorded cohort is
 source evidence, not the complete WLB.08 browser matrix or a WCAG certification.
 `Insights` and its HEEx controls invoke the shared optional Lab Explorer
@@ -928,6 +947,11 @@ loopback endpoint and browser supervisor. Ordinary host tests exclude this
 lane; frontend asset tests remain unit tests. Connection coverage includes
 origin and row focus, retained drafts, native Remove, concurrent revision
 conflicts, edge replacement and the 599/600, 839/840 and 320-pixel profiles.
+The suite also renders every static Storybook story in light and dark themes,
+requires no accessibility-addon violations, exercises component/island keyboard
+controls and verifies no-JavaScript server fallbacks without replay. Build both
+the Workbench assets and Storybook before invoking it. The normal host gate
+builds both; the current Lab CI lane explicitly enables the browser suite.
 This bounded suite does not close the wider acceptance matrix above.
 
 ## Requirement catalogue
@@ -941,7 +965,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-S11-05 | Compose one Lab-owned token, CSS and component system across HEEx, Svelte, DocShell composition and Storybook without delegating product UI to the asset substrate. |
 | WLB-S11-06 | Render useful HEEx fallbacks and preserve the Workbench's admitted operation when an island, asset or LiveSocket is unavailable. |
 | WLB-S11-07 | Enhance bounded charts and data controls without admitting arbitrary client programs, remote data, unbounded values or browser-owned evidence. |
-| WLB-S11-08 | Build the production Svelte components as a static Storybook and test their real LiveView integration in a separate Phoenix Storybook host. Hosted publication follows the WLB.08 qualification runbook. |
+| WLB-S11-08 | Audit the complete frontend dependency lock, build the production Svelte components as a static Storybook and test their real LiveView integration in a separate Phoenix Storybook host. Hosted publication follows the WLB.08 qualification runbook. |
 | WLB-S11-09 | Meet the specified keyboard, focus, landmark, reflow, contrast, motion, theme, failure and disconnected-state behavior. |
 | WLB-S11-10 | Ship one local content-hashed Vite graph with code splitting, bundle budgets, no production Storybook manager and no Node runtime process. |
 | WLB-S11-11 | Preserve session isolation, reconnect safety, explicit Action approval, escaped untrusted content and restrictive browser policy across every island event. |
@@ -964,7 +988,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-V11-06 | Props and client events reject credentials, socket assigns, PIDs, functions, unrestricted structs, full tensors, unbounded telemetry and unknown fields before transport. |
 | WLB-V11-07 | Enhanced charts preserve gaps, units, labels, evidence/query identity, accessible description and the bounded table fallback across themes and updates. |
 | WLB-V11-08 | JavaScript-disabled, blocked-chunk, mount-failure and invalid-snapshot cohorts retain shell, fallback, ordinary navigation and every declared safe server action. |
-| WLB-V11-09 | The static Storybook imports the same component chunks, CSS and fixture digests as the Workbench; mocks are visibly distinct from real server operation. |
+| WLB-V11-09 | The static Storybook imports the same component chunks, CSS and fixture digests as the Workbench; mocks are visibly distinct from real server operation. Every emitted story renders in light and dark themes without accessibility-addon violations; the full frontend lock audit passes without suppressed advisories. |
 | WLB-V11-10 | Phoenix Storybook and Workbench browser cohorts cover keyboard/pointer interaction, focus recovery, 320-pixel reflow, 400% zoom, themes, high contrast, reduced motion, loading/error/disconnected states and assistive-content handoff. |
 | WLB-V11-11 | Production asset inspection finds one manifest, declared chunks within budget and no Storybook manager, source map, remote runtime URL, runtime compiler, arbitrary import or Node production process. |
 | WLB-V11-12 | The clone-free Workbench artifact runs the three experiments, metrics, evidence, documentation entry and no-LLM flow with islands enabled and with their client chunks deliberately unavailable. |

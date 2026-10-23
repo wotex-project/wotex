@@ -509,3 +509,23 @@ evidence. External standards schemas are linked, not copied into Lab fixtures.
 The current source selects ExMaude 0.5.0 and Nerves Pi system 2.1.2. The
 older archive, cross-compilation and device observations above retain their
 original inputs; upgrading a requirement does not transfer that evidence.
+
+### Frontend build and catalogue advisory review
+
+Observation date: 2026-10-23. The Workbench lock selected Storybook 10.6.0,
+Vite 8.3.1 and transitive `source-map-js` 1.2.1. The complete pnpm audit
+reported nine matching advisories: one critical, three high, four moderate
+and one low. The selected replacements are Storybook/framework/a11y 10.6.2,
+Vite 8.3.3 and `source-map-js` 1.2.2. No advisory suppression or forced
+dependency override is used.
+
+The upstream [Storybook advisory](https://github.com/storybookjs/storybook/security/advisories/GHSA-f2ph-cmg5-wxc8)
+identifies the patched preview event-origin handling. The
+[Vite patch release](https://github.com/vitejs/vite/releases/tag/v8.3.3)
+updates the affected development-server cohort. The
+[`source-map-js` release](https://github.com/7rulnik/source-map-js/releases/tag/v1.2.2)
+fixes malicious indexed-source-map denial of service.
+`pnpm run audit:dependencies` audits the complete lock at every severity and is part
+of the frontend gate. A clean audit is dated dependency evidence, not a claim
+that future advisories cannot match. Component/browser behavior and production
+asset budgets are qualified separately against the replacement lock.

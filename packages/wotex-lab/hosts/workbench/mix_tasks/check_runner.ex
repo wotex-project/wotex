@@ -7,6 +7,7 @@ defmodule WotexLabWorkbench.CheckRunner do
     {:compiler, "mix", ["compile", "--warnings-as-errors"], "test"},
     {:seed_data, "mix", ["seed", "--check"], "test"},
     {:frontend, "mix", ["assets.check"], "test"},
+    {:storybook, "pnpm", ["run", "storybook:build"], "test"},
     {:formatter, "mix", ["format", "--check-formatted"], "test"},
     {:credo, "mix", ["credo", "--strict"], "test"},
     {:unused_deps, "mix", ["deps.unlock", "--check-unused"], "test"},

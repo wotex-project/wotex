@@ -70,6 +70,7 @@
 
   .wl-button[data-wotex-variant="danger"] {
     background: var(--wotex-semantic-color-danger);
+    color: var(--wotex-semantic-color-canvas);
   }
 
   .wl-button:disabled,
@@ -135,8 +136,8 @@
   }
 
   .wl-tabs [role="tab"][aria-selected="true"] {
-    border-color: var(--wotex-semantic-color-accent);
-    color: var(--wotex-semantic-color-accent);
+    border-color: var(--wotex-semantic-color-text);
+    color: var(--wotex-semantic-color-text);
   }
 
   .wl-table-wrap {
@@ -194,7 +195,7 @@
   .wl-chart-inspect {
     border: 0;
     background: transparent;
-    color: var(--wotex-semantic-color-accent);
+    color: var(--wotex-semantic-color-text);
     font: inherit;
     text-decoration: underline;
     cursor: pointer;

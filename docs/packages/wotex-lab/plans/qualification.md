@@ -47,6 +47,29 @@ alone do not establish protocol interoperability. Record each demonstrated
 boundary separately. Sensor dynamics and fault schedules use explicit inputs;
 frontend code contains no fabricated device state.
 
+## Frontend source qualification
+
+Run `pnpm --dir packages/wotex-lab/hosts/workbench run check` for Biome,
+the complete pnpm advisory audit, Svelte/TypeScript, pure frontend units, Vite
+and asset budgets. The Workbench
+gate also builds static Storybook. With the locked Chromium already installed,
+run the complete Elixir browser suite from the repository root:
+
+```sh
+pnpm --dir packages/wotex-lab/hosts/workbench run storybook:build
+WOTEX_LAB_E2E=1 mix pkg wotex-lab cmd --cd hosts/workbench mix test test/e2e
+```
+
+The browser suite owns ephemeral loopback listeners and contexts. It covers
+backend journeys, state/focus/reconnect behavior, responsive profiles and
+server fallbacks. The Storybook suite renders every emitted story in light
+and dark themes and requires no accessibility-addon violations. These scans
+and Chromium journeys are source evidence, not WCAG certification, a
+cross-browser qualification or native Figma acceptance. The independent
+Modbus suite is a separate transport boundary; no browser story fabricates a
+successful Modbus operation. CI explicitly selects both suites on the current
+Lab lane after its source gate.
+
 ## Candidate artifacts
 
 Build and inspect the base package, Workbench source archive and release, OCI

@@ -43,7 +43,7 @@
 
   .wl-island-chart-inspect {
     border: 0;
-    color: var(--wotex-semantic-color-accent);
+    color: var(--wotex-semantic-color-text);
     background: transparent;
     font: inherit;
     text-decoration: underline;
@@ -106,8 +106,8 @@
   }
 
   .wl-island-tabs [role="tab"][aria-selected="true"] {
-    border-color: var(--wotex-semantic-color-accent);
-    color: var(--wotex-semantic-color-accent);
+    border-color: var(--wotex-semantic-color-text);
+    color: var(--wotex-semantic-color-text);
   }
 }
 
