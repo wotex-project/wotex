@@ -541,9 +541,9 @@ VD-T1–T14 matrix and owning verifier milestone remain open; this profile does
 not close consumer transactions, actual clocks/source custody, wider models or
 physical authority.
 
-## Accepted archive resource-bound renewal
+## Archive resource-bound qualification
 
-The [independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal-target)
+The [independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal)
 adds thirty-three behavioral cases per independent source/journal family. Both
 Time grammars, relevant-present/relevant-absent/irrelevant UTC, native/plain
 inputs and five public verification operations must cover all five JSON resource
@@ -551,6 +551,9 @@ axes: 300 exact/one-under pairs per family. Separate cases check aggregate
 arguments, complete certificate output and Unicode/escaped byte accounting.
 The extracted baseline must pass forty-one cases per family, and all thirteen
 isolated mutations must fail through assertions across forty behavioral cases.
-Source preflight is implemented; renewed archive evidence is pending its owning
-execution. The complete newer time matrix, maximal-work qualification and wider
+Both extracted consumers now pass all forty-one baseline cases and catch all
+thirteen faults each through assertions, with no harness errors, skips or
+exclusions. The [renewal record](../provenance/decision-archive-bounds-2026-10.md)
+binds the clean source commit, archives, independent inputs and executed gates.
+The complete newer time matrix, maximal-work qualification and wider
 consumer-host adoption remain separate obligations.

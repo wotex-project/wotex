@@ -1,8 +1,8 @@
 # Independent verified-decision archive profile
 
-Version: 0.2.0. Updated: 2026-10-24. Status: accepted resource-bound renewal;
-the earlier seven-case archive lane is implemented. The renewal's execution
-status is recorded separately after its owning checks.
+Version: 0.2.0. Updated: 2026-10-24. Status: implemented resource-bound renewal;
+both extracted consumers pass forty-one cases, and all twenty-six isolated
+mutation runs fail through assertions with zero harness errors.
 Owner: [verified decisions](../specs/verified-decision-v1.md), principally
 VD-02–08 and VD-T10–T14. This profile makes those archive obligations concrete;
 it neither replaces the broader native matrix nor widens any runtime grammar.
@@ -99,7 +99,7 @@ counts. A smaller fixture cannot stand in for the specified capacity trace.
 
 ## Isolated semantic mutations
 
-### VDA-T8 — Resource-bound renewal target
+### VDA-T8 — Resource-bound renewal
 
 VDA-T8 adds thirty-three behavioral cases independently implemented in each family.
 The thirty metric/clock-cell cases check all five JSON axes through Transition.verify,
@@ -177,18 +177,26 @@ user data remain intact. A forced external kill is reported as incomplete and
 its exact owned workspace is inspected and cleaned before another run.
 
 Successful execution adds source/command/archive/lock identities and actual
-counts to provenance and updates the owning catalogue. This profile is entry
-criteria until those checks have run. It does not alone close all VD-T1–T14,
+counts to provenance and updates the owning catalogue. These requirements are
+entry criteria until their owning checks have run. This profile does not alone
+close all VD-T1–T14,
 the broad WRO.01–04 contracts, consumer adoption, current authority, installed
 clocks, source continuity, containment or physical qualification.
 
 The historical [archive record](../provenance/decision-archives-2026-10.md)
 superseded the local-only preflight scope for its exact inputs. Both extracted
-projects passed all eight cases, including their independent cohort identity and public query
+projects passed all eight cases, including their independent cohort identity
+and public query
 without application startup. Each family caught all six defects through
 assertions across seven behavioral cases per mutation, with zero harness errors,
 skips or exclusions. The parent joins its two concurrent mutation VMs before
 removing the complete owned workspace.
+
+The [resource-bound renewal record](../provenance/decision-archive-bounds-2026-10.md)
+now binds the current exact cohort and independent counters. Each family passes
+forty-one baseline cases and catches all thirteen faults across forty behavioral
+cases per mutation: 128 assertion failures in total, with zero harness errors,
+skips or exclusions. The guarded native corpus also passes all 58 cases.
 
 The broader VD-T1–T14 acceptance matrix and owning verifier milestone remain
 open. This archive result grants no current consumer authority, installed clock,

@@ -525,16 +525,16 @@ relations. Fifteen new cases include an independent all-pairs oracle over 162
 policy/batch combinations, 1,024 contributors with a final supplied conflict,
 a 1,023 refusal, both Time grammars and exact argument/output byte bounds.
 The [complete-decision record](../provenance/verified-decisions-2026-10.md) binds
-this native evidence. Independent raw-source/journal archive consumers,
-complete-verifier mutations, full VD-T1–T14 and the owning milestone remain
-open. No consumer authority, host/physical qualification or wider Model scope
+this native evidence. The later independent archive and resource-bound
+qualifications below add paired consumer/mutation evidence. Full VD-T1–T14
+and the owning milestone remain open. No consumer authority, host/physical qualification or wider Model scope
 is supplied.
 
 The [verified-decision archive profile](../decisions/verified-decision-archive-profile.md)
 now freezes distinct source/journal oracles, complete finite case counts, exact
 cohort/lock/source identities, all six assertion-only semantic mutations in both
-families and owned-workspace cleanup. This is accepted implementation entry;
-the new archive lane and its evidence remain unimplemented.
+families and owned-workspace cleanup. The archive foundation and subsequent
+resource-bound renewal now execute these obligations for their exact cohorts.
 
 The source-family oracle/consumer now passes all seven local native preflight
 cases, including full raw-source relations, independent all-pairs arbitration,
@@ -550,14 +550,17 @@ ledger are independent of the source oracle and production execution helpers.
 Full-record, restore, negative-time, complete proposed/reserved, 1,024-contributor,
 policy/cutoff and exact public byte-bound cases pass. The
 [journal preflight record](../provenance/decision-journal-preflight-2026-10.md)
-binds the sources and executed checks. Both families are still native preflight;
-the opt-in archive runner, cohort identity, extracted projects, twelve semantic
-mutation runs and owning verifier milestone remain required.
+binds the sources and executed checks. That record describes the historical
+native preflight. The later independent
+archive foundation and resource-bound qualification below renew their exact
+archive inputs; the complete combined verifier milestone remains open.
 
-## Accepted archive resource-bound renewal
+## Archive resource-bound qualification
 
-The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal-target)
+The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal)
 requires independent argument/output accounting across both Time grammars and
-all selected JSON resource axes. Its source preflight is implemented; extracted
-archive execution remains pending. This qualification addition changes no runtime
-grammar and does not close the combined verifier or consumer-host milestone.
+all selected JSON resource axes. Both extracted consumers now pass forty-one
+cases and catch thirteen faults each through assertions with no harness errors,
+skips or exclusions. The [renewal record](../provenance/decision-archive-bounds-2026-10.md)
+binds the exact cohort and owning gates. This changes no runtime grammar and
+does not close the combined verifier or consumer-host milestone.

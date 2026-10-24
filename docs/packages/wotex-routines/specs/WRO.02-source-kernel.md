@@ -390,7 +390,7 @@ execution. An old format never accepts a new operator by accident.
 | WRO02-T4 | 02, 06 | ACK-only sequence, partial parallel failure, deadline and post-handoff cancellation never fabricate completion, compensation or resend |
 | WRO02-T5 | 01–06 | Independent archive consumers execute the same scalar/event/slow-actuator procedure without shared private modules, schema or consumer terminology |
 
-Implemented software evidence now includes `kernel_test.exs`: explicit receipt ordering, full due confidence, elapsed reevaluation, sticky branches, bound invocations, no-repeat spend, partial joins and post-handoff cancellation. Reported-edge qualification now has executable `edge_test.exs` traces. Complete-set collection/arbitration is exercised in `arbitration_test.exs`; independent transition/archive consumers remain unimplemented obligations.
+Implemented software evidence now includes `kernel_test.exs`: explicit receipt ordering, full due confidence, elapsed reevaluation, sticky branches, bound invocations, no-repeat spend, partial joins and post-handoff cancellation. Reported-edge qualification now has executable `edge_test.exs` traces. Complete-set collection/arbitration is exercised in `arbitration_test.exs`; the later continuation and independent archive sections below supply their scoped evidence; wider consumer-host adoption remains open.
 
 ### Closed reported-edge retention
 
@@ -581,8 +581,9 @@ arbitration and batching. Current non-time input and complete arbitration must
 still match. Point verification permits no current effect or consumer authority.
 
 The target forbids delegating verification to forward execution/regeneration.
-Full VD-T1–T14, independent archive consumers and the owning milestone remain
-open; the existing continuation milestone does not establish this successor.
+The complete VD-T1–T14 matrix and owning milestone remain open. The later
+independent archive and resource-bound qualifications below supply their scoped
+consumer evidence; the continuation milestone alone does not establish this successor.
 
 The successor entry schema and vectors now pass five native representation
 checks, including 52 malformed/missing-field cases and all six clock-cell
@@ -615,9 +616,9 @@ relations. Fifteen new cases include an independent all-pairs oracle over 162
 policy/batch combinations, 1,024 contributors with a final supplied conflict,
 a 1,023 refusal, both Time grammars and exact argument/output byte bounds.
 The [complete-decision record](../provenance/verified-decisions-2026-10.md) binds
-this native evidence. Independent raw-source/journal archive consumers,
-complete-verifier mutations, full VD-T1–T14 and the owning milestone remain
-open. No consumer authority, host/physical qualification or wider Model scope
+this native evidence. The later independent archive and resource-bound
+qualifications below add paired consumer/mutation evidence. Full VD-T1–T14
+and the owning milestone remain open. No consumer authority, host/physical qualification or wider Model scope
 is supplied.
 
 The separate journal family now passes seven local native preflight cases.
@@ -626,14 +627,17 @@ ledger are independent of the source oracle and production execution helpers.
 Full-record, restore, negative-time, complete proposed/reserved, 1,024-contributor,
 policy/cutoff and exact public byte-bound cases pass. The
 [journal preflight record](../provenance/decision-journal-preflight-2026-10.md)
-binds the sources and executed checks. Both families are still native preflight;
-the opt-in archive runner, cohort identity, extracted projects, twelve semantic
-mutation runs and owning verifier milestone remain required.
+binds the sources and executed checks. That record describes the historical
+native preflight. The later independent
+archive foundation and resource-bound qualification below renew their exact
+archive inputs; the complete combined verifier milestone remains open.
 
-## Accepted archive resource-bound renewal
+## Archive resource-bound qualification
 
-The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal-target)
+The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal)
 requires independent argument/output accounting across both Time grammars and
-all selected JSON resource axes. Its source preflight is implemented; extracted
-archive execution remains pending. This qualification addition changes no runtime
-grammar and does not close the combined verifier or consumer-host milestone.
+all selected JSON resource axes. Both extracted consumers now pass forty-one
+cases and catch thirteen faults each through assertions with no harness errors,
+skips or exclusions. The [renewal record](../provenance/decision-archive-bounds-2026-10.md)
+binds the exact cohort and owning gates. This changes no runtime grammar and
+does not close the combined verifier or consumer-host milestone.

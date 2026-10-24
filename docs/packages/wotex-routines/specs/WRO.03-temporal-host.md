@@ -512,15 +512,17 @@ relations. Fifteen new cases include an independent all-pairs oracle over 162
 policy/batch combinations, 1,024 contributors with a final supplied conflict,
 a 1,023 refusal, both Time grammars and exact argument/output byte bounds.
 The [complete-decision record](../provenance/verified-decisions-2026-10.md) binds
-this native evidence. Independent raw-source/journal archive consumers,
-complete-verifier mutations, full VD-T1–T14 and the owning milestone remain
-open. No consumer authority, host/physical qualification or wider Model scope
+this native evidence. The later independent archive and resource-bound
+qualifications below add paired consumer/mutation evidence. Full VD-T1–T14
+and the owning milestone remain open. No consumer authority, host/physical qualification or wider Model scope
 is supplied.
 
-## Accepted archive resource-bound renewal
+## Archive resource-bound qualification
 
-The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal-target)
+The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal)
 requires independent argument/output accounting across both Time grammars and
-all selected JSON resource axes. Its source preflight is implemented; extracted
-archive execution remains pending. This qualification addition changes no runtime
-grammar and does not close the combined verifier or consumer-host milestone.
+all selected JSON resource axes. Both extracted consumers now pass forty-one
+cases and catch thirteen faults each through assertions with no harness errors,
+skips or exclusions. The [renewal record](../provenance/decision-archive-bounds-2026-10.md)
+binds the exact cohort and owning gates. This changes no runtime grammar and
+does not close the combined verifier or consumer-host milestone.
