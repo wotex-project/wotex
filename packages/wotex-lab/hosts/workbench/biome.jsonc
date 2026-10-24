@@ -11,6 +11,8 @@
       "assets/**/*.{ts,js,mjs,cjs,svelte,css}",
       "tools/**/*.{ts,js,mjs,cjs}",
       ".storybook/**",
+      "test/frontend/**/*.ts",
+      "priv/static/contract-assets/**/*.{css,js}",
       "vite.config.ts",
       "tsconfig.json",
       "package.json",

@@ -5,7 +5,7 @@ defmodule Wotex.Lab.Check.SourceArchive do
                       config/**/* lib/**/* rel/**/* test/**/* mix.exs mix.lock)
 
   @workbench_patterns ~w(.check.exs .credo.exs .dockerignore .formatter.exs .gitignore Dockerfile
-                         README.md .storybook/**/* config/**/* lib/**/*
+                         README.md .storybook/**/* config/**/* lib/**/* storybook/**/*
                          priv/static/**/* priv/seeds.exs priv/seeds/**/* test/**/* mix.exs mix.lock
                          assets/**/* tools/**/* package.json pnpm-lock.yaml pnpm-workspace.yaml
                          biome.jsonc tsconfig.json vite.config.ts)

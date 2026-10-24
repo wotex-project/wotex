@@ -1,7 +1,12 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.7.1. Contract: accepted. Implementation status:
+Specification version: 0.7.2. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.7.2 records the live catalogue as a development-only route in the
+Workbench Phoenix host. The public static Storybook and documentation artifact
+remain independent of that route, so publication behavior and adoption claims
+do not change.
 
 The documentation cohort pins published DocShell 1.0.0 across the family
 build dependencies, isolated collector and Workbench. Producer and consumer
@@ -403,7 +408,7 @@ place.
 
 Storybook mock transports demonstrate component presentation and failure
 states. They do not claim LiveView authorization, persistence, reconnect or
-effect execution. A separately deployed Phoenix Storybook reference host may
+effect execution. The Workbench's development-only Phoenix Storybook route may
 provide real LiveView examples. It is not part of the static Pages artifact,
 and the public docs remain complete when it is absent.
 

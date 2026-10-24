@@ -19,6 +19,7 @@
     ".storybook/**/*.ts",
     "assets/**/*.ts",
     "assets/**/*.svelte",
+    "test/frontend/**/*.ts",
     "vite.config.ts",
     "tools/**/*.ts"
   ]

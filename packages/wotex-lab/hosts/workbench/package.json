@@ -12,7 +12,7 @@
     "check:browser:islands": "WOTEX_LAB_E2E=1 mix test test/e2e/island_reconnect_test.exs test/e2e/island_fallback_test.exs",
     "check": "pnpm run lint && pnpm run audit:dependencies && pnpm run typecheck && pnpm run test:layout && pnpm run build && node --experimental-strip-types tools/assets/check.ts",
     "audit:dependencies": "pnpm audit --audit-level low",
-    "test:layout": "node --experimental-strip-types --import ./tools/node/register_aliases.ts --test assets/layout-profile.test.ts assets/islands/canvas-model.test.ts assets/islands/metric-plot.test.ts assets/islands/protocol.test.ts assets/primitives/menu-navigation.test.ts assets/live-view-hook.test.ts assets/islands/hook.test.ts tools/lint/*.test.ts",
+    "test:layout": "node --experimental-strip-types --import ./tools/node/register_aliases.ts --test assets/layout-profile.test.ts assets/islands/canvas-model.test.ts assets/islands/metric-plot.test.ts assets/islands/protocol.test.ts assets/primitives/menu-navigation.test.ts assets/live-view-hook.test.ts assets/islands/hook.test.ts test/frontend/*.test.ts tools/lint/*.test.ts",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "format": "biome format --write . && node --experimental-strip-types tools/lint/format.ts",
     "lint": "biome check --error-on-warnings . && pnpm run lint:style",

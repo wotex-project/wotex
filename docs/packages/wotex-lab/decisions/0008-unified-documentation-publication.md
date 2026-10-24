@@ -34,8 +34,8 @@ Phoenix Assets entry so the static site does not require a LiveSocket.
 The same Phoenix Assets token, CSS and component contract also supplies the
 Workbench and the statically published Svelte Storybook. The Storybook renders
 production Svelte components with mock transports. Real LiveView integration
-belongs to a separate Phoenix Storybook host and is not part of the static
-documentation artifact.
+is a development-only route in the Workbench Phoenix host and is not part of
+the static documentation artifact.
 
 ## Consequences
 

@@ -457,8 +457,8 @@ removed once a patched release exists.
 
 ### Dependency review, 2026-10-19
 
-The Lab test server and the Workbench and Storybook hosts select Bandit 1.13.1
-with Thousand Island 1.6.0. The
+At that date, the Lab test server and the then-separate Workbench and Storybook
+hosts selected Bandit 1.13.1 with Thousand Island 1.6.0. The
 [Bandit changelog](https://github.com/mtrudel/bandit/blob/1.13.1/CHANGELOG.md)
 records the security fixes in 1.13.0 and its connection regression fix in 1.13.1.
 No Bandit advisory is acknowledged.
@@ -540,8 +540,8 @@ version ranges retained for the numerical and native cohorts.
 
 Observation date: 2026-10-23. Hex reported `EEF-CVE-2026-105963` against
 the locked `plug_crypto` 2.2.0: wrong-typed arguments could expose the secret
-key base in a function-clause stack trace. The root tooling, Lab, Workbench
-and Phoenix Storybook locks now select the upstream
+key base in a function-clause stack trace. The root tooling, Lab and Workbench
+locks, including Workbench's Phoenix Storybook dependency, now select the upstream
 [2.2.1 patch](https://github.com/elixir-plug/plug_crypto/releases/tag/v2.2.1).
 No advisory exemption is added. The Workbench dependency-security regression
 passes malformed salt/options to all four public token operations and checks

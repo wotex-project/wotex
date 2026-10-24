@@ -441,9 +441,9 @@ defmodule Wotex.Lab.GraphTest do
     # and must never become part of this fixture's source snapshot. The
     # documentation tree is copied beside mix.exs, the copied-tree layout.
     for entry <-
-          ~w(lib test bin clients hosts/workbench/lib hosts/workbench/test hosts/workbench/bin
-             hosts/workbench/assets hosts/workbench/tools
-             hosts/storybook/test hosts/nerves/test
+          ~w(lib test bin clients hosts/workbench/lib hosts/workbench/test
+             hosts/workbench/assets hosts/workbench/tools hosts/workbench/storybook
+             hosts/nerves/test
              priv/fixtures priv/cookbooks priv/provenance priv/conformance/native/src
              priv/conformance/native/tests priv/conformance/native/probes
              priv/conformance/native/Cargo.toml priv/conformance/native/Cargo.lock

@@ -2,7 +2,7 @@
 
 The Workbench frontend uses functional TypeScript and Svelte 5 composition.
 This standard covers `hosts/workbench/assets/`, its Storybook configuration,
-frontend build/check tools and the standalone Storybook host's lazy loader.
+frontend build/check tools and its Phoenix Storybook lazy loader.
 The generated control SDK has a separate public constructor API under WLB.08;
 this UI refactor does not change that API or its generator.
 
@@ -96,16 +96,12 @@ pnpm --dir packages/wotex-lab/hosts/workbench run lint:style assets/components/c
 ## Enforcement and exemptions
 
 [Biome configuration](../../../packages/wotex-lab/hosts/workbench/biome.jsonc)
-pins 2.6.2; the standalone Storybook host extends it and runs Biome in its
-own host directory through `tools/lint/biome-host.ts <host-directory>`.
-Workbench lint, format and unit tests use only Workbench inputs, including in
-an extracted source archive. The Lab gate
-[`storybook_host`](../../../packages/wotex-lab/.check.exs) separately runs the
-shared Biome runner, read-only AST gate and strict TypeScript check on the
-live host before its Mix checks. Missing explicitly selected host inputs fail;
-no rule or host scope is skipped. Portable plugin tests and the actual live-host
-regression cover both entry points. Plugin resolution stays relative to the
-declaring configuration. Its installed schema defines `style/noParameterAssign`,
+pins 2.6.2. Workbench lint, format, TypeScript and unit tests cover the
+application, its static Storybook and its Phoenix Storybook bridge in one host
+scope, including in an extracted source archive. Missing explicitly selected
+inputs fail. Portable plugin tests exercise the installed configuration and
+plugin resolution stays relative to the declaring configuration. Its installed
+schema defines `style/noParameterAssign`,
 `style/noNestedTernary`, `nursery/useConsistentFunctionStyle` with expression
 style, `nursery/noThisOutsideOfClass` and `complexity/useArrowFunction`.
 The existing rule groups, complexity limit and formatter settings remain.

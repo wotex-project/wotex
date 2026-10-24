@@ -92,7 +92,6 @@ defmodule Wotex.Workspace.ToolchainTest do
     for name <- [
           "Lab browser prerequisites",
           "Lab browser journeys and Storybook accessibility",
-          "Lab live catalogue browser journeys",
           "Lab independent software devices"
         ] do
       index = Enum.find_index(steps, &(&1["name"] == name))
@@ -104,14 +103,10 @@ defmodule Wotex.Workspace.ToolchainTest do
 
     browser = Enum.find(steps, &(&1["name"] == "Lab browser journeys and Storybook accessibility"))
     devices = Enum.find(steps, &(&1["name"] == "Lab independent software devices"))
-    catalogue = Enum.find(steps, &(&1["name"] == "Lab live catalogue browser journeys"))
     assert browser["env"]["WOTEX_LAB_E2E"] == "1"
     assert browser["env"]["WOTEX_LAB_SIMULATORS"] == "1"
     assert browser["run"] == "MIX_ENV=test mix test test/e2e"
     assert devices["env"]["WOTEX_LAB_SIMULATORS"] == "1"
-    assert catalogue["working-directory"] == "packages/wotex-lab/hosts/storybook"
-    assert catalogue["env"]["WOTEX_LAB_E2E"] == "1"
-    assert catalogue["run"] == "MIX_ENV=test mix test test/e2e"
   end
 
   test "mise.toml replaces .tool-versions and selects every package when it changes" do

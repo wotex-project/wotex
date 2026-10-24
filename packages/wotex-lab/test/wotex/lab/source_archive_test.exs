@@ -45,7 +45,8 @@ defmodule Wotex.Lab.SourceArchiveTest do
     files = Map.new(files, fn {path, bytes} -> {List.to_string(path), bytes} end)
 
     for path <- ~w(package.json biome.jsonc .gitignore lib/mix/tasks/check_runner.ex
-                   .storybook/main.ts
+                   lib/wotex_lab_workbench_web/storybook.ex
+                   .storybook/main.ts storybook/islands.story.exs
                    test/e2e/documentation_test.exs test/support/documentation_server.ex
                    tools/assets/check.ts tools/assets/clean.ts tools/boundary/check.exs
                    tools/documentation/browser_fixture.exs

@@ -92,16 +92,19 @@ WOTEX_PATH_DEPS=1 mix seed
 WOTEX_PATH_DEPS=1 mix phx.server
 ```
 
+Open the Workbench at <http://localhost:4000/> or its development live
+catalogue at <http://localhost:4000/storybook/islands>.
+
 `priv/seeds.exs` owns reference-room simulator values and component and island Storybook
 examples. `mix seed` generates deterministic JSON; `mix seed --check` refuses
 missing or stale output without writing it. Neither command starts a room or
 performs an operation. The host gate checks these files. Room startup validates
 the generated seed before starting its Things; invalid or missing data refuses
 startup. Browser islands receive only server snapshots. Static Storybook imports
-the generated examples; production bundles exclude them. To update the Phoenix
-Storybook copy, run `mix seed --storybook-output ../storybook/priv/fixtures`.
-The Lab gate checks both copies with `--check`; the live host reads only its
-own artifact and displays no substitute if it is unavailable.
+the generated examples; production bundles exclude them. In development and
+test, Phoenix Storybook is mounted by this application at `/storybook` and
+reads the same bounded `priv/seeds/islands.json` artifact. It is absent from
+production compilation, the router and the release dependency closure.
 This host uses disposable room processes rather than Ash resources or a database.
 
 `WOTEX_PATH_DEPS=1` is the sole workspace switch. With it unset, dependencies
@@ -249,8 +252,8 @@ reflow and reload without replay. It also checks escaped Thing Description
 titles, disabled investigation without a provider, unavailable formal engines,
 immutable frozen datasets and approval/cancellation around reconnects.
 `pnpm run check:browser:islands` selects the reconnect and failed-chunk/snapshot
-journeys. The separate live catalogue suite is documented in
-[`../storybook/README.md`](../storybook/README.md).
+journeys. `WOTEX_LAB_E2E=1 mix test test/e2e/storybook_islands_test.exs`
+selects the live catalogue journeys on the same endpoint.
 
 These checks use the pinned Playwright installation and an owned ephemeral
 loopback server. They establish source behavior for that cohort, not a complete

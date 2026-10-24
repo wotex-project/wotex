@@ -31,8 +31,9 @@ defmodule Wotex.Lab.Check.WorkbenchArchive do
   @cohort ~w(hosts/workbench/config/**/* hosts/workbench/lib/**/*
              hosts/workbench/tools/documentation/browser_fixture.exs
              hosts/workbench/tools/documentation/browser_fixture_support.exs
-             hosts/workbench/priv/static/**/*
-             hosts/workbench/priv/seeds.exs hosts/workbench/priv/seeds/**/*
+             hosts/workbench/storybook/**/*
+             hosts/workbench/priv/static/**/* hosts/workbench/priv/seeds.exs
+             hosts/workbench/priv/seeds/**/*
              hosts/workbench/README.md hosts/workbench/mix.exs hosts/workbench/mix.lock
              hosts/workbench/package.json hosts/workbench/pnpm-lock.yaml
              bin/check_workbench_archive.exs bin/support/archive_repository.exs

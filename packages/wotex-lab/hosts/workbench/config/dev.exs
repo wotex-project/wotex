@@ -7,4 +7,6 @@ config :wotex_lab_workbench, WotexLabWorkbenchWeb.Endpoint,
   secret_key_base: String.duplicate("wotex-lab-workbench-development-only-", 3),
   session_secure: false
 
+config :wotex_lab_workbench, dev_routes: true
+
 config :logger, level: :debug

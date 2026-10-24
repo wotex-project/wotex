@@ -6,6 +6,8 @@ defmodule WotexLabWorkbenchWeb.Router do
 
   use WotexLabWorkbenchWeb, :router
 
+  require WotexLabWorkbenchWeb.StorybookRoutes
+
   pipeline :browser do
     plug(:accepts, ["html"])
     plug(:fetch_session)
@@ -97,4 +99,6 @@ defmodule WotexLabWorkbenchWeb.Router do
     pipe_through(:control_api)
     get("/healthz", HealthController, :show)
   end
+
+  WotexLabWorkbenchWeb.StorybookRoutes.routes()
 end

@@ -41,7 +41,7 @@ defmodule Wotex.Lab.WLB12EvidenceManifestTest do
     "test/wotex/lab/wlb12_evidence_manifest_test.exs"
   ]
 
-  test "the historical WLB.12 record remains stale after tooling relocation" do
+  test "the historical WLB.12 record remains valid and stale after host consolidation" do
     root = Path.expand("../../..", __DIR__)
     path = Path.join(root, "priv/provenance/WLB.12-evidence.json")
     assert Enum.all?(@record_keys, &is_atom/1)
@@ -60,6 +60,6 @@ defmodule Wotex.Lab.WLB12EvidenceManifestTest do
     refute record.outcomes.hosted_adoption
     assert Enum.all?(record.assertions, &(&1.status == :pass))
     refute {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
-    assert {:ok, record.lock_digest} == Digest.file(Path.join(root, "hosts/workbench/mix.lock"))
+    refute {:ok, record.lock_digest} == Digest.file(Path.join(root, "hosts/workbench/mix.lock"))
   end
 end

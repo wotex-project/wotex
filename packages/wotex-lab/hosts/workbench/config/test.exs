@@ -19,6 +19,7 @@ config :wotex_lab_workbench,
   session_sweep_ms: 50,
   max_sessions: 16,
   metrics_capacity: 64,
+  dev_routes: true,
   control_mutations: [
     max_requests: 12,
     window_ms: 60_000,
@@ -28,6 +29,7 @@ config :wotex_lab_workbench,
   ]
 
 config :logger, level: :warning
+config :phoenix_storybook, :compilation_mode, :eager
 
 config :phoenix_test,
   otp_app: :wotex_lab_workbench,

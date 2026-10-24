@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.20.2. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.21.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -14,6 +14,14 @@ independent archive recovery. The corrected Actuator prototype and current
 source handoff remain distinct from runtime tests. Final brand review and
 complete native lifecycle, keyboard and responsive/theme acceptance remain
 open under the design contract.
+
+Version 1.21 folds the Phoenix Storybook development catalogue into the
+Workbench Phoenix application. One endpoint, PubSub, session, seed artifact,
+frontend gate and browser harness now own the application and live catalogue.
+Phoenix Storybook remains a development/test host dependency and is absent
+from production compilation, the router and the release dependency closure.
+Static Storybook publication and the base library's Phoenix independence are
+unchanged.
 
 Version 1.11 requires the complete pnpm advisory audit and static Storybook build in the Workbench gate and
 rendered light/dark accessibility scans in the Elixir browser suite. The
@@ -101,8 +109,9 @@ candidate source digest. The base distribution has twenty-four artifacts.
 The renewed Workbench BOM records the sixty-four-component local candidate
 closure; published packages, OCI execution and hosted adoption remain separate.
 
-Version 1.19 replaces remaining Node browser runners with Elixir journeys in
-the owning Workbench and live catalogue hosts. Current-lane CI runs both.
+Version 1.19 replaced the remaining Node browser runners with Elixir journeys.
+Those application and live catalogue suites now share the Workbench host and
+run together in the current CI lane.
 The catalogue applies selected themes and serves its pinned manager stylesheet
 without the remote font import. Browser tests cover failed enhancement,
 keyboard/reconnect behavior, chart/export boundaries and inert unavailable
@@ -169,9 +178,9 @@ acceptance gate. Archived packages and advisory conflicts are not waived.
 Version 1.5 selected a shared design system and bounded Svelte islands inside
 the LiveView Workbench. LiveView retains routes, authorization, canonical
 state, evidence and effectful commands. The same production Svelte components
-publish through static Storybook; HEEx fallbacks and a separate Phoenix
-Storybook host cover no-JavaScript and real-transport behavior. Version 1.7
-corrects the original upstream ownership choice.
+publish through static Storybook; HEEx fallbacks and Phoenix Storybook cover
+no-JavaScript and real-transport behavior. Version 1.21 integrates that route
+into Workbench. Version 1.7 corrects the original upstream ownership choice.
 
 Version 1.6 records complete source implementation for C08, C10 and C11. The
 contained reference runner, Mix and Mix.install archive consumers, local

@@ -1,8 +1,0 @@
-{
-  "extends": "../workbench/tsconfig.json",
-  "compilerOptions": {
-    "typeRoots": ["../workbench/node_modules/@types"],
-    "types": ["node"]
-  },
-  "include": ["test/frontend/**/*.ts"]
-}

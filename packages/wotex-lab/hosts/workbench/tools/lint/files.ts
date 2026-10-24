@@ -16,7 +16,14 @@ const filesWithin = async (path: string): Promise<string[]> => {
 export const sourceFiles = async (paths: string[] = []) => {
   const selected = paths.length
     ? paths
-    : ["assets", "tools", ".storybook", "vite.config.ts"]
+    : [
+        "assets",
+        "tools",
+        ".storybook",
+        "priv/static/contract-assets",
+        "test/frontend",
+        "vite.config.ts",
+      ]
   return [
     ...new Set(
       (await Promise.all(selected.map((path) => filesWithin(resolve(hostRoot, path))))).flat(),

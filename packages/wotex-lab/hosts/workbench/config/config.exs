@@ -35,7 +35,8 @@ config :wotex_lab_workbench,
   beamlens_ollama_timeout_ms: 18_000,
   beamlens_ollama_max_tokens: 320,
   formal_engine: nil,
-  control_mutations: false
+  control_mutations: false,
+  dev_routes: false
 
 config :phoenix, :json_library, Jason
 

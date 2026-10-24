@@ -43,25 +43,6 @@ defmodule WotexLabWorkbench.SeedsTest do
     assert_invalid(Seeds.room(path))
   end
 
-  test "explicit live Storybook output is identical and checked without writes", %{tmp_dir: root} do
-    workbench = Path.join(root, "workbench")
-    storybook = Path.join(root, "storybook")
-    options = ["--output", workbench, "--storybook-output", storybook]
-    Seed.run(options)
-    live_path = Path.join(storybook, "islands.json")
-    assert File.read!(live_path) == File.read!(Path.join(workbench, "islands.json"))
-    assert File.ls!(storybook) == ["islands.json"]
-    Seed.run(["--check" | options])
-    File.write!(live_path, "stale")
-    assert_raise Mix.Error, ~r/stale seed data/, fn -> Seed.run(["--check" | options]) end
-    assert File.read!(live_path) == "stale"
-    File.rm!(live_path)
-    assert_raise Mix.Error, ~r/stale seed data/, fn -> Seed.run(["--check" | options]) end
-    refute File.exists?(live_path)
-    Seed.run(options)
-    assert File.read!(live_path) == File.read!(Path.join(workbench, "islands.json"))
-  end
-
   test "invalid definitions cannot substitute identities, schemes or simulator state" do
     seed =
       :wotex_lab_workbench

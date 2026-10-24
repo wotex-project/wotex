@@ -35,8 +35,8 @@ schema_version: "1.0.0"
 #   behaviour tools (compile, tests with coverage, archive and application-free
 #   checks); static analysis, whose results depend on the compiler and OTP
 #   version, and the native tools, which do not depend on it, run on the
-#   current lane only. So do wotex-lab's reference host gates (workbench,
-#   storybook_host, nerves_host), each a complete gate that includes formatting and linting:
+#   current lane only. So do wotex-lab's reference host gates (workbench and
+#   nerves_host), each a complete gate that includes formatting and linting:
 #   the hosts are applications built with the current toolchain, and the
 #   minimum lane verifies library compatibility with the oldest supported
 #   Elixir and OTP.
@@ -46,7 +46,7 @@ lanes:
     otp: "27.3.4.18"
     skip: [formatter, credo, doctor, dialyzer, ex_doc, mix_audit, hex_audit, diff, api_surface,
            compatibility_review,
-           native_format, native_lint, native_test, workbench, storybook_host, nerves_host]
+           native_format, native_lint, native_test, workbench, nerves_host]
   current:
     elixir: "1.20.2-otp-29"
     otp: "29.0.4"
@@ -1271,7 +1271,6 @@ packages:
     # the rpi4 firmware.
     hosts:
       - path: hosts/workbench
-      - path: hosts/storybook
       - path: hosts/nerves
         env:
           DOC_SHELL_CANDIDATE: ""

@@ -28,7 +28,7 @@ defmodule WotexLabWorkbench.MixProject do
 
   @spec application() :: keyword()
   def application do
-    [mod: {WotexLabWorkbench.Application, []}, extra_applications: [:logger, :runtime_tools]]
+    [mod: {WotexLabWorkbench.Application, []}, extra_applications: extra_applications(Mix.env())]
   end
 
   @spec cli() :: keyword()
@@ -65,6 +65,7 @@ defmodule WotexLabWorkbench.MixProject do
       {:phoenix_html, "~> 4.3"},
       {:phoenix_live_view, "~> 1.2.11"},
       {:phoenix_pubsub, "~> 2.1"},
+      {:phoenix_storybook, "== 1.5.0", only: [:dev, :test]},
       {:bandit, "~> 1.13.1"},
       {:jason, "~> 1.4"},
       {:req, "~> 0.5"},
@@ -146,6 +147,11 @@ defmodule WotexLabWorkbench.MixProject do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp extra_applications(environment) when environment in [:dev, :test],
+    do: [:logger, :runtime_tools, :phoenix_storybook]
+
+  defp extra_applications(_), do: [:logger, :runtime_tools]
 
   defp aliases do
     [

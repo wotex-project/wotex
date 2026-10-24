@@ -1,7 +1,15 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.33.4. Contract: accepted. Implementation status:
+Specification version: 0.34.0. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.34 folds the Phoenix Storybook live catalogue into the Workbench
+Phoenix application. Development and test use one endpoint, PubSub, session,
+seed artifact, frontend gate and browser harness. Its pinned Phoenix Storybook
+dependency, story source and route are excluded from production compilation
+and the release dependency closure. Static Storybook publication, browser contracts, island
+messages and Action authority are unchanged. Historical evidence for the
+former two-host source tree remains historical.
 
 Version 0.33.4 reconciles the native journey Spec with the committed source,
 records current component/state counts and qualifies native archive recovery
@@ -40,15 +48,15 @@ changes no graph revision, handler count or dispatch. These bounded Workbench
 cases do not establish the complete Storybook, state or assistive-technology
 matrix required below.
 
-Version 0.33 removes independent sample values from the Phoenix Storybook host.
-Explicit `mix seed --storybook-output ../storybook/priv/fixtures` writes the
-same island-catalogue bytes as the Workbench seed output. The Lab gate checks
-both copies without writing. The live catalogue reads only its own bounded,
-regular fixture artifact, validates an inline island snapshot and exposes its
-canonical payload digest. Missing or invalid fixtures show an unavailable state
-without substituted data. Semantic fallbacks derive their columns and series
-from those same payloads. No runtime neighbouring-project discovery, room
-startup, browser seeding or command authority is added.
+Version 0.33 removed independent sample values from the Phoenix Storybook
+catalogue by generating a byte-identical copy of the Workbench island seed.
+Version 0.34 removes that duplicate copy: the integrated development route
+reads the Workbench's bounded regular fixture artifact, validates an inline
+island snapshot and exposes its canonical payload digest. Missing or invalid
+fixtures show an unavailable state without substituted data. Semantic
+fallbacks derive their columns and series from those same payloads. No runtime
+neighbouring-project discovery, room startup, browser seeding or command
+authority is added.
 
 Version 0.32 adds explicitly selected host-configured Modbus room profiles.
 The session registry admits up to four closed IPv4 endpoint profiles and
@@ -468,9 +476,9 @@ canvas that presents the same tokens and semantic fallbacks instead of relying
 on the manager's default surface. Its single Vite graph
 produces bounded, content-hashed Workbench and Storybook entries. The chart,
 data-grid, tabs and canvas islands retain semantic HEEx fallbacks and use closed,
-revisioned snapshots and events. A separate Phoenix Storybook host exercises
-the real LiveView transport against the same registered components and fixture
-identities. Focused browser cohorts cover lifecycle, malformed and stale
+revisioned snapshots and events. A development-only Phoenix Storybook route in
+the Workbench exercises the real LiveView transport against the same registered
+components and fixture identities. Focused browser cohorts cover lifecycle, malformed and stale
 updates, reconnect resynchronization, command non-replay, fallback behavior,
 keyboard operation, reflow, zoom, themes, contrast, reduced motion and asset
 failure. Asset inspection rejects remote runtime dependencies, source maps,
@@ -493,12 +501,12 @@ evidence in `chart_contract_test.exs`. The Elixir suites in `hosts/workbench/tes
 marks, exact analysis/chart/dashboard links, saved arrangements, keyboard
 history loading, bounded downloads, escaped Thing Description titles, narrow
 reflow, frozen dataset immutability and reload/reconnect without replay.
-Unavailable investigation/formal engines stay inert. The separate
-`hosts/storybook/test/e2e/islands_test.exs` checks the real LiveView catalogue's
+Unavailable investigation/formal engines stay inert.
+`hosts/workbench/test/e2e/storybook_islands_test.exs` checks the real LiveView catalogue's
 keyboard focus and revisions, reconnect generations, blocked chunks, invalid
 snapshots, themes, narrow reflow, 400% zoom, reduced motion and no-JavaScript
-fallbacks. Both lanes own ephemeral loopback endpoints and use the locked
-Playwright/Chromium installation; the catalogue lane refuses external requests.
+fallbacks. The suites share an ephemeral loopback endpoint and use the locked
+Playwright/Chromium installation; the catalogue suite refuses external requests.
 The current Lab CI job runs them explicitly after the package gate. Ordinary
 `mix check` does not start a browser. Historical WLB.11 records remain historical;
 these tests do not establish the complete WLB.08 browser matrix, artifact
@@ -1017,10 +1025,10 @@ registry. Story transports are deterministic mocks for local, loading, success,
 validation, error, stale, disconnected and reconnect states. They do not claim
 server authorization, persistence, experiment execution or Action dispatch.
 
-A separate Phoenix Storybook integration host exercises the HEEx wrapper,
-semantic fallback, LiveComponent targets and real LiveView transport against
-the same fixture IDs and digests. It is development and qualification tooling,
-not a production dependency of the base library. Any online live catalogue is
+A development-only Phoenix Storybook route in the Workbench exercises the HEEx
+wrapper, semantic fallback, LiveComponent targets and real LiveView transport
+against the same fixture IDs and digests. It is development and qualification
+tooling and is absent from the production router and running release. Any online live catalogue is
 isolated from production data and credentials, uses a supported patched
 Phoenix Storybook release and has an explicit access decision.
 
@@ -1135,7 +1143,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-S11-05 | Compose one Lab-owned token, CSS and component system across HEEx, Svelte, DocShell composition and Storybook without delegating product UI to the asset substrate. |
 | WLB-S11-06 | Render useful HEEx fallbacks and preserve the Workbench's admitted operation when an island, asset or LiveSocket is unavailable. |
 | WLB-S11-07 | Enhance bounded charts and data controls without admitting arbitrary client programs, remote data, unbounded values or browser-owned evidence. |
-| WLB-S11-08 | Audit the complete frontend dependency lock, build the production Svelte components as a static Storybook and test their real LiveView integration in a separate Phoenix Storybook host. Hosted publication follows the WLB.08 qualification runbook. |
+| WLB-S11-08 | Audit the complete frontend dependency lock, build the production Svelte components as a static Storybook and test their real LiveView integration through the Workbench's development-only Phoenix Storybook route. Hosted publication follows the WLB.08 qualification runbook. |
 | WLB-S11-09 | Meet the specified keyboard, focus, landmark, reflow, contrast, motion, theme, failure and disconnected-state behavior. |
 | WLB-S11-10 | Ship one local content-hashed Vite graph with code splitting, bundle budgets, no production Storybook manager and no Node runtime process. |
 | WLB-S11-11 | Preserve session isolation, reconnect safety, explicit Action approval, escaped untrusted content and restrictive browser policy across every island event. |
@@ -1144,7 +1152,7 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-S11-14 | Preserve the authoritative subject, revision, local input, focus, command identity and recovery across composition changes while retaining required evidence and Action scope in compact composition. |
 | WLB-S11-15 | Deliver the separate editable WoTEx brand identity and approved asset handoff defined by WLB-C15, preserving the distinction between source values, proposals and accepted identity. |
 | WLB-S11-16 | Deliver the editable Lab page/state/profile inventory and connected task flows defined by WLB-C16, with source-aligned components, adjacent briefs and explicit approval/recovery boundaries. |
-| WLB-S11-17 | Author reference-room, component and island-story sample data in the backend Mix seed source; validate generated room input, reject stale generated outputs in both static and live Storybook hosts, and exclude Storybook sample payloads from production browser code. |
+| WLB-S11-17 | Author reference-room, component and island-story sample data in the backend Mix seed source; validate generated room input, reject stale generated output shared by the static and live Storybook surfaces, and exclude Storybook sample payloads from production browser code. |
 | WLB-S11-18 | Use typed Svelte 5 runes, arrow functions and closure controllers, expression-bodied inline handlers or named script handlers for block bodies, primitive composition, bounded components, transitive load ordering, consistent spacing and alias-based `.ts` imports. Colocate every primitive/composed component with its stories and keep island adapters thin. Enforce the source contract in the frontend gate. |
 | WLB-S11-19 | Admit host-configured Modbus room profiles with explicit browser selection, exclusive endpoint custody, real Runtime exchanges and unchanged Action approval; no fabricated observations or frontend seed values. |
 
@@ -1161,14 +1169,14 @@ This bounded suite does not close the wider acceptance matrix above.
 | WLB-V11-07 | Enhanced charts preserve gaps, units, labels, evidence/query identity, accessible description and the bounded table fallback across themes and updates. |
 | WLB-V11-08 | JavaScript-disabled, blocked-chunk, mount-failure and invalid-snapshot cohorts retain shell, fallback, ordinary navigation and every declared safe server action. |
 | WLB-V11-09 | The static Storybook imports the same component chunks, CSS and fixture digests as the Workbench; mocks are visibly distinct from real server operation. Every emitted story renders in light and dark themes without accessibility-addon violations; the full frontend lock audit passes without suppressed advisories. |
-| WLB-V11-10 | Phoenix Storybook and Workbench browser cohorts cover keyboard/pointer interaction, focus recovery, 320-pixel reflow, 400% zoom, themes, high contrast, reduced motion, loading/error/disconnected states and assistive-content handoff. |
+| WLB-V11-10 | The Workbench application and its Phoenix Storybook route browser cohorts cover keyboard/pointer interaction, focus recovery, 320-pixel reflow, 400% zoom, themes, high contrast, reduced motion, loading/error/disconnected states and assistive-content handoff. |
 | WLB-V11-11 | Production asset inspection finds one manifest, declared chunks within budget and no Storybook manager, source map, remote runtime URL, runtime compiler, arbitrary import or Node production process. |
 | WLB-V11-12 | The clone-free Workbench artifact runs the three experiments, metrics, evidence, documentation entry and no-LLM flow with islands enabled and with their client chunks deliberately unavailable. |
 | WLB-V11-13 | HEEx, Svelte and Storybook render the same task fixture at 599/600-pixel and 839/840-pixel task-container boundary pairs without changing its closed snapshot or emitting a command. |
 | WLB-V11-14 | Keyboard-only, screen-reader, reduced-motion and coarse-pointer journeys preserve selection, focus, drafts, evidence identity, pending-command state and reconnect recovery in every profile. |
 | WLB-V11-15 | Inspect the native brand file, source-exact assets/tokens, default/inverse instances and destination exports; verify accepted rules and independently restore the archived native artwork and dependencies. |
 | WLB-V11-16 | Inspect native Lab components and all required page/state/profile mappings, execute named Play journeys including back/cancel/expiry/reconnect, compare with the pinned source and independently restore the native prototype and component links. |
-| WLB-V11-17 | Repeated Mix seeding produces identical bytes without allocating browser state; check-only detects missing or stale output in both Storybook hosts without writes; live fixtures retain canonical payload digests without fallback data; room admission rejects malformed, duplicate and oversized seeds; a fresh browser renders no Things, readings, Runs, pins or evidence before explicit backend operations. |
+| WLB-V11-17 | Repeated Mix seeding produces identical bytes without allocating browser state; check-only detects missing or stale shared Storybook output without writes; live fixtures retain canonical payload digests without fallback data; room admission rejects malformed, duplicate and oversized seeds; a fresh browser renders no Things, readings, Runs, pins or evidence before explicit backend operations. |
 | WLB-V11-18 | AST and installed-Biome vectors accept arrows, accessors, aliases, expression-bodied inline handlers and named Svelte handlers and reject classes outside the documented platform exemptions, function/method declarations, `.js`/relative imports, inline block handlers, raw domain controls, oversized components, eager forward calls and missing spacing. Every production component has colocated rendered stories; callback-context isolation, enabled-menu navigation and single native activation pass unit/browser regressions. |
 | WLB-V11-19 | Configured room profiles pass malformed/duplicate/unknown/busy and owner-loss vectors; the independent container peer drives an Elixir browser journey through graph inspection, read, approved Run dispatch, target readback and failure/release without replay. |
 

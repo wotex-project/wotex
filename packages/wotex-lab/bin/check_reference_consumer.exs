@@ -48,7 +48,7 @@ defmodule Wotex.Lab.Check.ReferenceConsumer do
   ]
   @native_packages ~w(baml_elixir ex_maude explorer)a
   @workbench_patterns ~w(.check.exs .credo.exs .formatter.exs coveralls.json
-                          config/**/* lib/**/* priv/static/**/* test/**/*
+                          config/**/* lib/**/* storybook/**/* priv/static/**/* test/**/*
                           tools/**/* Dockerfile README.md mix.exs mix.lock)
 
   @spec run() :: :ok
