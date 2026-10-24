@@ -571,3 +571,13 @@ or exclusions. The [time renewal record](../provenance/decision-archive-time-202
 binds the exact cohort and owning gates. It preserves every qualified bounds-lane
 obligation and does not close the combined verifier, maximal-work or wider
 consumer-host milestone.
+
+## Current direct-point qualification
+
+The [direct-transition renewal](../provenance/verified-transitions-renewal-2026-10.md)
+passes 114 guarded tests, 1,233 point transitions, 72 Edge relations and all six
+isolated faults across thirteen direct cases each, with zero harness errors.
+The runner's stale twelve-case expectation is corrected and enforced by an
+ordinary Elixir subprocess regression. All 312 package tests and fifteen owning
+checks pass. This tooling correction changes no runtime grammar or public seam;
+the complete combined verifier and maximal-work obligations remain open.
