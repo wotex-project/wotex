@@ -11,6 +11,15 @@ combined native matrix and owning milestone remain open.
 The complete combined VD-T1–T14 matrix remains open; native and archive subsets
 below have executed evidence.
 
+<!-- Deferred input-validation issue, reproduced at b6bf165e (2026-10-24):
+Run.record/5 uses loose equality for regenerated path/original/kind identity.
+Integer-valued float step-path coordinates can pass Run validation. Conditional
+point claims then raise BadMapError for a selected path or accept a forged
+unused path; both Time grammars are affected. The code fix is intentionally
+deferred. Strict path identity and regression coverage at the Run, Kernel and
+Transition/Decision boundaries remain part of VD-T2's outstanding work.
+-->
+
 ## Result and ownership
 
 A consumer can check a supplied Kernel transition without running the transition
