@@ -140,9 +140,20 @@ defmodule Wotex.Routines.TransitionCorpus do
         })
     )
 
-    counts.assertions > 0 and counts.errors == 0 and results.total == 12 and
-      results.failures > 0 and results.skipped == 0 and results.excluded == 0
+    mutation_valid?(results, counts)
   end
+
+  @doc false
+  @spec mutation_valid?(map(), map()) :: boolean()
+  def mutation_valid?(
+        %{total: 13, failures: failures, skipped: 0, excluded: 0} = results,
+        %{assertions: assertions, errors: 0} = counts
+      )
+      when map_size(results) == 4 and map_size(counts) == 2 and is_integer(failures) and
+             failures > 0 and failures <= 13 and is_integer(assertions),
+      do: failures == assertions
+
+  def mutation_valid?(_, _), do: false
 
   defp mutate(name) do
     {file, rule} = Map.fetch!(@mutations, name)
