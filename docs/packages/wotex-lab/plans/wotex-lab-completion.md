@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.19.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.20.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -102,6 +102,12 @@ without the remote font import. Browser tests cover failed enhancement,
 keyboard/reconnect behavior, chart/export boundaries and inert unavailable
 engines. Seed ownership, production authority and historical evidence remain
 unchanged; full design and artifact qualification remain separate.
+
+Version 1.20 adds a tracked Elixir OCI runtime gate for an explicit local image
+identity. It inspects effective restrictions and exercises the release, then
+checks shutdown and removes owned resources. The ordinary package gate checks
+source policy and input/policy regressions. Candidate archive/image execution
+is separate from public distribution, deployment and other platform adoption.
 
 ## Delivery status
 

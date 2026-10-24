@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.14. Contract: accepted. Source status: the workspace
+Specification version: 0.9.15. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -10,8 +10,9 @@ private registry with Git unavailable. The contained reference consumer, local
 artifact builder, distribution validator, offline static-documentation builder
 and compatibility-readiness report are implemented. The
 Workbench also has a digest-pinned, non-root OCI Dockerfile, data-free health
-route and offline image-source gate; Docker's build-graph check passes, but no
-runnable image is claimed while its WoTEx Hex dependencies are unpublished.
+route, offline image-source gate and explicitly selected Elixir runtime gate.
+A local candidate image exercises the selected archive cohort independently of
+public Hex/image adoption; the default build still requires its Hex dependencies.
 Published npm/Hex/container adoption, hosted
 deployment and on-device evidence are qualification states governed by the
 [qualification runbook](../plans/qualification.md), not missing source. The
@@ -19,6 +20,18 @@ rpi4 firmware project, exact Nerves
 system/toolchain lock, inert host smoke and source gate are implemented under
 `hosts/nerves/`; the local cross-build reaches firmware assembly but cannot
 finish without the operator-installed `fwup` prerequisite.
+
+Version 0.9.15 adds `bin/check_oci_runtime.exs` for an exact, already present
+local image ID and new absolute output directory. It never pulls an image.
+Before running application checks it inspects the actual container's non-root
+identity, read-only root, bounded tmpfs mounts, memory/CPU/PID limits, dropped
+capabilities, no-new-privileges policy and loopback-only publication. It exercises
+health, documentation/search, application pages/assets, numerical execution,
+capture and exact approval/replay boundaries. Session revocation, graceful exit,
+OOM refusal and container/anonymous-volume removal are checked. Image labels,
+logs and actual ExUnit results are retained locally. Input/policy regressions
+and the offline OCI source gate run in the ordinary package gate; Docker
+execution stays explicit. Runtime APIs and publication authority are unchanged.
 
 Version 0.9.14 makes the local artifact builder and validator share one
 explicit twenty-package cohort. Profiles, Routines, UDP and Zigbee are
@@ -290,7 +303,13 @@ ephemeral write locations, and uses the fixed `/healthz` loopback probe. The
 documented run profile adds read-only root, tmpfs mounts, memory/CPU/PID limits
 and loopback-only publication. `bin/check_oci_source.exs` validates these
 properties without building; its opt-in Docker `--check` lane validates the
-build graph. Neither is a built-image/runtime/cleanup result.
+build graph. Those source checks do not establish runtime execution.
+`bin/check_oci_runtime.exs` separately exercises an explicitly supplied local
+Linux image under the documented limits and records its identity, actual
+checks, shutdown and cleanup. A candidate may use an explicitly admitted local
+archive registry only in its build stage; the image's runtime stage keeps the
+same source policy. This candidate qualification does not establish published
+Hex, container registry, deployed service or another platform's adoption.
 
 The reference host owns Phoenix/LiveView, PromEx and BeamLens dependencies.
 WLB.10's GreptimeDB process is opt-in; its endpoint/data volume/TTL and resource

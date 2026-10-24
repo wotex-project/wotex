@@ -52,6 +52,7 @@
      command: "mix run --no-start bin/generate_compatibility_review.exs --check",
      deps: [:api_surface]},
     {:nerves_source, command: "elixir bin/check_nerves_source.exs"},
+    {:oci_source, command: "elixir bin/check_oci_source.exs"},
     {:boundary, command: "elixir bin/check_boundary.exs"},
     # The reference hosts are separate Mix projects with their own gates and
     # locks; they inherit WOTEX_PATH_DEPS=1 from this gate. The Workbench's

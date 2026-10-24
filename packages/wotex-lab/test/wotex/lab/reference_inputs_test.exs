@@ -18,7 +18,8 @@ defmodule Wotex.Lab.ReferenceInputsTest do
              bin/build_artifacts.exs bin/check_distribution.exs
              bin/generate_api_surface.exs bin/generate_compatibility_review.exs
              bin/check_reference_consumer.exs bin/check_source_cohort.exs
-             bin/check_workbench_archive.exs
+             bin/check_workbench_archive.exs bin/check_oci_source.exs bin/check_oci_runtime.exs
+             bin/support/oci_runtime.exs
              bin/support/archive_repository.exs bin/support/child_environment.exs
              bin/support/compatibility_review.exs
              bin/support/distribution.exs

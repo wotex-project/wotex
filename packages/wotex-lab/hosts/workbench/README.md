@@ -732,18 +732,40 @@ OTP itself. `/tmp` and `/var/lib/wotex-lab` are the only declared ephemeral
 write locations. A hardened local run is:
 
 ```sh
-docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+docker run --rm --pull never --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m \
   --tmpfs /var/lib/wotex-lab:rw,noexec,nosuid,size=64m \
   --memory 512m --cpus 1 --pids-limit 256 -p 127.0.0.1:4000:4000 \
+  --cap-drop ALL --security-opt no-new-privileges \
   -e SECRET_KEY_BASE -e PHX_HOST=localhost wotex-lab-workbench:candidate
 ```
 
 `elixir ../../bin/check_oci_source.exs` is the offline source-shape gate.
 `WOTEX_LAB_OCI_CHECK=1` additionally asks Docker to validate the build graph;
 it resolves image metadata and may populate the local builder cache, but does
-not execute the image build. A full image build remains blocked until the
-WoTEx packages named in `mix.lock` exist in the selected Hex repository. The
-source check is not an image digest, runtime smoke or publication claim.
+not execute the image build. The default build requires the WoTEx packages
+named in `mix.lock` in the selected Hex repository. A local candidate build
+can instead explicitly admit those archives and compatible documentation
+renderer archives through a disposable local registry in the build stage;
+that does not establish public Hex or image adoption.
+
+The explicit Elixir runtime gate accepts an already built local image ID
+(`sha256:` followed by 64 lowercase hexadecimal digits), rather than a tag.
+From the repository root, set `WOTEX_LAB_OCI_IMAGE` to the exact ID returned by
+`docker image inspect` and `WOTEX_LAB_OCI_OUTPUT` to a new absolute directory:
+
+```sh
+elixir packages/wotex-lab/bin/check_oci_runtime.exs \
+  --image "$WOTEX_LAB_OCI_IMAGE" --output "$WOTEX_LAB_OCI_OUTPUT"
+```
+
+The gate never pulls an image. It inspects the effective user, read-only root,
+tmpfs mounts, quotas, dropped capabilities, privilege policy and loopback port
+binding before exercising health, docs/search, all application pages and local
+assets, a numerical Run, dataset capture, explicit approval and replay refusal.
+It revokes its sessions, checks clean shutdown without OOM and removes its
+container and anonymous volumes on failure too. Logs, image identity and test
+results go to the supplied directory. Ordinary checks run the offline source
+gate; Docker runtime qualification remains explicitly selected.
 
 All rooms and their child processes are session-owned and bounded. Reports are
 limited to one MiB, previews to 100 rows and 32 columns, charts to 2,000 points

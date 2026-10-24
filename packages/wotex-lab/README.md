@@ -358,6 +358,7 @@ when asked, inside `packages/wotex-lab`.
 | Workbench archive | `WOTEX_PATH_DEPS=1 mix run --no-start bin/check_workbench_archive.exs` | public dependencies and platform precompiled archives in the local Hex cache |
 | TypeScript client drift, Node tests, npm archive shape | `WOTEX_PATH_DEPS=1 mix run --no-start bin/generate_typescript_client.exs --check` | Node and npm |
 | Workbench OCI source shape | `elixir bin/check_oci_source.exs` (`WOTEX_LAB_OCI_CHECK=1` adds Docker's build-graph check) | Docker only for the build-graph check |
+| Workbench OCI runtime | `elixir bin/check_oci_runtime.exs --image "$WOTEX_LAB_OCI_IMAGE" --output "$WOTEX_LAB_OCI_OUTPUT"` | An explicitly built local image ID and a new absolute output directory; Docker; no image pull |
 
 The full conformance source suite requires Rust/Cargo 1.85+ with rustfmt and
 Clippy, plus Darwin `sandbox-exec` or an admitted Linux Bubblewrap environment.
