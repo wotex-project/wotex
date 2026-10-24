@@ -1,6 +1,6 @@
 # Canvas Workbench: journeys and design proposal
 
-Plan version: 0.21.0. Status: iterative design review. Implementation: persistent
+Plan version: 0.21.1. Status: iterative design review. Implementation: persistent
 canvas and contextual tools; full workbench migration remains open. Owners: WLB.11 and
 WLB.12. Package: `packages/wotex-lab`.
 
@@ -28,6 +28,12 @@ acceptance; [WLB.11](../specs/WLB.11-workbench-and-design-system.md) owns fronte
 behavior and [WLB.12](../specs/WLB.12-unified-documentation.md) owns documentation.
 
 ## Product model and workspace
+
+The 2026-10-24 [design reconciliation](brand-and-lab-design.md) records the
+current native inventory, concise source-bound journey Spec, corrected
+Actuator counter/receipt flow and independently restored native captures.
+Historical prototype reviews below retain their original scope. Native Play
+does not replace the Elixir browser, simulator or artifact acceptance lanes.
 
 The primary user is an engineer asking: what is connected, what is happening,
 why did it happen, and what should I inspect or run next? Opening the Lab shows

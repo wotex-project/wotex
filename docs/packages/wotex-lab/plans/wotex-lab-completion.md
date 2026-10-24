@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.20.1. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.20.2. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -8,6 +8,12 @@ Physical-device qualification is an optional deployment claim, not unfinished
 Lab work. The [qualification runbook](qualification.md) separates that claim
 from the [software simulator baseline](../labs/simulators.md). This
 clarification changes no package API or existing acceptance obligation.
+
+Version 1.20.2 records WLB.11's current native design reconciliation and
+independent archive recovery. The corrected Actuator prototype and current
+source handoff remain distinct from runtime tests. Final brand review and
+complete native lifecycle, keyboard and responsive/theme acceptance remain
+open under the design contract.
 
 Version 1.11 requires the complete pnpm advisory audit and static Storybook build in the Workbench gate and
 rendered light/dark accessibility scans in the Elixir browser suite. The
@@ -127,7 +133,7 @@ every environment or historical artifact has been requalified.
 | C07, C08, C10–C12 | Evidence/containment, cookbooks/graph, artifact builders, compatibility inputs, metrics/history and optional investigations | Catalogue evidence remains partial; historical manifests do not establish new source/artifact or hosted adoption. Release/API decisions remain with the maintainer. |
 | C13 | Backend-owned rooms, Things, experiments, metrics, pins, captures and evidence; frontend units, static/live catalogues and Elixir browser journeys | Complete accessibility and the full environment/browser matrix remain qualification work. The independent Modbus peer backs explicit room selection, Property reads, approved dispatch/readback, failure and isolation browser journeys. |
 | C14 | Documentation collections, API member projection, search and static/hosted builders | The accepted compact reader depends on a maintainer-published renderer seam; candidate-source results do not close published adoption. |
-| C15–C16 | Editable brand and Lab design drafts | Accepted identity, complete native component/state coverage, connected prototypes with executed Play and independent native archive restore remain open in the design contract. |
+| C15–C16 | Editable brand and Lab design files, native Specs, shared themes and independently restored native captures | Final brand review, complete native component/state coverage and remaining lifecycle, keyboard and responsive/theme Play acceptance remain open in the design contract. |
 
 The Workbench additionally requires backend-owned Mix seed definitions,
 deterministic generated data checks and an empty initial browser with no

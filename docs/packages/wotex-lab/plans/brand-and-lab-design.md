@@ -1,6 +1,6 @@
 # WoTEx brand and Lab design contract
 
-Plan version: 1.11.0. Contract: accepted. Design status: under revision.
+Plan version: 1.12.0. Contract: accepted. Design status: under revision.
 Owners: WoTEx family identity and WLB.11. Package path: `packages/wotex-lab`.
 
 The programme includes a separate editable WoTEx brand identity file and an
@@ -10,6 +10,64 @@ implemented browser behavior, Action authority or standards conformance.
 WLB-C15 and WLB-C16 in the
 [Lab completion contract](wotex-lab-completion.md)
 own their acceptance. No package API or frontend framework changes here.
+
+## Current source and recovery review
+
+The 2026-10-24 reconciliation uses committed source
+`7aa1ce9aeaac359e62d9eba80c6bcd67610b81f0`, package `packages/wotex-lab`.
+The current native journey Spec separates implemented behavior, executed
+software checks and fixed prototype transitions. It replaces superseded
+execution diaries with the current 22-source documentation cohort, member-level
+API projection and explicit renderer-candidate/publication boundary. The
+identity Spec now agrees with the shared board control's equal 12-pixel padding.
+Neither edit changes application CSS or promotes historical package evidence.
+
+Current inspection found 25 compact component families with 135 variants,
+29 documentation fixtures and 155 visible journey-page frames: 26 storyboards,
+two theme specimens, four reusable staging examples, an icon-master strip,
+a submenu study and 121 standalone task targets. The earlier counts below
+describe their historical editions. Current canvas and artwork-library
+inspection found no image-filled UI or artwork nodes. Inter and JetBrains Mono
+remain the intended native UI/code families; the application retains its system
+fallbacks. The original eight pages and shared theme modes are preserved.
+
+Native Play exposed and corrected Actuator-local statistics and source-receipt
+bindings, a missing observer-start transition and unreachable receipt text.
+Read target then Observe shows Waiting, three requests and one observer.
+Pause retains 20.0 °C with three requests and zero observers; Read temperature
+shows Read with four requests and zero observers. Sources retains both exact
+Property receipts. Scrolling reaches both lines, and close/reopen retains the
+values and counts. The unchanged 12-pixel shell padding and a transparent
+32-pixel prototype scroll extent accommodate variable receipt text; this is
+not an application layout change. The new private string counter projection
+is presentation state, with no runtime or CSS token counterpart. Label reads,
+incoming samples, stale/loss/error alternatives and wider keyboard/theme
+journeys are not claimed by this pass.
+
+Both native backups passed ZIP integrity and were independently imported into
+disposable Drafts files. The brand restore retained all eight pages, 32 vector
+masters, 66 variables, eight text styles and 60 study-instance links. Vector
+path/paint signatures, variable values/scopes, type definitions and linked
+master identities matched; its colour overview render was byte-identical.
+The Lab baseline matched the canvas, compact library and reader structures,
+typography, styles, variables and prototype reactions after normalizing
+regenerated local style identifiers. After the Actuator fix, a fresh native
+backup was imported again: its 112-layer Actuator subtree, all 157 variables,
+15 text styles, effects and complete 116-line journey Spec matched. The source
+and restored canvas renders were also byte-identical before that targeted fix.
+The corrected capture is identified separately below; earlier recovery results
+do not substitute for its changed inputs.
+
+| Native capture | SHA-256 |
+| --- | --- |
+| Brand, 2026-10-24 | `f1ff99873d3a552771ad9035de0224a167aee94e822fdec4569c81191433ad31` |
+| Lab after Actuator correction, 2026-10-24 | `dde69bb9ca002bbcd7d91bb33a97b8a28373c35b5ee6ad091fb15cbd08a26a42` |
+
+Native binaries and detailed recovery receipts remain local handoff artifacts;
+they are not package contents. Recovery copies are disposable and the original
+design-file identities remain the handoff destinations. Independent native
+recovery is qualified for these exact captures. Final brand review and complete
+native state, lifecycle, keyboard and responsive/theme acceptance remain open.
 
 ## Current review direction
 
@@ -110,7 +168,8 @@ contains three transparent SVGs, light/dark favicon and application PNG pairs,
 and two social cards, with native source frames, hashes and destination sizes.
 SVG path/viewBox checks and PNG integrity, transparency and crop checks passed;
 light/dark icon pairs have identical alpha geometry. Native archive recovery
-still requires independent restore evidence. These artwork checks do not
+remained unverified at that edition; the current captures above now have
+independent restore evidence. These artwork checks do not
 qualify browser installation or change application CSS. The supplied delivery
 below is now authoritative for its default Light/Dark artwork; the earlier
 derived dark treatment remains a proposal.
@@ -150,7 +209,8 @@ Dark versions of entire product flows. Lab journeys continue to use shared
 Light/Dark/Contrast variables, with two representative theme review frames.
 A fresh native archive of the expanded brand file was saved and its ZIP
 integrity checked. Independent restoration of its artwork, variables, type and
-component links remains unverified.
+component links remained unverified then; the current recovery review above
+qualifies its exact native capture.
 
 ## Lab pages, states and flows
 
@@ -422,8 +482,9 @@ recognition, co-branding, print preparation, destination adoption and native
 archive/restore acceptance remain required.
 
 The full component catalogue, all page/state/profile combinations, remaining
-native Play journeys, final brand acceptance, channel artwork, native archives
-and independent restores are still acceptance obligations.
+native Play journeys, final brand acceptance and channel artwork remain
+acceptance obligations. Native archive recovery is now qualified for the
+exact captures in the current review above.
 The current files have not been published as libraries, and folder placement
 or collaborator access has not been qualified. Design completion and browser
 implementation evidence must be recorded separately. Historical WLB.11 evidence

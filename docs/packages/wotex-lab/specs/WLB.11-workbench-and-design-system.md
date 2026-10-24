@@ -1,7 +1,15 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.33.3. Contract: accepted. Implementation status:
+Specification version: 0.33.4. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.33.4 reconciles the native journey Spec with the committed source,
+records current component/state counts and qualifies native archive recovery
+separately from software behavior. Actuator prototype counters, observation
+state and source receipts retain their own identities through disclosures and
+close/reopen. These design changes add no browser API, seed, operation or
+authority seam. Complete native lifecycle and responsive review remain open
+under the [design contract](../plans/brand-and-lab-design.md).
 
 Version 0.33.3 moves the remaining chart/island browser runners into Elixir
 under each owning host's `test/e2e/`. The current Lab CI lane runs both hosts'
