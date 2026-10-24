@@ -57,6 +57,7 @@ defmodule Wotex.Lab.DistributionTest do
       ~w(wotex wotex_runtime wotex_binding_http wotex_binding_mqtt
          wotex_modbus wotex_coap wotex_bacnet wotex_opcua wotex_ble
          wotex_matter wotex_thread wotex_directory wotex_continuum
+         wotex_profiles wotex_routines wotex_udp wotex_zigbee
          wotex_nx wotex_conformance wotex_lab)
       |> Enum.map(&"hex/#{&1}-0.1.0.tar")
 
@@ -64,6 +65,22 @@ defmodule Wotex.Lab.DistributionTest do
       hex ++
         ~w(source/wotex-lab-workbench.tar source/wotex-lab-oci-context.tar
            source/wotex-lab-nerves-rpi4.tar npm/wotex-lab-client-0.1.0.tgz)
+
+    assert length(hex) == 20
+
+    assert Enum.map(Distribution.packages(), fn {app, _} -> "hex/#{app}-0.1.0.tar" end) ==
+             hex
+
+    assert Enum.all?(Distribution.packages(), fn {app, directory} ->
+             Atom.to_string(app) == String.replace(directory, "-", "_")
+           end)
+
+    for package <- ~w(wotex_profiles wotex_routines wotex_udp wotex_zigbee) do
+      incomplete = List.delete(base, "hex/#{package}-0.1.0.tar")
+
+      assert {:error, :invalid_candidate_layout} =
+               Distribution.validate_candidate_paths(incomplete, false)
+    end
 
     assert :ok = Distribution.validate_candidate_paths(base, false)
     assert {:error, :invalid_candidate_layout} = Distribution.validate_candidate_paths(base, true)

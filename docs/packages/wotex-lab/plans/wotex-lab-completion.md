@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.17.1. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.18.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -88,6 +88,12 @@ collection digests. The closed catalogue and taxonomy cover every registered
 package, including distinct Profiles, Routines, UDP and Zigbee routes.
 Malformed catalogue records fail with structured errors. The documentation
 implementation plan now separates existing source from remaining qualification.
+
+Version 1.18 requires the full twenty-package artifact cohort through one
+shared builder/validator list and binds all twenty Hex archives into the
+candidate source digest. The base distribution has twenty-four artifacts.
+The renewed Workbench BOM records the sixty-four-component local candidate
+closure; published packages, OCI execution and hosted adoption remain separate.
 
 ## Delivery status
 

@@ -224,7 +224,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.07-cookbooks-and-machine-interfaces.md"
       - id: "WLB.08"
-        version: "0.9.13"
+        version: "0.9.14"
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.08-distribution-and-compatibility.md"
       - id: "WLB.09"

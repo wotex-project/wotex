@@ -5,16 +5,39 @@ defmodule Wotex.Lab.Check.Distribution do
 
   @schema "wotex-lab-distribution/v1"
   @digest ~r/\Asha256:[0-9a-f]{64}\z/
-  @hex_packages ~w(wotex wotex_runtime wotex_binding_http wotex_binding_mqtt
-                    wotex_modbus wotex_coap wotex_bacnet wotex_opcua wotex_ble
-                    wotex_matter wotex_thread wotex_directory wotex_continuum
-                    wotex_nx wotex_conformance wotex_lab)
+  @packages [
+    {:wotex, "wotex"},
+    {:wotex_runtime, "wotex-runtime"},
+    {:wotex_binding_http, "wotex-binding-http"},
+    {:wotex_binding_mqtt, "wotex-binding-mqtt"},
+    {:wotex_modbus, "wotex-modbus"},
+    {:wotex_coap, "wotex-coap"},
+    {:wotex_bacnet, "wotex-bacnet"},
+    {:wotex_opcua, "wotex-opcua"},
+    {:wotex_ble, "wotex-ble"},
+    {:wotex_matter, "wotex-matter"},
+    {:wotex_thread, "wotex-thread"},
+    {:wotex_directory, "wotex-directory"},
+    {:wotex_continuum, "wotex-continuum"},
+    {:wotex_profiles, "wotex-profiles"},
+    {:wotex_routines, "wotex-routines"},
+    {:wotex_udp, "wotex-udp"},
+    {:wotex_zigbee, "wotex-zigbee"},
+    {:wotex_nx, "wotex-nx"},
+    {:wotex_conformance, "wotex-conformance"},
+    {:wotex_lab, "wotex-lab"}
+  ]
+  @hex_packages Enum.map(@packages, fn {app, _} -> Atom.to_string(app) end)
   @source_paths ~w(source/wotex-lab-workbench.tar source/wotex-lab-oci-context.tar
                    source/wotex-lab-nerves-rpi4.tar)
   @npm ~r{\Anpm/wotex-lab-client-\d+\.\d+\.\d+\.tgz\z}
   @static "static/wotex-lab-documentation.tar.gz"
   @release ~r{\Arelease/wotex-lab-workbench-[a-zA-Z0-9_.-]+\.tar\.gz\z}
   @release_source "release/wotex-lab-workbench-source.tar"
+
+  @doc "Returns the complete explicit package cohort in deterministic build order."
+  @spec packages() :: [{atom(), String.t()}]
+  def packages, do: @packages
 
   @spec build_manifest(Path.t(), String.t(), String.t()) :: {:ok, map()} | {:error, atom()}
   def build_manifest(root, revision, source_digest) do

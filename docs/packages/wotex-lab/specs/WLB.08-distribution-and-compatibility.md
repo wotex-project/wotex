@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.13. Contract: accepted. Source status: the workspace
+Specification version: 0.9.14. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -19,6 +19,22 @@ rpi4 firmware project, exact Nerves
 system/toolchain lock, inert host smoke and source gate are implemented under
 `hosts/nerves/`; the local cross-build reaches firmware assembly but cannot
 finish without the operator-installed `fwup` prerequisite.
+
+Version 0.9.14 makes the local artifact builder and validator share one
+explicit twenty-package cohort. Profiles, Routines, UDP and Zigbee are
+required alongside the previous sixteen packages. The base layout contains
+twenty Hex archives, three source archives and one npm archive; a layout
+missing any package fails validation. The source digest now also binds the
+relative names and bytes of all twenty Hex archives, alongside the Lab,
+Workbench and Nerves source inputs.
+
+The refreshed CycloneDX BOM describes the selected sixty-four-component
+production archive closure, including Modbus and DocShell 1.0. The renderer
+is a separately inspected local source candidate whose declared requirement
+admits that DocShell release. A fresh archive-only build checks the BOM before
+production compilation and release smoke with Git unavailable. This remains
+local candidate evidence; it establishes no published dependency, Linux image,
+hosted service or hardware adoption.
 
 Version 0.9.13 pins published DocShell 1.0.0 consistently in the family
 documentation producers, isolated collector and Workbench. Build-only library

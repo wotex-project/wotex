@@ -27,24 +27,6 @@ defmodule Wotex.Lab.BuildArtifacts do
 
   alias Wotex.Lab.Evidence.Digest
 
-  @packages [
-    {:wotex, "wotex"},
-    {:wotex_runtime, "wotex-runtime"},
-    {:wotex_binding_http, "wotex-binding-http"},
-    {:wotex_binding_mqtt, "wotex-binding-mqtt"},
-    {:wotex_modbus, "wotex-modbus"},
-    {:wotex_coap, "wotex-coap"},
-    {:wotex_bacnet, "wotex-bacnet"},
-    {:wotex_opcua, "wotex-opcua"},
-    {:wotex_ble, "wotex-ble"},
-    {:wotex_matter, "wotex-matter"},
-    {:wotex_thread, "wotex-thread"},
-    {:wotex_directory, "wotex-directory"},
-    {:wotex_continuum, "wotex-continuum"},
-    {:wotex_nx, "wotex-nx"},
-    {:wotex_conformance, "wotex-conformance"},
-    {:wotex_lab, "wotex-lab"}
-  ]
   @nerves_patterns ~w(.check.exs .credo.exs .formatter.exs README.md config/**/* lib/**/*
                        test/**/* mix.exs mix.lock)
   @oci_patterns ~w(.dockerignore Dockerfile README.md config/**/* lib/**/* mix_tasks/**/*
@@ -60,7 +42,7 @@ defmodule Wotex.Lab.BuildArtifacts do
     source = Path.join(output, "source")
     Enum.each([hex, npm, source], &File.mkdir!/1)
 
-    ArchiveRepository.build_archives!(root, @packages, hex)
+    ArchiveRepository.build_archives!(root, Distribution.packages(), hex)
 
     SourceArchive.create!(
       Path.join(root, "hosts/workbench"),
@@ -88,7 +70,8 @@ defmodule Wotex.Lab.BuildArtifacts do
     end
 
     {:ok, lab_digest} = ReferenceInputs.digest(root)
-    source_digest = combined_source_digest(root, lab_digest)
+    {:ok, archive_digest} = Digest.tree(hex, ["*.tar"])
+    source_digest = combined_source_digest(root, lab_digest, archive_digest)
     revision = ArchiveRepository.revision(root)
     {:ok, manifest} = Distribution.build_manifest(output, revision, source_digest)
     {:ok, encoded} = Distribution.encode(manifest)
@@ -276,12 +259,12 @@ defmodule Wotex.Lab.BuildArtifacts do
     |> String.replace("_", "-")
   end
 
-  defp combined_source_digest(root, lab_digest) do
+  defp combined_source_digest(root, lab_digest, archive_digest) do
     {:ok, workbench} =
       Digest.tree(Path.join(root, "hosts/workbench"), SourceArchive.workbench_patterns())
 
     {:ok, nerves} = Digest.tree(Path.join(root, "hosts/nerves"), @nerves_patterns)
-    Digest.bytes(Enum.join([lab_digest, workbench, nerves], "\n"))
+    Digest.bytes(Enum.join([lab_digest, workbench, nerves, archive_digest], "\n"))
   end
 
   defp abort(message) do
