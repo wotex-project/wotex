@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.20.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.20.1. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -108,6 +108,11 @@ identity. It inspects effective restrictions and exercises the release, then
 checks shutdown and removes owned resources. The ordinary package gate checks
 source policy and input/policy regressions. Candidate archive/image execution
 is separate from public distribution, deployment and other platform adoption.
+
+Version 1.20.1 corrects Nerves firmware initialization and supplies its VM
+startup template. The host cohort stays independent of the bootstrap archive;
+source packaging and its digest retain the required release inputs. Source
+firmware assembly/integrity does not establish trusted signing or physical boot.
 
 ## Delivery status
 

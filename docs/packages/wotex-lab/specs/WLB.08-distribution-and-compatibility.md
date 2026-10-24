@@ -1,6 +1,6 @@
 # WLB.08: Distribution, compatibility and release evidence
 
-Specification version: 0.9.15. Contract: accepted. Source status: the workspace
+Specification version: 0.9.16. Contract: accepted. Source status: the workspace
 switch, the base/profile dependency split, the package content gate, the
 source-cohort guard, the base archive-consumer gate, the full-host Workbench
 archive/release gate, CycloneDX production-closure SBOM, public API snapshot and
@@ -18,8 +18,21 @@ deployment and on-device evidence are qualification states governed by the
 [qualification runbook](../plans/qualification.md), not missing source. The
 rpi4 firmware project, exact Nerves
 system/toolchain lock, inert host smoke and source gate are implemented under
-`hosts/nerves/`; the local cross-build reaches firmware assembly but cannot
-finish without the operator-installed `fwup` prerequisite.
+`hosts/nerves/`. Firmware targets start the pinned bootstrap and include the
+required VM startup template. Source assembly requires the documented host
+tools; archive integrity, trusted signing and physical boot are separate checks.
+
+Version 0.9.16 completes the Nerves source assembly inputs. Firmware targets
+require and start `nerves_bootstrap` 1.15.0; the ordinary host cohort neither
+requires nor starts it. The release includes its Elixir CLI VM startup template
+without loading an additional console script. One shared Nerves archive pattern
+owns source packaging and the input digest, including `.gitignore` and
+`rel/vm.args.eex`; extracted-byte and digest regressions cover those inputs.
+The smoke's compiled source digest includes that template and declares its
+inputs as compiler resources so changes invalidate the embedded digest.
+The documented cross-build and `fwup --verify` check source assembly and archive
+integrity. They do not establish trusted signing, released Hex adoption,
+physical boot or hardware effects.
 
 Version 0.9.15 adds `bin/check_oci_runtime.exs` for an exact, already present
 local image ID and new absolute output directory. It never pulls an image.

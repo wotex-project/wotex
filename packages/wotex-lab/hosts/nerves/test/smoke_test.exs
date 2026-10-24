@@ -6,6 +6,12 @@ defmodule WotexLabNerves.SmokeTest do
   alias Wotex.Lab.Evidence.Record
   alias WotexLabNerves.Smoke
 
+  test "the host cohort neither requires nor starts the firmware bootstrap" do
+    assert Mix.target() == :host
+    assert Mix.Project.config()[:archives] == []
+    refute List.keymember?(Application.started_applications(), :nerves_bootstrap, 0)
+  end
+
   test "host cohort exercises the target code without claiming hardware boot" do
     assert {:ok,
             %{

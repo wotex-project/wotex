@@ -1,11 +1,17 @@
 defmodule Wotex.Lab.Check.SourceArchive do
   @moduledoc false
 
+  @nerves_patterns ~w(.check.exs .credo.exs .formatter.exs .gitignore README.md
+                      config/**/* lib/**/* rel/**/* test/**/* mix.exs mix.lock)
+
   @workbench_patterns ~w(.check.exs .credo.exs .dockerignore .formatter.exs .gitignore Dockerfile
                          README.md .storybook/**/* bin/**/* config/**/* lib/**/* mix_tasks/**/*
                          priv/static/**/* priv/seeds.exs priv/seeds/**/* test/**/* mix.exs mix.lock
                          assets/**/* tools/**/* package.json pnpm-lock.yaml pnpm-workspace.yaml
                          biome.jsonc tsconfig.json vite.config.ts)
+
+  @spec nerves_patterns() :: [String.t()]
+  def nerves_patterns, do: @nerves_patterns
 
   @spec workbench_patterns() :: [String.t()]
   def workbench_patterns, do: @workbench_patterns

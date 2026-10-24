@@ -23,8 +23,11 @@ defmodule WotexLabNerves.Smoke do
     "lib/wotex_lab_nerves/application.ex",
     "lib/wotex_lab_nerves/smoke.ex",
     "mix.exs",
-    "mix.lock"
+    "mix.lock",
+    "rel/vm.args.eex"
   ]
+  for file <- @source_files, do: @external_resource(Path.join(@source_root, file))
+
   @source_tree_digest (case Digest.tree(@source_root, @source_files) do
                          {:ok, digest} -> digest
                          {:error, _} -> raise "Nerves source cohort cannot be digested"

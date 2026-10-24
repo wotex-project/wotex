@@ -12,11 +12,13 @@ defmodule Wotex.Lab.Check.NervesSource do
     lib/wotex_lab_nerves/smoke.ex
     mix.exs
     mix.lock
+    rel/vm.args.eex
     test/smoke_test.exs
     test/test_helper.exs
   )
 
   @pins [
+    ~s(nerves_bootstrap: "1.15.0"),
     ~s({:nerves, "1.15.0", runtime: false}),
     ~s({:nerves_system_rpi4, "2.1.2", runtime: false, targets: :rpi4}),
     ~s("nerves": {:hex, :nerves, "1.15.0"),

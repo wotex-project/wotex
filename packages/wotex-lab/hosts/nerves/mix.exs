@@ -10,6 +10,7 @@ defmodule WotexLabNerves.MixProject do
       app: @app,
       version: @version,
       elixir: "~> 1.18",
+      archives: if(Mix.target() == :host, do: [], else: [nerves_bootstrap: "1.15.0"]),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       releases: [{@app, release()}]

@@ -27,8 +27,6 @@ defmodule Wotex.Lab.BuildArtifacts do
 
   alias Wotex.Lab.Evidence.Digest
 
-  @nerves_patterns ~w(.check.exs .credo.exs .formatter.exs README.md config/**/* lib/**/*
-                       test/**/* mix.exs mix.lock)
   @oci_patterns ~w(.dockerignore Dockerfile README.md config/**/* lib/**/* mix_tasks/**/*
                     priv/static/**/* priv/seeds.exs priv/seeds/**/* mix.exs mix.lock assets/**/*)
 
@@ -58,7 +56,7 @@ defmodule Wotex.Lab.BuildArtifacts do
 
     SourceArchive.create!(
       Path.join(root, "hosts/nerves"),
-      @nerves_patterns,
+      SourceArchive.nerves_patterns(),
       Path.join(source, "wotex-lab-nerves-rpi4.tar")
     )
 
@@ -263,7 +261,7 @@ defmodule Wotex.Lab.BuildArtifacts do
     {:ok, workbench} =
       Digest.tree(Path.join(root, "hosts/workbench"), SourceArchive.workbench_patterns())
 
-    {:ok, nerves} = Digest.tree(Path.join(root, "hosts/nerves"), @nerves_patterns)
+    {:ok, nerves} = Digest.tree(Path.join(root, "hosts/nerves"), SourceArchive.nerves_patterns())
     Digest.bytes(Enum.join([lab_digest, workbench, nerves, archive_digest], "\n"))
   end
 

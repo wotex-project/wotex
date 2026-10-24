@@ -10,6 +10,30 @@ defmodule Wotex.Lab.SourceArchiveTest do
 
   @moduletag :tmp_dir
 
+  test "the Nerves source artifact includes the bootstrap configuration and VM startup", %{
+    tmp_dir: root
+  } do
+    host = Path.expand("../../../hosts/nerves", __DIR__)
+    archive = Path.join(root, "nerves.tar")
+    patterns = SourceArchive.nerves_patterns()
+    assert :ok = SourceArchive.create!(host, patterns, archive)
+    assert {:ok, entries} = :erl_tar.extract(String.to_charlist(archive), [:memory])
+    files = Map.new(entries, fn {path, bytes} -> {List.to_string(path), bytes} end)
+
+    for path <- ~w(.check.exs .credo.exs .formatter.exs .gitignore README.md mix.exs mix.lock
+                   config/config.exs rel/vm.args.eex lib/wotex_lab_nerves/application.ex
+                   lib/wotex_lab_nerves/smoke.ex test/smoke_test.exs test/test_helper.exs) do
+      assert Map.fetch!(files, path) == File.read!(Path.join(host, path)), path
+    end
+
+    refute Enum.any?(Map.keys(files), &String.starts_with?(&1, ~w(_build/ deps/)))
+    source = Path.join(root, "source")
+    put_file(source, "rel/vm.args.eex", "original")
+    assert {:ok, before} = Digest.tree(source, patterns)
+    put_file(source, "rel/vm.args.eex", "changed")
+    refute Digest.tree(source, patterns) == {:ok, before}
+  end
+
   test "the Workbench source archive retains executable frontend and browser gates and inputs", %{
     tmp_dir: root
   } do
