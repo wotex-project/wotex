@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.38. Updated: 2026-10-24. Accepted programme; the basis is partially implemented.
+Version: 0.2.39. Updated: 2026-10-24. Accepted programme; the basis is partially implemented.
 
 The WRO.01–05 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -270,3 +270,12 @@ exclusions. The [renewal record](../provenance/decision-archive-bounds-2026-10.m
 binds the clean source commit, archives, independent inputs and executed gates.
 The complete newer time matrix, maximal-work qualification and wider
 consumer-host adoption remain separate obligations.
+
+## Accepted archive time-matrix renewal
+
+The [VDA-T9 archive profile](../decisions/verified-decision-archive-profile.md#vda-t9--time-matrix-archive-renewal)
+adds eighteen independent time cases per source/journal family, a fifty-nine-case
+combined baseline and eight assertion-only faults across twenty-five semantic
+cases each. It preserves every qualified bounds-lane obligation. Source preflight
+passes thirty-six cases; extracted execution remains pending. This slice does
+not close the combined verifier, maximal-work or wider consumer-host milestone.

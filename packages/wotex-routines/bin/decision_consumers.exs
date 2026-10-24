@@ -1,12 +1,16 @@
 defmodule Wotex.Routines.Check.DecisionConsumers do
   @moduledoc false
 
-  @spec run(Path.t(), keyword(Path.t()), Path.t()) :: :ok
-  def run(archive, paths, temporary) do
+  @spec run(Path.t(), keyword(Path.t()), Path.t(), :bounds | :time) :: :ok
+  def run(archive, paths, temporary, corpus \\ :bounds) when corpus in [:bounds, :time] do
     IO.puts("decision workspace: " <> temporary)
+    suffix = if corpus == :time, do: "-time", else: ""
+    baseline_count = if corpus == :time, do: 59, else: 41
+    mutation_count = if corpus == :time, do: 25, else: 40
 
     for family <- ~w(source journal) do
-      consumer = Path.join(temporary, "decision-" <> family)
+      label = if corpus == :time, do: family <> "/time", else: family
+      consumer = Path.join(temporary, "decision-" <> family <> suffix)
       tests = Path.join(consumer, "test")
       File.mkdir_p!(tests)
       project!(paths, consumer)
@@ -25,6 +29,13 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
         Path.join(tests, "decision_bounds_consumer_test.exs")
       )
 
+      if corpus == :time do
+        copy!(
+          "test/support/archive/decision_#{family}_time_consumer.exs",
+          Path.join(tests, "decision_time_consumer_test.exs")
+        )
+      end
+
       copy!("test/support/archive/decision_identity_consumer.exs", Path.join(tests, "identity.exs"))
       script = Path.join(consumer, "decision_mutations.exs")
       copy!("test/support/archive/decision_mutation_consumer.exs", script)
@@ -40,25 +51,25 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
         {"WOTEX_ROUTINES_COMPILER_BASIS", "sha256:" <> sha256(archive)}
       ]
 
-      IO.puts("decision consumer: " <> family)
+      IO.puts("decision consumer: " <> label)
       command!(["deps.get"], consumer, environment)
       command!(["compile", "--warnings-as-errors"], consumer, environment)
-      baseline = execute(consumer, environment, script, "baseline")
-      verify!(baseline, 41, false, family <> "/baseline")
+      baseline = execute(consumer, environment, script, "baseline", corpus)
+      verify!(baseline, baseline_count, false, label <> "/baseline")
 
       IO.puts(
-        family <> " decision consumer lock sha256: " <> sha256(Path.join(consumer, "mix.lock"))
+        label <> " decision consumer lock sha256: " <> sha256(Path.join(consumer, "mix.lock"))
       )
 
       # Each VM changes only its own in-memory module. Finish all children before
       # returning a refusal so the parent's archive cleanup cannot race a child.
-      replacements = replacements!(paths, consumer)
+      replacements = replacements!(paths, consumer, corpus)
 
       results =
         replacements
         |> Task.async_stream(
           fn {name, replacement} ->
-            {name, execute(consumer, environment, script, replacement)}
+            {name, execute(consumer, environment, script, replacement, corpus)}
           end,
           max_concurrency: 2,
           timeout: :infinity
@@ -66,7 +77,7 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
         |> Enum.to_list()
 
       for {:ok, {name, result}} <- results do
-        verify!(result, 40, true, family <> "/" <> name)
+        verify!(result, mutation_count, true, label <> "/" <> name)
       end
 
       unless Enum.all?(results, &match?({:ok, _}, &1)),
@@ -90,9 +101,11 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
     """)
   end
 
-  defp execute(consumer, environment, script, replacement) do
+  defp execute(consumer, environment, script, replacement, corpus) do
     {output, status} =
-      System.cmd("mix", ["run", "--no-start", "--no-compile", script, replacement],
+      System.cmd(
+        "mix",
+        ["run", "--no-start", "--no-compile", script, replacement, to_string(corpus)],
         cd: consumer,
         env: environment,
         stderr_to_stdout: true
@@ -151,8 +164,10 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
 
   defp valid_counts?(_, _, _, _, _), do: false
 
-  defp replacements!(paths, consumer) do
-    for {name, file, from, to} <- mutations() do
+  defp replacements!(paths, consumer, corpus) do
+    mutations = if corpus == :time, do: time_mutations(), else: mutations()
+
+    for {name, file, from, to} <- mutations do
       source =
         File.read!(Path.join(Keyword.fetch!(paths, :wotex_routines), "lib/wotex/routines/" <> file))
 
@@ -208,6 +223,31 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
       {"encoded_bytes", "validation.ex", "true <- byte_size(bytes) <= limits[\"max_bytes\"]",
        "true <- 0 * byte_size(bytes) <= limits[\"max_bytes\"]"}
     ] ++ bounds
+  end
+
+  defp time_mutations do
+    negative = Enum.find(mutations(), &(elem(&1, 0) == "negative_member"))
+
+    times = [
+      {"freshness_inclusive", "fact[\"receipt_ms\"] + evidence[\"freshness_ms\"] + 1",
+       "fact[\"receipt_ms\"] + evidence[\"freshness_ms\"]"},
+      {"expiry_exclusive", "cut(:elapsed, fact[\"expires_ms\"])",
+       "cut(:elapsed, fact[\"expires_ms\"] + 1)"},
+      {"fractional_floor", "center = DateTime.to_unix(instant, :millisecond)",
+       "center = div(DateTime.to_unix(instant, :microsecond), 1000)"},
+      {"prior_history",
+       "[entry[\"prior\"][\"original\"], entry[\"prior\"][\"busy\"], result && result[\"run\"]]",
+       "[nil, nil, result && result[\"run\"]]"},
+      {"utc_high_endpoint",
+       "do: inside(cell[\"utc_high\"], time[\"utc_high_ms\"], \"/cell/utc_high\")", "do: :ok"},
+      {"elapsed_generation",
+       "equal(cell[\"clock_generation\"], time[\"clock_generation\"], \"/cell/clock_generation\")",
+       ":ok"},
+      {"clamp_cuts", "cut < minimum or cut > maximum -> axis",
+       "cut < minimum or cut > maximum -> nearest(axis, max(minimum, min(maximum, cut)))"}
+    ]
+
+    [negative | Enum.map(times, fn {name, from, to} -> {name, "decision_cell.ex", from, to} end)]
   end
 
   defp command!(args, directory, environment) do

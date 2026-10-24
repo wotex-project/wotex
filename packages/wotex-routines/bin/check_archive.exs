@@ -19,6 +19,7 @@ defmodule Wotex.Routines.Check.Archive do
           composition_consumers: :boolean,
           continuation_consumers: :boolean,
           decision_consumers: :boolean,
+          decision_time_consumers: :boolean,
           profile_consumers: :boolean,
           model_consumer: :boolean,
           maude_path: :string
@@ -42,7 +43,9 @@ defmodule Wotex.Routines.Check.Archive do
         :throw, {:archive, message} -> {:error, message}
       after
         File.rm_rf!(temporary)
-        if opts[:decision_consumers], do: IO.puts("decision workspace cleanup: removed")
+
+        if opts[:decision_consumers] || opts[:decision_time_consumers],
+          do: IO.puts("decision workspace cleanup: removed")
       end
 
     case result do
@@ -67,7 +70,7 @@ defmodule Wotex.Routines.Check.Archive do
       do: throw({:archive, "model consumer requires an explicit interpreter path"})
 
     if producer || opts[:composition_consumers] || opts[:continuation_consumers] ||
-         opts[:decision_consumers] ||
+         opts[:decision_consumers] || opts[:decision_time_consumers] ||
          opts[:model_consumer] || opts[:profile_consumers] do
       paths = artifacts!(producer, archive, temporary, opts[:profile_consumers])
 
@@ -80,6 +83,11 @@ defmodule Wotex.Routines.Check.Archive do
       if opts[:decision_consumers] do
         Code.require_file("decision_consumers.exs", __DIR__)
         Wotex.Routines.Check.DecisionConsumers.run(archive, paths, temporary)
+      end
+
+      if opts[:decision_time_consumers] do
+        Code.require_file("decision_consumers.exs", __DIR__)
+        Wotex.Routines.Check.DecisionConsumers.run(archive, paths, temporary, :time)
       end
 
       if opts[:model_consumer], do: model_consumer!(archive, paths, temporary, opts[:maude_path])

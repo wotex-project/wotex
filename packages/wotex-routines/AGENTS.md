@@ -71,6 +71,13 @@ errors or skipped cases. The runner uses two fresh mutation VMs concurrently and
 joins them before archive cleanup. This lane does not qualify consumer authority,
 installed clocks, host transactions or physical effects.
 
+`bin/check_archive.exs --decision-time-consumers` adds independent source/journal
+Time@1/Time@2 boundary cases. Each combined baseline runs all 59 cases, including
+the bounds corpus and identity. Eight isolated time faults run all 25 original
+and time semantic cases per family, with zero harness errors, skips or exclusions.
+The bounds flag retains its full 41/40-case obligations and thirteen mutations.
+Both flags may run together in separate disposable consumers of one cohort.
+
 `bin/check_archive.exs --model-consumer --maude-path /absolute/maude` runs the explicitly selected proposal-prefix native archive consumer against exact Hex ExMaude 0.5.0. The interpreter remains separately provisioned; this Port lane does not build the C-Node or qualify containment, execution admission or wider models.
 
 `bin/check_archive.exs --profile-consumers` runs two independent scalar consumers

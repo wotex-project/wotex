@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.20. Updated: 2026-10-24. Status: accepted target; implementation partial.
+Version: 0.2.21. Updated: 2026-10-24. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -564,3 +564,12 @@ cases and catch thirteen faults each through assertions with no harness errors,
 skips or exclusions. The [renewal record](../provenance/decision-archive-bounds-2026-10.md)
 binds the exact cohort and owning gates. This changes no runtime grammar and
 does not close the combined verifier or consumer-host milestone.
+
+## Accepted archive time-matrix renewal
+
+The [VDA-T9 archive profile](../decisions/verified-decision-archive-profile.md#vda-t9--time-matrix-archive-renewal)
+adds eighteen independent time cases per source/journal family, a fifty-nine-case
+combined baseline and eight assertion-only faults across twenty-five semantic
+cases each. It preserves every qualified bounds-lane obligation. Source preflight
+passes thirty-six cases; extracted execution remains pending. This slice does
+not close the combined verifier, maximal-work or wider consumer-host milestone.

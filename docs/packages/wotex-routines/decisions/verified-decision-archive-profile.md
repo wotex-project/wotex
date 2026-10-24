@@ -1,8 +1,8 @@
 # Independent verified-decision archive profile
 
-Version: 0.2.0. Updated: 2026-10-24. Status: implemented resource-bound renewal;
-both extracted consumers pass forty-one cases, and all twenty-six isolated
-mutation runs fail through assertions with zero harness errors.
+Version: 0.3.0. Updated: 2026-10-24. Status: resource-bound renewal implemented;
+time-matrix renewal accepted with source preflight only. Its extracted execution
+status remains separate until the owning checks run.
 Owner: [verified decisions](../specs/verified-decision-v1.md), principally
 VD-02–08 and VD-T10–T14. This profile makes those archive obligations concrete;
 it neither replaces the broader native matrix nor widens any runtime grammar.
@@ -201,3 +201,43 @@ skips or exclusions. The guarded native corpus also passes all 58 cases.
 The broader VD-T1–T14 acceptance matrix and owning verifier milestone remain
 open. This archive result grants no current consumer authority, installed clock,
 host transaction, wider Model/Analysis or physical qualification.
+
+## VDA-T9 — Time-matrix archive renewal
+
+The separate `--decision-time-consumers` opt-in entry builds the same exact
+three-library cohort and isolated source/journal consumers. It adds eighteen
+behavioral cases per family: nine declared time traces under each Time grammar.
+Raw declarations may follow the native matrix; expected partition algorithms
+must not import or copy its reference, time-cell, execution-tree or qualification
+helpers. The source family sorts a declared interval catalogue. The journal
+family intersects containing half-lines from its independent boundary ledger.
+Neither derives expected cuts from production outputs.
+
+Both families must independently check adjacent receipt/freshness/expiry points,
+uncertain UTC low/high bounds, signed fractional instants, relevant absence and
+irrelevant UTC changes, clock/epoch/grammar replacement, retained delay/wait/child
+starts, occurrence windows with negative membership, debounce/cooldown including
+zero debounce, shorter effect deadlines, terminal original/busy history and
+65-bit/domain-edge arithmetic. Exact full canonical cells and complete retained
+current results must agree; invalid reuse must refuse for native/plain decisions.
+
+A combined baseline runs all fifty-nine cases per family: the seven original
+semantic cases, thirty-three bounds cases, eighteen time cases and cohort
+identity. Each time mutation runs the twenty-five original-plus-time semantic
+cases in a fresh VM, without test filters, skips, exclusions or harness errors.
+The distinct bounds entry retains its forty-one-case baseline, forty behavioral
+cases per mutation and all thirteen defects. Both entries may run together in
+separate consumer directories against the same extracted cohort. No existing
+bounds obligation is removed or reduced.
+
+The eight time faults are omitted negative members, inclusive-freshness offset,
+exclusive-expiry offset, signed fractional truncation instead of floor, omitted
+prior history, ignored UTC high endpoint, ignored elapsed generation and clamped
+out-of-domain cuts. The negative-member site is the existing isolated defect,
+reused against the new time corpus. Each fault must be caught by assertions in
+both families with exact complete counts. Cohort identity, source/lock/archive
+hashes, passive startup and joined cleanup follow the existing archive rules.
+
+The source preflight passes thirty-six cases with zero failures, skips or
+exclusions. This is not yet extracted-archive evidence. Full combined VD-T1–T14,
+maximal-work qualification and wider consumer-host adoption remain open.

@@ -32,7 +32,9 @@ ExUnit.start(
   formatters: [ExUnit.CLIFormatter, DecisionMutationAssertions]
 )
 
-[replacement] = System.argv()
+[replacement, corpus] = System.argv()
+
+unless corpus in ~w(bounds time), do: raise("unsupported decision corpus")
 
 if replacement == "baseline" do
   Code.require_file("test/identity.exs")
@@ -42,7 +44,11 @@ else
 end
 
 Code.require_file("test/decision_consumer_test.exs")
-Code.require_file("test/decision_bounds_consumer_test.exs")
+
+if corpus == "bounds" or replacement == "baseline",
+  do: Code.require_file("test/decision_bounds_consumer_test.exs")
+
+if corpus == "time", do: Code.require_file("test/decision_time_consumer_test.exs")
 result = ExUnit.run()
 IO.write("DECISION_RESULT=" <> JSON.encode!(result) <> "\n")
 System.halt(if result.failures == 0, do: 0, else: 1)
