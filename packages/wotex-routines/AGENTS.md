@@ -64,8 +64,9 @@ removed on exit. This software lane does not qualify a host or physical effect.
 
 `bin/check_archive.exs --decision-consumers` runs the independent raw-source and
 journal decision consumers against one extracted core/Continuum/Routines cohort.
-Each has seven behavioral cases and a passive identity/query case. Both families
-must catch all six isolated verifier mutations through assertions, with no harness
+Each has forty behavioral cases and a passive identity/query case, including
+300 exact/one-under resource-bound pairs per family. Both families must catch
+all thirteen isolated verifier mutations through assertions, with no harness
 errors or skipped cases. The runner uses two fresh mutation VMs concurrently and
 joins them before archive cleanup. This lane does not qualify consumer authority,
 installed clocks, host transactions or physical effects.

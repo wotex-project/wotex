@@ -1,9 +1,10 @@
 # Independent verified-decision archive profile
 
-Version: 0.1.2. Updated: 2026-10-20. Status: implemented archive lane;
-both extracted consumers and all twelve semantic mutations pass.
+Version: 0.2.0. Updated: 2026-10-24. Status: accepted resource-bound renewal;
+the earlier seven-case archive lane is implemented. The renewal's execution
+status is recorded separately after its owning checks.
 Owner: [verified decisions](../specs/verified-decision-v1.md), principally
-VD-02–08 and VD-T11–T14. This profile makes those archive obligations concrete;
+VD-02–08 and VD-T10–T14. This profile makes those archive obligations concrete;
 it neither replaces the broader native matrix nor widens any runtime grammar.
 
 ## Result, inputs and ownership
@@ -76,8 +77,9 @@ oracle algorithms and expected trace state may not.
 
 ## Cases required in both families
 
-Each family has seven behavioral cases plus its independent cohort identity
-case. A case may contain an explicit finite matrix, but no required cell may be
+The original VDA-T1–T7 foundation has seven behavioral cases plus an independent
+cohort identity case. The VDA-T8 renewal below adds thirty-three behavioral
+cases. A case may contain an explicit finite matrix, but no required cell may be
 skipped, projected onto a simpler source or counted as passed through an error.
 
 | Case | Required trace and independent falsifier |
@@ -97,9 +99,39 @@ counts. A smaller fixture cannot stand in for the specified capacity trace.
 
 ## Isolated semantic mutations
 
-For each family, first run the actual seven behavioral cases unmodified in a
-fresh VM. Then execute the same cases against each single selected mutation of
-the extracted verifier source, recompiling only that module in memory or an
+### VDA-T8 — Resource-bound renewal target
+
+VDA-T8 adds thirty-three behavioral cases independently implemented in each family.
+The thirty metric/clock-cell cases check all five JSON axes through Transition.verify,
+Decision.verify_point, new, to_map and check, in native and plain forms under
+both Time grammars with relevant-present, relevant-absent and irrelevant UTC:
+300 exact/one-under pairs per family. The other cases check repeated aggregate
+nodes while individual arguments fit, certificate output larger than its input,
+and 100-byte/80-character/162-encoded-byte identity strings. Bounds include
+empty containers and every repeated embedded copy; keys count toward string
+width without becoming JSON value nodes.
+
+Each family derives its own measurements without Wotex.JSON, Validation or the
+native decision-bound reference. The source family scans an explicit stack;
+the journal family composes independent subtree heights and encoded lengths.
+Public canonical hashing may refresh enclosing identities after explicit
+Limits rebinding; it supplies no resource measurement or expected admission.
+Expected source motion and journal rows remain separate oracles. Undersized
+claims are prepared without requiring a production constructor to accept them.
+
+The renewed lane requires forty-one baseline cases per family (forty behavioral
+and one identity case). Every mutation runs all forty behavioral cases, with
+no skips or harness errors. In addition to the original six faults, both
+families must catch omitted argument envelopes, omitted certificate output,
+ignored encoded byte counts and ceiling substitution for selected depth, node,
+string and collection limits. All thirteen mutations are isolated fresh-VM
+changes to extracted modules. These obligations renew archive resource-bound
+evidence; they do not claim the complete newer time matrix, maximal-work
+complexity qualification, consumer transactions or physical effects.
+
+For each family, first run all forty behavioral cases and the identity case
+unmodified in a fresh VM. Then execute all forty behavioral cases against each
+single selected mutation of the extracted verifier source, recompiling only that module in memory or an
 isolated disposable replacement. The unmodified archives and installed BEAMs
 remain unchanged. The source site must match exactly once; ambiguous/missing
 sites, compiler/loader failures and unavailable dependencies fail the lane.
@@ -112,14 +144,21 @@ sites, compiler/loader failures and unavailable dependencies fail the lane.
 | negative_member | Omit a member with no newly emitted proposal when deriving the complete time cell. |
 | widened_cell | Accept a rehashed noncanonical cell instead of deriving and comparing its full bounds. |
 | cutoff_omission | Omit a complete contributor/domain after the batch cutoff or fail to check its full conflict/decision consequence. |
+| argument_envelope | Bound only Profile/Limits while omitting the supplied operation arguments. |
+| certificate_output | Bound only the output format field instead of the complete certificate. |
+| encoded_bytes | Ignore encoded JSON byte length while retaining the other selected bounds. |
+| depth_selection | Replace selected depth with the implementation ceiling. |
+| nodes_selection | Replace selected node count with the implementation ceiling. |
+| string_bytes_selection | Replace selected string bytes with the implementation ceiling. |
+| collection_size_selection | Replace selected collection width with the implementation ceiling. |
 
-Each family must catch all six defects through ExUnit.AssertionError failures
+Each family must catch all thirteen defects through ExUnit.AssertionError failures
 with zero runtime, setup, invalid-test or other harness errors and no skipped or
 excluded tests. Every result includes exact total/failure/assertion/error counts;
 missing, duplicate or malformed markers fail. A mutant can produce any positive
 assertion count, but a process/loader error is never a successful catch. The
-ordinary extracted run has exactly eight passing cases per family; mutation
-runs have exactly seven executed behavioral cases each. A passive identity
+ordinary extracted run has exactly forty-one passing cases per family; mutation
+runs have exactly forty executed behavioral cases each. A passive identity
 check cannot be substituted for a semantic catch.
 
 ## Failure, cleanup and evidence
@@ -143,10 +182,10 @@ criteria until those checks have run. It does not alone close all VD-T1–T14,
 the broad WRO.01–04 contracts, consumer adoption, current authority, installed
 clocks, source continuity, containment or physical qualification.
 
-The [archive record](../provenance/decision-archives-2026-10.md) supersedes the
-local-only preflight scope for these exact inputs. Both extracted projects pass
-all eight cases, including their independent cohort identity and public query
-without application startup. Each family catches all six defects through
+The historical [archive record](../provenance/decision-archives-2026-10.md)
+superseded the local-only preflight scope for its exact inputs. Both extracted
+projects passed all eight cases, including their independent cohort identity and public query
+without application startup. Each family caught all six defects through
 assertions across seven behavioral cases per mutation, with zero harness errors,
 skips or exclusions. The parent joins its two concurrent mutation VMs before
 removing the complete owned workspace.

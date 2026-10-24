@@ -1,6 +1,6 @@
 # Verified transitions and time-stable decisions v1
 
-Version: 0.1.9. Updated: 2026-10-21. Status: accepted target; implementation partial.
+Version: 0.1.10. Updated: 2026-10-24. Status: accepted target; implementation partial.
 Owner: WRO.02 retained transitions/complete collection; WRO.03 time correspondence;
 WRO.04 independent validation scope.
 Implementation: public direct-transition and complete-decision APIs, canonical
@@ -540,3 +540,17 @@ then-current 41-case guarded corpus and 292-test package fast gate. The complete
 VD-T1–T14 matrix and owning verifier milestone remain open; this profile does
 not close consumer transactions, actual clocks/source custody, wider models or
 physical authority.
+
+## Accepted archive resource-bound renewal
+
+The [independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal-target)
+adds thirty-three behavioral cases per independent source/journal family. Both
+Time grammars, relevant-present/relevant-absent/irrelevant UTC, native/plain
+inputs and five public verification operations must cover all five JSON resource
+axes: 300 exact/one-under pairs per family. Separate cases check aggregate
+arguments, complete certificate output and Unicode/escaped byte accounting.
+The extracted baseline must pass forty-one cases per family, and all thirteen
+isolated mutations must fail through assertions across forty behavioral cases.
+Source preflight is implemented; renewed archive evidence is pending its owning
+execution. The complete newer time matrix, maximal-work qualification and wider
+consumer-host adoption remain separate obligations.

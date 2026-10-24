@@ -1,6 +1,6 @@
 # WRO.04 — Analysis scope and semantic correspondence
 
-Version: 0.2.19. Updated: 2026-10-16. Status: accepted target; implementation partial.
+Version: 0.2.20. Updated: 2026-10-24. Status: accepted target; implementation partial.
 
 ## Required outcomes
 
@@ -553,3 +553,11 @@ policy/cutoff and exact public byte-bound cases pass. The
 binds the sources and executed checks. Both families are still native preflight;
 the opt-in archive runner, cohort identity, extracted projects, twelve semantic
 mutation runs and owning verifier milestone remain required.
+
+## Accepted archive resource-bound renewal
+
+The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal-target)
+requires independent argument/output accounting across both Time grammars and
+all selected JSON resource axes. Its source preflight is implemented; extracted
+archive execution remains pending. This qualification addition changes no runtime
+grammar and does not close the combined verifier or consumer-host milestone.

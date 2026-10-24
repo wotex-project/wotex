@@ -42,6 +42,7 @@ else
 end
 
 Code.require_file("test/decision_consumer_test.exs")
+Code.require_file("test/decision_bounds_consumer_test.exs")
 result = ExUnit.run()
 IO.write("DECISION_RESULT=" <> JSON.encode!(result) <> "\n")
 System.halt(if result.failures == 0, do: 0, else: 1)

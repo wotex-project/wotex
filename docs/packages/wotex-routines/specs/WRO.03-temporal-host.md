@@ -1,6 +1,6 @@
 # WRO.03 — Temporal calculation and consumer host
 
-Version: 0.2.15. Updated: 2026-10-16. Status: accepted target; implementation partial.
+Version: 0.2.16. Updated: 2026-10-24. Status: accepted target; implementation partial.
 
 ## Calculation seam
 
@@ -516,3 +516,11 @@ this native evidence. Independent raw-source/journal archive consumers,
 complete-verifier mutations, full VD-T1–T14 and the owning milestone remain
 open. No consumer authority, host/physical qualification or wider Model scope
 is supplied.
+
+## Accepted archive resource-bound renewal
+
+The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal-target)
+requires independent argument/output accounting across both Time grammars and
+all selected JSON resource axes. Its source preflight is implemented; extracted
+archive execution remains pending. This qualification addition changes no runtime
+grammar and does not close the combined verifier or consumer-host milestone.

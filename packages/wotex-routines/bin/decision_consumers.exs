@@ -20,6 +20,11 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
         Path.join(tests, "decision_consumer_test.exs")
       )
 
+      copy!(
+        "test/support/archive/decision_#{family}_bounds_consumer.exs",
+        Path.join(tests, "decision_bounds_consumer_test.exs")
+      )
+
       copy!("test/support/archive/decision_identity_consumer.exs", Path.join(tests, "identity.exs"))
       script = Path.join(consumer, "decision_mutations.exs")
       copy!("test/support/archive/decision_mutation_consumer.exs", script)
@@ -39,7 +44,7 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
       command!(["deps.get"], consumer, environment)
       command!(["compile", "--warnings-as-errors"], consumer, environment)
       baseline = execute(consumer, environment, script, "baseline")
-      verify!(baseline, 8, false, family <> "/baseline")
+      verify!(baseline, 41, false, family <> "/baseline")
 
       IO.puts(
         family <> " decision consumer lock sha256: " <> sha256(Path.join(consumer, "mix.lock"))
@@ -61,7 +66,7 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
         |> Enum.to_list()
 
       for {:ok, {name, result}} <- results do
-        verify!(result, 7, true, family <> "/" <> name)
+        verify!(result, 40, true, family <> "/" <> name)
       end
 
       unless Enum.all?(results, &match?({:ok, _}, &1)),
@@ -177,7 +182,32 @@ defmodule Wotex.Routines.Check.DecisionConsumers do
       {"cutoff_omission", "decision_arbitration.ex",
        "domains = domain_index(Enum.map(groups, fn {key, [first | _]} -> {first, key} end))",
        "domains = domain_index(Enum.map(Enum.take(groups, batch), fn {key, [first | _]} -> {first, key} end))"}
-    ]
+    ] ++ resource_mutations()
+  end
+
+  defp resource_mutations do
+    bounds =
+      for {key, ceiling} <- [
+            max_depth: 64,
+            max_nodes: 2_000_000,
+            max_string_bytes: 65_536,
+            max_collection_size: 8192
+          ] do
+        name = key |> Atom.to_string() |> String.replace_prefix("max_", "")
+
+        {name <> "_selection", "validation.ex", "{key, limits[Atom.to_string(key)]}",
+         "{key, if(key == #{inspect(key)}, do: #{ceiling}, else: limits[Atom.to_string(key)])}"}
+      end
+
+    [
+      {"argument_envelope", "decision.ex",
+       "Map.merge(body, %{\"profile\" => profile.data, \"json_limits\" => limits.data})",
+       "Map.take(Map.merge(body, %{\"profile\" => profile.data, \"json_limits\" => limits.data}), [\"profile\", \"json_limits\"])"},
+      {"certificate_output", "decision.ex", ":ok <- Validation.bounded(data, limits)",
+       ":ok <- Validation.bounded(Map.take(data, [\"format\"]), limits)"},
+      {"encoded_bytes", "validation.ex", "true <- byte_size(bytes) <= limits[\"max_bytes\"]",
+       "true <- 0 * byte_size(bytes) <= limits[\"max_bytes\"]"}
+    ] ++ bounds
   end
 
   defp command!(args, directory, environment) do

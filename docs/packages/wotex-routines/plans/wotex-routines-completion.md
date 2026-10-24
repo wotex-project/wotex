@@ -1,6 +1,6 @@
 # Optional routines completion contract
 
-Version: 0.2.37. Updated: 2026-10-21. Accepted programme; the basis is partially implemented.
+Version: 0.2.38. Updated: 2026-10-24. Accepted programme; the basis is partially implemented.
 
 The WRO.01–05 catalogue is registered with the optional nineteenth package.
 Closed basis, registry, unit and fact values, the Continuum observation adapter,
@@ -253,3 +253,17 @@ run all eight new cases each and fail through fourteen assertions, with zero
 harness errors, skips or exclusions. No library contract or behavior changes.
 This strengthens VD-T10's native boundary evidence; the full combined matrix,
 complexity/resource qualification and owning verifier milestone remain open.
+
+## Accepted archive resource-bound renewal
+
+The [independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal-target)
+adds thirty-three behavioral cases per independent source/journal family. Both
+Time grammars, relevant-present/relevant-absent/irrelevant UTC, native/plain
+inputs and five public verification operations must cover all five JSON resource
+axes: 300 exact/one-under pairs per family. Separate cases check aggregate
+arguments, complete certificate output and Unicode/escaped byte accounting.
+The extracted baseline must pass forty-one cases per family, and all thirteen
+isolated mutations must fail through assertions across forty behavioral cases.
+Source preflight is implemented; renewed archive evidence is pending its owning
+execution. The complete newer time matrix, maximal-work qualification and wider
+consumer-host adoption remain separate obligations.

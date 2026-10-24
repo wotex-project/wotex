@@ -8,24 +8,26 @@ defmodule Wotex.Routines.DecisionArchiveRunnerTest do
   alias Wotex.Routines.Check.DecisionConsumers
 
   test "only a complete passing baseline or assertion-only semantic catch is evidence" do
-    baseline = marker(8, 0, 0, 0)
-    mutant = marker(7, 2, 2, 0)
-    assert {:ok, _} = DecisionConsumers.validate(baseline, 0, 8, false)
-    assert {:ok, _} = DecisionConsumers.validate(mutant, 1, 7, true)
+    baseline = marker(41, 0, 0, 0)
+    mutant = marker(40, 2, 2, 0)
+    assert {:ok, _} = DecisionConsumers.validate(baseline, 0, 41, false)
+    assert {:ok, _} = DecisionConsumers.validate(mutant, 1, 40, true)
 
     for {output, status, total, mutant?} <- [
-          {baseline, 1, 8, false},
-          {mutant, 0, 7, true},
-          {marker(7, 0, 0, 0), 0, 7, true},
-          {marker(7, 2, 1, 1), 1, 7, true},
-          {marker(7, 2, 1, 0), 1, 7, true},
-          {marker(6, 1, 1, 0), 1, 7, true},
-          {marker(7, 1, 1, 0, skipped: 1), 1, 7, true},
-          {marker(7, 1, 1, 0, excluded: 1), 1, 7, true},
-          {baseline <> baseline, 0, 8, false},
-          {"DECISION_RESULT={}\nDECISION_ASSERTIONS={}\n", 0, 8, false},
-          {"DECISION_RESULT=invalid\nDECISION_ASSERTIONS={}\n", 0, 8, false},
-          {"compiler failure", 1, 7, true}
+          {baseline, 1, 41, false},
+          {marker(8, 0, 0, 0), 0, 41, false},
+          {marker(7, 1, 1, 0), 1, 40, true},
+          {mutant, 0, 40, true},
+          {marker(40, 0, 0, 0), 0, 40, true},
+          {marker(40, 2, 1, 1), 1, 40, true},
+          {marker(40, 2, 1, 0), 1, 40, true},
+          {marker(39, 1, 1, 0), 1, 40, true},
+          {marker(40, 1, 1, 0, skipped: 1), 1, 40, true},
+          {marker(40, 1, 1, 0, excluded: 1), 1, 40, true},
+          {baseline <> baseline, 0, 41, false},
+          {"DECISION_RESULT={}\nDECISION_ASSERTIONS={}\n", 0, 41, false},
+          {"DECISION_RESULT=invalid\nDECISION_ASSERTIONS={}\n", 0, 41, false},
+          {"compiler failure", 1, 40, true}
         ] do
       assert {:error, _} = DecisionConsumers.validate(output, status, total, mutant?)
     end
