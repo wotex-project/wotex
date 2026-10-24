@@ -565,11 +565,14 @@ skips or exclusions. The [renewal record](../provenance/decision-archive-bounds-
 binds the exact cohort and owning gates. This changes no runtime grammar and
 does not close the combined verifier or consumer-host milestone.
 
-## Accepted archive time-matrix renewal
+## Archive time-matrix qualification
 
 The [VDA-T9 archive profile](../decisions/verified-decision-archive-profile.md#vda-t9--time-matrix-archive-renewal)
 adds eighteen independent time cases per source/journal family, a fifty-nine-case
 combined baseline and eight assertion-only faults across twenty-five semantic
-cases each. It preserves every qualified bounds-lane obligation. Source preflight
-passes thirty-six cases; extracted execution remains pending. This slice does
-not close the combined verifier, maximal-work or wider consumer-host milestone.
+cases each. Both extracted families now pass all fifty-nine baseline cases and
+catch all eight time faults through assertions, with zero harness errors, skips
+or exclusions. The [time renewal record](../provenance/decision-archive-time-2026-10.md)
+binds the exact cohort and owning gates. It preserves every qualified bounds-lane
+obligation and does not close the combined verifier, maximal-work or wider
+consumer-host milestone.

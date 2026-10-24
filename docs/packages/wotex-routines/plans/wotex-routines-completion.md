@@ -268,14 +268,18 @@ Both extracted consumers now pass all forty-one baseline cases and catch all
 thirteen faults each through assertions, with no harness errors, skips or
 exclusions. The [renewal record](../provenance/decision-archive-bounds-2026-10.md)
 binds the clean source commit, archives, independent inputs and executed gates.
-The complete newer time matrix, maximal-work qualification and wider
-consumer-host adoption remain separate obligations.
+The complete combined verifier matrix, maximal-work qualification and wider
+consumer-host adoption remain separate obligations. The time-matrix archive
+renewal is qualified below.
 
-## Accepted archive time-matrix renewal
+## Archive time-matrix qualification
 
 The [VDA-T9 archive profile](../decisions/verified-decision-archive-profile.md#vda-t9--time-matrix-archive-renewal)
 adds eighteen independent time cases per source/journal family, a fifty-nine-case
 combined baseline and eight assertion-only faults across twenty-five semantic
-cases each. It preserves every qualified bounds-lane obligation. Source preflight
-passes thirty-six cases; extracted execution remains pending. This slice does
-not close the combined verifier, maximal-work or wider consumer-host milestone.
+cases each. Both extracted families now pass all fifty-nine baseline cases and
+catch all eight time faults through assertions, with zero harness errors, skips
+or exclusions. The [time renewal record](../provenance/decision-archive-time-2026-10.md)
+binds the exact cohort and owning gates. It preserves every qualified bounds-lane
+obligation and does not close the combined verifier, maximal-work or wider
+consumer-host milestone.

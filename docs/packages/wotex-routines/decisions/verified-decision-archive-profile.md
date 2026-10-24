@@ -1,8 +1,8 @@
 # Independent verified-decision archive profile
 
-Version: 0.3.0. Updated: 2026-10-24. Status: resource-bound renewal implemented;
-time-matrix renewal accepted with source preflight only. Its extracted execution
-status remains separate until the owning checks run.
+Version: 0.3.0. Updated: 2026-10-24. Status: resource-bound and time-matrix renewals implemented;
+both extracted families pass the complete fifty-nine-case baseline, their thirteen
+resource faults and eight time faults through assertions with zero harness errors.
 Owner: [verified decisions](../specs/verified-decision-v1.md), principally
 VD-02–08 and VD-T10–T14. This profile makes those archive obligations concrete;
 it neither replaces the broader native matrix nor widens any runtime grammar.
@@ -238,6 +238,9 @@ reused against the new time corpus. Each fault must be caught by assertions in
 both families with exact complete counts. Cohort identity, source/lock/archive
 hashes, passive startup and joined cleanup follow the existing archive rules.
 
-The source preflight passes thirty-six cases with zero failures, skips or
-exclusions. This is not yet extracted-archive evidence. Full combined VD-T1–T14,
-maximal-work qualification and wider consumer-host adoption remain open.
+The [time-matrix archive record](../provenance/decision-archive-time-2026-10.md)
+now binds the clean source, exact cohort, both fifty-nine-case baselines and all
+sixteen time mutation runs. Both families catch all eight faults through 103
+assertions in total, with zero harness errors, skips or exclusions; cleanup is
+verified. Full combined VD-T1–T14, maximal-work qualification and wider
+consumer-host adoption remain open.
