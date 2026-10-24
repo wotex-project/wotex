@@ -1,7 +1,16 @@
 # WLB.11: Lean workbench and Lab design system
 
-Specification version: 0.33.2. Contract: accepted. Implementation status:
+Specification version: 0.33.3. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
+
+Version 0.33.3 moves the remaining chart/island browser runners into Elixir
+under each owning host's `test/e2e/`. The current Lab CI lane runs both hosts'
+browser suites with their pinned Workbench Playwright toolchain. Live catalogue
+fixtures receive the selected theme, and pinned manager CSS is served without
+its external font import under the unchanged local-only CSP. Invalid snapshots
+and blocked chunks retain semantic fallbacks and explicit server operations.
+These source checks change no island envelope, seed ownership or Action
+authority; native design and wider qualification remain partial.
 
 Version 0.33.2 separates frontend gate ownership by host. Workbench lint,
 format and unit tests no longer read or write a sibling project. The Lab's
@@ -472,33 +481,20 @@ cohort evidence.
 
 The interactive analytics extension below adds acceptance obligations. Closed
 chart admission and mark-correct server SVG rendering have executable source
-evidence in `chart_contract_test.exs`. The separately invoked, optional
-`hosts/workbench/bin/check_chart_browser.cjs` source cohort checks real
-Chromium rendering, mark updates, exact analysis/chart/dashboard links, saved
-session arrangements,
-keyboard disclosure and skip navigation, themes, mobile reflow, bounded
-downloads, reload/no-replay and session isolation. It also loads saved history
-panels from the keyboard and checks their charts, mobile reflow, reload without
-replay and absence from a second session. Its first run found history panels
-widening a 375-pixel page, because stacked grid items kept the min-content
-width of charts and query digests. Stacked items may now shrink and digests
-wrap. The cohort also drops and restores the LiveView socket before submitting
-a smart-room approval from the keyboard, then requires that neither a further
-reconnect nor a reload shows the approval again or changes the dispatched run
-in the evidence report. A run cancelled before approval stays undispatched
-across a reconnect. A registered Thing Description whose title holds image and
-script markup must render that title as text, with no created element, dialog
-or executed handler. Without a configured provider the investigation composer
-is disabled, names that reason and shows no data disclosure. A separate browser
-context then sees the Things, Metrics and Evidence empty states with no room
-controls, and the evidence report refuses with 404 while no room exists. It
-starts a room from the keyboard, runs the thermal experiment twice and freezes
-the retained measurements between the runs: the live sample count grows while
-the frozen dataset in the report stays identical, and a formal verification
-request without an engine reports the unavailable engine. It is not part of the
-normal `mix check` host gate and requires an operator-owned server plus an
-explicitly installed Playwright/Chromium toolchain. Its recorded cohort is
-source evidence, not the complete WLB.08 browser matrix or a WCAG certification.
+evidence in `chart_contract_test.exs`. The Elixir suites in `hosts/workbench/test/e2e/` check real Chromium chart
+marks, exact analysis/chart/dashboard links, saved arrangements, keyboard
+history loading, bounded downloads, escaped Thing Description titles, narrow
+reflow, frozen dataset immutability and reload/reconnect without replay.
+Unavailable investigation/formal engines stay inert. The separate
+`hosts/storybook/test/e2e/islands_test.exs` checks the real LiveView catalogue's
+keyboard focus and revisions, reconnect generations, blocked chunks, invalid
+snapshots, themes, narrow reflow, 400% zoom, reduced motion and no-JavaScript
+fallbacks. Both lanes own ephemeral loopback endpoints and use the locked
+Playwright/Chromium installation; the catalogue lane refuses external requests.
+The current Lab CI job runs them explicitly after the package gate. Ordinary
+`mix check` does not start a browser. Historical WLB.11 records remain historical;
+these tests do not establish the complete WLB.08 browser matrix, artifact
+adoption or WCAG certification.
 `Insights` and its HEEx controls invoke the shared optional Lab Explorer
 profile only on explicit inspection. Unit and LiveView tests cover range/series/
 mark selection, scope substitution, empty results and unchanged run evidence.

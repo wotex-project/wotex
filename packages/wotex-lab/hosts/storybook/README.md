@@ -28,3 +28,20 @@ Runtime fixture loading never reads another project's source. The Lab gate
 checks byte parity with the backend seed source without writing either copy.
 Missing, oversized, symbolic or invalid fixtures display an unavailable state
 rather than invented samples.
+
+Browser journeys are Elixir tests in this host's `test/e2e/`. After building
+the Workbench assets and installing its locked Playwright Chromium cohort, run
+from the repository root:
+
+```sh
+WOTEX_LAB_E2E=1 mix pkg wotex-lab cmd --cd hosts/storybook env MIX_ENV=test mix test test/e2e
+```
+
+The tests own an ephemeral loopback listener and browser contexts. Requests to
+other origins fail. They exercise actual chart/grid/tab islands, keyboard focus,
+server revisions, disconnect/reconnect, invalid snapshots, blocked chunks,
+light/dark/contrast/system themes, narrow reflow, 400% zoom, reduced motion and
+no-JavaScript fallbacks. Normal tests exclude this lane and start no listener.
+The current Lab CI lane runs it after the Workbench browser suite. Manager CSS
+retains the pinned upstream stylesheet with its remote font import removed;
+the existing CSP continues to allow only local styles and fonts.

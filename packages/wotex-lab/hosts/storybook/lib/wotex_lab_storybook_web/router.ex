@@ -14,6 +14,7 @@ defmodule WotexLabStorybookWeb.Router do
     get "/contract-assets/storybook-loader.js", AssetController, :loader
     get "/contract-assets/storybook-module.js", AssetController, :javascript
     get "/contract-assets/design-system.css", AssetController, :stylesheet
+    get "/storybook/assets/css/phoenix_storybook.css", AssetController, :manager_stylesheet
     get "/assets/*path", AssetController, :asset
   end
 

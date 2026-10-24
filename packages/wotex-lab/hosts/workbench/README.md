@@ -243,31 +243,18 @@ with row/feature/vector truncation disclosed. Min/max downsampling keeps gap
 sentinels around retained extrema; it cannot draw a line across an omitted gap.
 Its interval is input points per bucket, not an assumed event-time duration.
 
-The optional browser gate requires an explicitly installed Playwright/browser
-cohort and a disposable local server. It never downloads them. For example,
-start the host with `PORT=4107 WOTEX_PATH_DEPS=1 mix phx.server`, then run:
+The Elixir browser suite above covers analysis marks and exact chart links,
+saved dashboard definitions and downloads, keyboard-loaded history, narrow
+reflow and reload without replay. It also checks escaped Thing Description
+titles, disabled investigation without a provider, unavailable formal engines,
+immutable frozen datasets and approval/cancellation around reconnects.
+`pnpm run check:browser:islands` selects the reconnect and failed-chunk/snapshot
+journeys. The separate live catalogue suite is documented in
+[`../storybook/README.md`](../storybook/README.md).
 
-```sh
-node bin/check_chart_browser.cjs http://127.0.0.1:4107
-```
-
-Supply Playwright through your tool environment (for example `NODE_PATH`). The
-script reports actual Node, Playwright and Chromium versions. The 2026-09-17
-source cohort passed with Node 26.8.2, Playwright 1.63.0-alpha-2026-08-31 and
-Chromium 153.0.8010.12. It covered saved dashboard and exact analysis/chart
-links, keyboard disclosure/skip navigation, reflow, session isolation and
-bounded downloads. It also covered keyboard-loaded history panels with mobile
-reflow, reload without replay and session isolation. A later run of the same
-cohort added a keyboard-submitted smart-room approval around LiveView socket
-reconnects without replay, a cancelled run that stays undispatched, a Thing
-Description title with image and script markup rendered as text, and the
-disabled investigation composer without a provider, and then a fresh browser
-context with its empty states, a keyboard-started room, a frozen dataset that
-stays unchanged while live measurements grow, and the unavailable formal
-engine. The first run of the
-history checks found a 10-pixel horizontal overflow at 375 pixels, which the
-host stylesheet now prevents. This is neither a stable-browser compatibility
-matrix, WCAG certification nor installed-artifact evidence.
+These checks use the pinned Playwright installation and an owned ephemeral
+loopback server. They establish source behavior for that cohort, not a complete
+browser compatibility matrix, WCAG certification or installed-artifact adoption.
 
 ## Optional operator-owned metrics
 

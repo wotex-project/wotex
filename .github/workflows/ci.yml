@@ -342,6 +342,12 @@ jobs:
           WOTEX_LAB_E2E: "1"
           WOTEX_LAB_SIMULATORS: "1"
         run: MIX_ENV=test mix test test/e2e
+      - name: Lab live catalogue browser journeys
+        if: matrix.package == 'wotex-lab' && matrix.lane == 'current'
+        working-directory: packages/wotex-lab/hosts/storybook
+        env:
+          WOTEX_LAB_E2E: "1"
+        run: MIX_ENV=test mix test test/e2e
       - name: Lab independent software devices
         if: matrix.package == 'wotex-lab' && matrix.lane == 'current'
         working-directory: packages/wotex-lab
@@ -359,6 +365,7 @@ jobs:
             ${{ runner.temp }}/package-gate.log
             packages/${{ matrix.package }}/cover/
             packages/${{ matrix.package }}/hosts/workbench/_build/test/e2e/
+            packages/${{ matrix.package }}/hosts/storybook/_build/test/e2e/
 
   native_check:
     name: ${{ matrix.package }} native checks

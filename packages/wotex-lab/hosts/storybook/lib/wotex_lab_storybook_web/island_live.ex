@@ -13,6 +13,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
       socket
       |> assign(assigns)
       |> assign_new(:revision, fn -> 1 end)
+      |> assign_new(:theme, fn -> :system end)
       |> assign_new(:generation, fn ->
         to_string(System.unique_integer([:positive, :monotonic]))
       end)
@@ -52,6 +53,7 @@ defmodule WotexLabStorybookWeb.IslandLive do
     ~H"""
     <section
       class="wotex-lab"
+      data-wotex-theme={@theme || :system}
       data-wotex-design-system={@contract["schema_version"]}
       data-wotex-token-digest={@contract["token_digest"]}
       data-wotex-component-digest={@contract["component_registry_digest"]}

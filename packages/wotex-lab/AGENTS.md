@@ -37,7 +37,9 @@ are in the root `AGENTS.md`.
   component limit, primitive composition, load ordering and narrow platform
   constructor exemptions.
 - Write browser end-to-end tests in Elixir under
-  `hosts/workbench/test/e2e/`, using `PhoenixTest.Playwright.Case`.
+  the owning reference host's `test/e2e/`, using `PhoenixTest.Playwright.Case`
+  (`hosts/workbench/` for the application and `hosts/storybook/` for live
+  catalogue integration).
   Keep `assets/` for frontend source, stories and unit tests; browser journey
   suites do not belong there.
 - Workspace mode (`WOTEX_PATH_DEPS=1`) never proves artifact adoption. Release

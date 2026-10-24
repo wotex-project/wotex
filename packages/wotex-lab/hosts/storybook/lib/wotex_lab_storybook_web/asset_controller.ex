@@ -6,6 +6,24 @@ defmodule WotexLabStorybookWeb.AssetController do
   @manifest_entry "assets/storybook.ts"
   @max_asset_bytes 4 * 1_024 * 1_024
   @composition_stylesheet "priv/static/contract-assets/storybook.css"
+  @google_font_import ~s(@import "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";)
+  @remote_import ~r/@import\s+(?:url\(\s*)?["']?(?:https?:)?\/\//i
+
+  @doc "Serves the pinned manager CSS with its external Google Fonts import removed."
+  @spec manager_stylesheet(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def manager_stylesheet(conn, _) do
+    path = Application.app_dir(:phoenix_storybook, "priv/static/css/phoenix_storybook.css")
+
+    with {:ok, %File.Stat{type: :regular, size: size}} when size <= @max_asset_bytes <-
+           File.lstat(path),
+         {:ok, body} <- File.read(path),
+         body = String.replace(body, @google_font_import, ""),
+         false <- Regex.match?(@remote_import, body) do
+      respond(conn, "text/css; charset=utf-8", body)
+    else
+      _ -> unavailable(conn)
+    end
+  end
 
   @doc "Serves the bounded Storybook asset loader."
   @spec loader(Plug.Conn.t(), map()) :: Plug.Conn.t()

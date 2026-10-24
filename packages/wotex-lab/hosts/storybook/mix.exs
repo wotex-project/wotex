@@ -34,6 +34,8 @@ defmodule WotexLabStorybook.MixProject do
       {:bandit, "~> 1.13.1"},
       {:jason, "~> 1.4"},
       {:lazy_html, "~> 0.1.13", only: :test},
+      {:phoenix_test_playwright, "== 0.19.0", only: :test, runtime: false},
+      {:playwright_ex, "== 0.15.0", only: :test, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.23", only: [:dev, :test], runtime: false},

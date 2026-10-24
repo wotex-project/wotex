@@ -583,7 +583,7 @@ specifications:
       the pinned Grafana and GreptimeDB cohort. No mandatory observability,
       database or model dependency enters the base library.
   - id: WLB.11
-    version: "0.33.2"
+    version: "0.33.3"
     path: docs/specs/WLB.11-workbench-and-design-system.md
     implementation_status: partial
     evidence_status: partial
@@ -675,7 +675,7 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench/run_pin_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/insights_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/investigation_presentation_test.exs"
-      - "hosts/workbench/bin/check_chart_browser.cjs"
+      - "hosts/workbench/test/e2e/analytics_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/formal_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/metrics_test.exs"
       - "hosts/workbench/test/wotex_lab_workbench/sessions_room_test.exs"
@@ -692,7 +692,8 @@ specifications:
       - "hosts/workbench/test/wotex_lab_workbench_web/health_controller_test.exs"
       - "hosts/workbench/bin/check_boundary.exs"
       - "hosts/workbench/test/wotex_lab_workbench_web/islands_test.exs"
-      - "hosts/workbench/bin/check_islands_browser.mjs"
+      - "hosts/workbench/test/e2e/island_fallback_test.exs"
+      - "hosts/storybook/test/e2e/islands_test.exs"
       - "hosts/workbench/test/e2e/connections_test.exs"
       - "hosts/workbench/test/e2e/island_reconnect_test.exs"
       - "hosts/workbench/test/e2e/board_search_test.exs"

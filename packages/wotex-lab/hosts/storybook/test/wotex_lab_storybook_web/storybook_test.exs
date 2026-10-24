@@ -1,5 +1,34 @@
 defmodule WotexLabStorybookWeb.StorybookTest do
+  @moduledoc false
+
   use WotexLabStorybookWeb.ConnCase, async: true
+
+  test "serves the manager CSS locally without remote font imports", %{conn: conn} do
+    stylesheet = get(conn, "/storybook/assets/css/phoenix_storybook.css")
+    body = response(stylesheet, 200)
+    assert byte_size(body) > 1_000
+    refute body =~ "fonts.googleapis.com"
+    refute body =~ ~r/@import\s+(?:url\(\s*)?["']?(?:https?:)?\/\//i
+    [etag] = get_resp_header(stylesheet, "etag")
+
+    cached =
+      conn
+      |> recycle()
+      |> put_req_header("if-none-match", etag)
+      |> get("/storybook/assets/css/phoenix_storybook.css")
+
+    assert response(cached, 304) == ""
+  end
+
+  test "the selected manager theme reaches every fixture", %{conn: conn} do
+    for theme <- ~w(light dark contrast system) do
+      {:ok, view, _} = live(conn, "/storybook/islands?theme=#{theme}")
+
+      for id <- ~w(reporting-chart data-grid navigation-tabs) do
+        assert has_element?(view, "[data-fixture-id='#{id}'][data-wotex-theme='#{theme}']")
+      end
+    end
+  end
 
   test "serves a secured local storybook with the shared contract", %{conn: conn} do
     conn = get(conn, "/storybook/islands")

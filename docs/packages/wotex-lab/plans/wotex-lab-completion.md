@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.18.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.19.0. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -94,6 +94,14 @@ shared builder/validator list and binds all twenty Hex archives into the
 candidate source digest. The base distribution has twenty-four artifacts.
 The renewed Workbench BOM records the sixty-four-component local candidate
 closure; published packages, OCI execution and hosted adoption remain separate.
+
+Version 1.19 replaces remaining Node browser runners with Elixir journeys in
+the owning Workbench and live catalogue hosts. Current-lane CI runs both.
+The catalogue applies selected themes and serves its pinned manager stylesheet
+without the remote font import. Browser tests cover failed enhancement,
+keyboard/reconnect behavior, chart/export boundaries and inert unavailable
+engines. Seed ownership, production authority and historical evidence remain
+unchanged; full design and artifact qualification remain separate.
 
 ## Delivery status
 

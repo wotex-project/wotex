@@ -128,6 +128,17 @@ defmodule WotexLabWorkbenchWeb.E2E.BackendJourneysTest do
     assert dataset.rows > 0
     assert %DateTime{} = dataset.frozen_at
 
+    conn =
+      conn
+      |> visit("/experiments")
+      |> click_button("#run-thermal", "Run")
+      |> assert_path("/runs/run-2")
+      |> assert_has("#wl-run-result")
+
+    {:ok, later_measurements} = Metrics.query(scope: session_id)
+    assert length(later_measurements.samples) > length(measurements.samples)
+    assert Room.snapshot(room).datasets == [dataset]
+
     conn
     |> visit("/evidence")
     |> assert_has("#evidence-runs", text: "run-1")
@@ -145,12 +156,12 @@ defmodule WotexLabWorkbenchWeb.E2E.BackendJourneysTest do
       assert download.name == "wotex-lab-evidence.json"
       report = JSON.decode!(download.content)
       assert report["session"] == session_id
-      assert length(report["runs"]) == 1
+      assert length(report["runs"]) == 2
       assert length(report["datasets"]) == 1
       assert hd(report["datasets"])["samples"] != []
     end)
 
-    assert [%{id: "run-1"}] = Room.runs(room)
+    assert [%{id: "run-2"}, %{id: "run-1"}] = Room.runs(room)
   end
 
   test "review and cancellation stay inert and an explicit approval dispatches only once", %{
@@ -182,11 +193,14 @@ defmodule WotexLabWorkbenchWeb.E2E.BackendJourneysTest do
       conn
       |> click_button("Cancel run")
       |> refute_has("#approve-run-1")
+      |> reconnect()
+      |> refute_has("#approve-run-1")
       |> visit("/experiments?experiment=smart_room")
       |> click_button("#run-smart_room", "Run")
       |> assert_path("/runs/run-2")
       |> click_link("Review Action")
-      |> click_button("Approve Action")
+      |> reconnect()
+      |> press("#approve-run-2 button[type='submit']", "Enter")
       |> refute_has("#approve-run-2")
       |> assert_has("#wl-run-panel-run-2", text: "No pending Action")
 
@@ -194,6 +208,7 @@ defmodule WotexLabWorkbenchWeb.E2E.BackendJourneysTest do
     after_dispatch = handler_calls(room)
 
     conn
+    |> reconnect()
     |> visit("/runs/run-2?view=review")
     |> assert_has("#wl-run-panel-run-2", text: "No pending Action")
     |> refute_has("#approve-run-2")
@@ -202,4 +217,12 @@ defmodule WotexLabWorkbenchWeb.E2E.BackendJourneysTest do
   end
 
   defp handler_calls(room), do: Enum.map(Room.things(room), &{&1.id, &1.stats.handler_calls})
+
+  defp reconnect(conn) do
+    conn
+    |> evaluate("window.liveSocket.disconnect()", fn _ -> :ok end)
+    |> assert_has("[data-wotex-island='canvas'][data-wotex-island-state='disconnected']")
+    |> evaluate("window.liveSocket.connect()", fn _ -> :ok end)
+    |> assert_has("[data-phx-main].phx-connected")
+  end
 end
