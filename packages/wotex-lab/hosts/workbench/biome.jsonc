@@ -9,11 +9,7 @@
     "ignoreUnknown": true,
     "includes": [
       "assets/**/*.{ts,js,mjs,cjs,svelte,css}",
-      "bin/*.js",
-      "bin/*.mjs",
-      "bin/*.ts",
-      "tools/lint/**/*.{ts,js,mjs,cjs}",
-      "bin/*.cjs",
+      "tools/**/*.{ts,js,mjs,cjs}",
       ".storybook/**",
       "vite.config.ts",
       "tsconfig.json",

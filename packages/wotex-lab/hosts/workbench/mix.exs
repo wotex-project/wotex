@@ -1,5 +1,3 @@
-Code.require_file("mix_tasks/check_runner.ex", __DIR__)
-
 defmodule WotexLabWorkbench.MixProject do
   use Mix.Project
 
@@ -151,7 +149,7 @@ defmodule WotexLabWorkbench.MixProject do
 
   defp aliases do
     [
-      check: [&WotexLabWorkbench.CheckRunner.run/1],
+      check: [&check/1],
       seed: ["wotex_lab.seed"],
       setup: ["deps.get", "deps.compile", "assets.setup"],
       "assets.setup": ["cmd pnpm install --frozen-lockfile"],
@@ -159,5 +157,12 @@ defmodule WotexLabWorkbench.MixProject do
       "assets.check": ["cmd pnpm run check"],
       "test.cover": ["coveralls"]
     ]
+  end
+
+  defp check(args) do
+    unless Code.ensure_loaded?(WotexLabWorkbench.CheckRunner),
+      do: Code.require_file("lib/mix/tasks/check_runner.ex", __DIR__)
+
+    WotexLabWorkbench.CheckRunner.run(args)
   end
 end

@@ -1,3 +1,6 @@
+# Fixture status and failures are consumed through this command's output.
+# credo:disable-for-this-file Credo.Check.Refactor.IoPuts
+
 defmodule WotexLabWorkbench.Documentation.BrowserFixture do
   @moduledoc false
 

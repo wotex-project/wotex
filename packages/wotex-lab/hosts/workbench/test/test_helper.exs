@@ -1,4 +1,4 @@
-Code.require_file("../bin/support/documentation_browser_fixture.exs", __DIR__)
+Code.require_file("../tools/documentation/browser_fixture_support.exs", __DIR__)
 Code.require_file("../../../test/support/child_environment.ex", __DIR__)
 Code.require_file("../../../test/support/modbus_simulator.ex", __DIR__)
 

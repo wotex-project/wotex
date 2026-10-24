@@ -4,8 +4,7 @@
   inputs: [
     "{mix,.formatter,.check,.credo}.exs",
     "{config,lib,test}/**/*.{ex,exs,heex}",
-    "bin/**/*.exs",
-    "mix_tasks/*.ex",
+    "tools/**/*.exs",
     "priv/seeds.exs"
   ],
   line_length: 100

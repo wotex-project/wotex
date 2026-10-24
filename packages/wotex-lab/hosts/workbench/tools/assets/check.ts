@@ -3,8 +3,17 @@ import { readdir, readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { gzipSync } from "node:zlib"
 
-const root = new URL("../priv/static/", import.meta.url)
-const manifest = JSON.parse(await readFile(new URL(".vite/manifest.json", root), "utf8"))
+interface ManifestEntry {
+  dynamicImports?: string[]
+  file: string
+  imports?: string[]
+  isEntry?: boolean
+}
+
+const root = new URL("../../priv/static/", import.meta.url)
+const manifest: Record<string, ManifestEntry> = JSON.parse(
+  await readFile(new URL(".vite/manifest.json", root), "utf8"),
+)
 const files = await readdir(new URL("assets/", root))
 const entry = manifest["assets/app.ts"]
 const storybookEntry = manifest["assets/storybook.ts"]
@@ -29,7 +38,9 @@ assert.deepEqual(
   storybookEntry.imports,
   "both hosts must share the real island hook",
 )
-const hook = manifest[entry.imports[0]]
+const [hookName] = entry.imports ?? []
+assert.ok(hookName, "the production entry must import the island hook")
+const hook = manifest[hookName]
 assert.ok((hook?.dynamicImports ?? []).length >= 3, "registered islands must remain split")
 assert.ok(
   files.every((file) => !file.endsWith(".map")),

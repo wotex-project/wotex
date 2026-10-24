@@ -17,6 +17,6 @@
     {:doctor, command: "mix doctor"},
     {:ex_doc, command: "mix docs --warnings-as-errors", env: %{"MIX_ENV" => "docs"}},
     {:ex_unit, command: "mix coveralls"},
-    {:boundary, command: "elixir bin/check_boundary.exs"}
+    {:boundary, command: "elixir tools/boundary/check.exs"}
   ]
 ]

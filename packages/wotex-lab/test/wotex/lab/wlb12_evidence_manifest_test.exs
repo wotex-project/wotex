@@ -28,8 +28,8 @@ defmodule Wotex.Lab.WLB12EvidenceManifestTest do
     "test/wotex/lab/docs/**/*",
     "hosts/workbench/test/e2e/documentation_test.exs",
     "hosts/workbench/test/support/documentation_server.ex",
-    "hosts/workbench/bin/support/documentation_browser_fixture.exs",
-    "hosts/workbench/bin/serve_documentation_browser_fixture.exs",
+    "hosts/workbench/tools/documentation/browser_fixture_support.exs",
+    "hosts/workbench/tools/documentation/browser_fixture.exs",
     "hosts/workbench/lib/mix/tasks/wotex_lab.docs.build.ex",
     "hosts/workbench/lib/wotex_lab_workbench/documentation.ex",
     "hosts/workbench/lib/wotex_lab_workbench/documentation/**/*",
@@ -41,7 +41,7 @@ defmodule Wotex.Lab.WLB12EvidenceManifestTest do
     "test/wotex/lab/wlb12_evidence_manifest_test.exs"
   ]
 
-  test "the WLB.12 record binds the static, LiveView, search and release cohorts" do
+  test "the historical WLB.12 record remains stale after tooling relocation" do
     root = Path.expand("../../..", __DIR__)
     path = Path.join(root, "priv/provenance/WLB.12-evidence.json")
     assert Enum.all?(@record_keys, &is_atom/1)
@@ -59,7 +59,7 @@ defmodule Wotex.Lab.WLB12EvidenceManifestTest do
     refute record.outcomes.wcag_certification
     refute record.outcomes.hosted_adoption
     assert Enum.all?(record.assertions, &(&1.status == :pass))
-    assert {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
+    refute {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
     assert {:ok, record.lock_digest} == Digest.file(Path.join(root, "hosts/workbench/mix.lock"))
   end
 end

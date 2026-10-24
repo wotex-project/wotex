@@ -44,10 +44,13 @@ defmodule Wotex.Lab.SourceArchiveTest do
     assert {:ok, files} = :erl_tar.extract(String.to_charlist(archive), [:memory])
     files = Map.new(files, fn {path, bytes} -> {List.to_string(path), bytes} end)
 
-    for path <- ~w(package.json biome.jsonc .gitignore bin/register_aliases.ts .storybook/main.ts
-                   bin/serve_documentation_browser_fixture.exs
-                   bin/support/documentation_browser_fixture.exs
+    for path <- ~w(package.json biome.jsonc .gitignore lib/mix/tasks/check_runner.ex
+                   .storybook/main.ts
                    test/e2e/documentation_test.exs test/support/documentation_server.ex
+                   tools/assets/check.ts tools/assets/clean.ts tools/boundary/check.exs
+                   tools/documentation/browser_fixture.exs
+                   tools/documentation/browser_fixture_support.exs
+                   tools/node/alias_loader.ts tools/node/register_aliases.ts
                    tools/lint/check.ts tools/lint/frontend-style.ts tools/lint/ordering.ts
                    tools/lint/spacing.ts tools/lint/format.ts tools/lint/biome-host.ts
                    tools/lint/frontend-style.test.ts tools/lint/biome.test.ts
@@ -56,6 +59,7 @@ defmodule Wotex.Lab.SourceArchiveTest do
       assert Map.fetch!(files, path) == File.read!(Path.join(host, path)), path
     end
 
+    refute Map.has_key?(files, "mix_tasks/check_runner.ex")
     refute Enum.any?(Map.keys(files), &String.starts_with?(&1, ~w(node_modules/ _build/ deps/)))
 
     source = Path.join(root, "source")

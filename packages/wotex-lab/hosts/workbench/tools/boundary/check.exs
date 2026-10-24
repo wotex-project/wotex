@@ -1,3 +1,6 @@
+# Standalone gate output is this script's command-line contract.
+# credo:disable-for-this-file Credo.Check.Refactor.IoPuts
+
 # Boundary scan for the explicit Phoenix host. Runs with Elixir alone.
 
 defmodule WotexLabWorkbench.Check.Boundary do

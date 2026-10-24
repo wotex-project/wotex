@@ -27,7 +27,7 @@ defmodule Wotex.Lab.BuildArtifacts do
 
   alias Wotex.Lab.Evidence.Digest
 
-  @oci_patterns ~w(.dockerignore Dockerfile README.md config/**/* lib/**/* mix_tasks/**/*
+  @oci_patterns ~w(.dockerignore Dockerfile README.md config/**/* lib/**/*
                     priv/static/**/* priv/seeds.exs priv/seeds/**/* mix.exs mix.lock assets/**/*)
 
   @spec run([String.t()]) :: :ok

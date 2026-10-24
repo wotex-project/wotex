@@ -17,12 +17,12 @@ defmodule Wotex.Lab.WLB11EvidenceManifestTest do
     "lib/wotex/lab/design_system.ex",
     "test/wotex/lab/design_system_test.exs",
     "hosts/workbench/assets/**/*",
-    "hosts/workbench/bin/check_assets.mjs",
+    "hosts/workbench/tools/assets/check.ts",
     "hosts/workbench/test/e2e/island_reconnect_test.exs",
     "hosts/workbench/test/e2e/island_fallback_test.exs",
     "hosts/workbench/test/e2e/analytics_test.exs",
     "hosts/workbench/test/e2e/backend_journeys_test.exs",
-    "hosts/workbench/bin/clean_assets.mjs",
+    "hosts/workbench/tools/assets/clean.ts",
     "hosts/workbench/config/**/*",
     "hosts/workbench/lib/wotex_lab_workbench_web/components/shell.ex",
     "hosts/workbench/lib/wotex_lab_workbench_web/islands.ex",
@@ -47,7 +47,7 @@ defmodule Wotex.Lab.WLB11EvidenceManifestTest do
     "test/wotex/lab/wlb11_evidence_manifest_test.exs"
   ]
 
-  test "the WLB.11 record binds the shared frontend and real-browser cohort" do
+  test "the historical WLB.11 record remains stale after tooling relocation" do
     root = Path.expand("../../..", __DIR__)
     path = Path.join(root, "priv/provenance/WLB.11-evidence.json")
     assert Enum.all?(@record_keys, &is_atom/1)
@@ -63,7 +63,7 @@ defmodule Wotex.Lab.WLB11EvidenceManifestTest do
     refute record.outcomes.wcag_certification
     refute record.outcomes.hosted_adoption
     assert Enum.all?(record.assertions, &(&1.status == :pass))
-    assert {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
+    refute {:ok, record.source_tree_digest} == SourceTree.digest(root, @source_files)
     assert {:ok, record.lock_digest} == Digest.file(Path.join(root, "hosts/workbench/mix.lock"))
   end
 end

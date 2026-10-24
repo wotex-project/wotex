@@ -1,8 +1,8 @@
 import type { ResolveHookSync } from "node:module"
 
 const aliases: Record<string, URL> = {
-  "$lib/": new URL("../assets/", import.meta.url),
-  "$seeds/": new URL("../priv/seeds/", import.meta.url),
+  "$lib/": new URL("../../assets/", import.meta.url),
+  "$seeds/": new URL("../../priv/seeds/", import.meta.url),
 }
 
 export const resolve: ResolveHookSync = (specifier, context, nextResolve) => {
