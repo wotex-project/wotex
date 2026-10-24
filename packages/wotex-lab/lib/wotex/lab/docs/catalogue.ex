@@ -12,6 +12,7 @@ defmodule Wotex.Lab.Docs.Catalogue do
     wotex wotex-runtime wotex-binding-http wotex-binding-mqtt
     wotex-modbus wotex-coap wotex-bacnet wotex-opcua wotex-ble
     wotex-matter wotex-thread wotex-directory wotex-continuum
+    wotex-profiles wotex-routines wotex-udp wotex-zigbee
     wotex-nx wotex-conformance wotex-lab family-docs wotex-dot
   )
   @root_keys ~w(schema_version profile tree_digest_algorithm sources)
@@ -50,6 +51,7 @@ defmodule Wotex.Lab.Docs.Catalogue do
     with :ok <- closed(catalogue, @root_keys, :catalogue),
          true <- catalogue["profile"] in ["release", "rolling"],
          true <- catalogue["tree_digest_algorithm"] == "sha256-git-ls-tree-v1",
+         true <- Enum.all?(sources, &is_map/1),
          true <- Enum.map(sources, & &1["id"]) == @source_ids,
          :ok <- validate_sources(sources) do
       :ok
@@ -106,7 +108,7 @@ defmodule Wotex.Lab.Docs.Catalogue do
          true <- nonempty?(source["version"]),
          true <- roots?(source["documentation_roots"]),
          true <- source["default_branch"] == "main",
-         true <- Regex.match?(@revision, source["revision"] || ""),
+         true <- revision?(source["revision"]),
          true <- digest?(source["tree_digest"]),
          true <- nonempty?(source["license"]),
          true <- command?(source),
@@ -163,12 +165,15 @@ defmodule Wotex.Lab.Docs.Catalogue do
 
   defp https_repository?(url) when is_binary(url) do
     case URI.parse(url) do
-      %URI{scheme: "https", host: "github.com", query: nil, fragment: nil} -> true
+      %URI{scheme: "https", host: "github.com", userinfo: nil, query: nil, fragment: nil} -> true
       _ -> false
     end
   end
 
   defp https_repository?(_), do: false
+  defp revision?(value) when is_binary(value), do: Regex.match?(@revision, value)
+  defp revision?(_), do: false
+
   defp digest?(value) when is_binary(value), do: Regex.match?(@digest, value)
   defp digest?(_), do: false
   defp nonempty?(value), do: is_binary(value) and value != "" and String.valid?(value)

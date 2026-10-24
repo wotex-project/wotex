@@ -1,4 +1,6 @@
 defmodule Wotex.Lab.Docs.ProjectorTest do
+  @moduledoc false
+
   use ExUnit.Case, async: true
 
   alias DocShell.Generate.Collection
@@ -7,7 +9,7 @@ defmodule Wotex.Lab.Docs.ProjectorTest do
   test "projects the complete closed cohort into canonical routes and navigation" do
     assert {:ok, declaration} = Projector.project(collections(), base_path: "/docs/")
 
-    assert length(declaration["pages"]) == 19
+    assert length(declaration["pages"]) == 23
     assert page_route(declaration, "family_docs:readme") == "/start/"
 
     assert page_route(declaration, "wotex:Wotex.ThingDescription") ==
@@ -18,6 +20,15 @@ defmodule Wotex.Lab.Docs.ProjectorTest do
 
     assert page_route(declaration, "wotex_ble:overview") ==
              "/protocols/bluetooth-le/overview/"
+
+    for {id, route} <- [
+          {"wotex_profiles", "/profiles/overview/"},
+          {"wotex_routines", "/routines/overview/"},
+          {"wotex_udp", "/transports/udp/overview/"},
+          {"wotex_zigbee", "/protocols/zigbee/overview/"}
+        ] do
+      assert page_route(declaration, "#{id}:overview") == route
+    end
 
     assert page_route(declaration, "wotex_continuum:overview") ==
              "/discovery/exchange/overview/"
@@ -58,7 +69,7 @@ defmodule Wotex.Lab.Docs.ProjectorTest do
                  canonical_origin: "https://wotex.io"
                )
 
-      assert map_size(site.pages) == 19
+      assert map_size(site.pages) == 23
       assert site.routes["/docs/start/"] == "family_docs:readme"
 
       assert site.routes["/docs/api/wotex/wotex-thing-description/"] ==
@@ -258,6 +269,9 @@ defmodule Wotex.Lab.Docs.ProjectorTest do
       "Start",
       "Core Thing Description",
       "Runtime",
+      "Profiles",
+      "Routines",
+      "Transports",
       "Bindings",
       "Protocols",
       "Discovery and exchange",

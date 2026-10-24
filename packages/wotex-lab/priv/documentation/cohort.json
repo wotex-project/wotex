@@ -1,295 +1,523 @@
 {
-  "schema_version": "wotex-documentation-cohort/v1",
   "profile": "release",
-  "tree_digest_algorithm": "sha256-git-ls-tree-v1",
+  "schema_version": "wotex-documentation-cohort/v1",
   "sources": [
     {
-      "id": "wotex",
-      "title": "Core Thing Description",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex",
+        "docs/packages/wotex"
+      ],
+      "expected_collection_digest": "sha256:7722c3dd433b860dd892cb9163c279fb6e23815285069ee3696453fd24949ea3",
       "hex_package": "wotex",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex", "docs/packages/wotex"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:1c8141cf463ee1007850d22dc3d31381da07c125ba9558f57b76c6a05bf57401",
+      "id": "wotex",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:72f83687da9eece739f10b63a994188b3b625af4252525e09857fcb37f47cbfb"
+      "repository_path": "packages/wotex",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Core Thing Description",
+      "tree_digest": "sha256:43a47eb407dedd4c8fd1254c4487947e16aa19da72f6254387ab2c644982277a",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-runtime",
-      "title": "Runtime",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-runtime",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-runtime",
+        "docs/packages/wotex-runtime"
+      ],
+      "expected_collection_digest": "sha256:8bafb57a9741b1e5b19330fa38362554b13e2dd96bc21730c3ddfe9aacdeb4f4",
       "hex_package": "wotex_runtime",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-runtime", "docs/packages/wotex-runtime"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:404dad4926359ca1e7410ce9564091836e6f42796352a372b7abf91bbee3c925",
+      "id": "wotex-runtime",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:1977822cffb2e3240c4740a106b703ad9cdc690a4c38dd04c8ac220dbc14c000"
+      "repository_path": "packages/wotex-runtime",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Runtime",
+      "tree_digest": "sha256:1b94c71badfe6448f5aaaf8a1b23e7435feb499937a95adb69e779207c4a9512",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-binding-http",
-      "title": "HTTP binding",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-binding-http",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-binding-http",
+        "docs/packages/wotex-binding-http"
+      ],
+      "expected_collection_digest": "sha256:a26e40221f4da8dd633a1dcb0ac5e08c344b1a2d6b50725501ee429c7645afaf",
       "hex_package": "wotex_binding_http",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-binding-http", "docs/packages/wotex-binding-http"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:198415e49ee7fa6613a5b6de149b1d63cf4032d64e4f2212ff05c6c01aafc9bf",
+      "id": "wotex-binding-http",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:ba89d7ffb9f5537fa8c1dc4ab3d9fb130b9413205699a4ef9cc5ef10aef2c590"
+      "repository_path": "packages/wotex-binding-http",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "HTTP binding",
+      "tree_digest": "sha256:f85e540f2753663dbefc559193c3a0061f0370c6d439832dfbc9cb331c291cc6",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-binding-mqtt",
-      "title": "MQTT binding",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-binding-mqtt",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-binding-mqtt",
+        "docs/packages/wotex-binding-mqtt"
+      ],
+      "expected_collection_digest": "sha256:49596ed67534a7fe9f0f0b35d578a1b4d83f2c97a15e9be8139d0fb819a706c5",
       "hex_package": "wotex_binding_mqtt",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-binding-mqtt", "docs/packages/wotex-binding-mqtt"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:aec4e2df1db9abb961d868d911f12b57cb67cd5952c504cfcc93fdc30bd86fe6",
+      "id": "wotex-binding-mqtt",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:05656ad7e27401d38d72a7c95c0b0fbc9242248fc154eafa3d5d91184a04b872"
+      "repository_path": "packages/wotex-binding-mqtt",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "MQTT binding",
+      "tree_digest": "sha256:9bea72f15c51ed37ef577e8c6d22e18b9597aaf85e5fcedb5b2e6a1f758ce3f2",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-modbus",
-      "title": "Modbus",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-modbus",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-modbus",
+        "docs/packages/wotex-modbus"
+      ],
+      "expected_collection_digest": "sha256:49a3beffa02e8c559c2bbe21517ddd7b0ec62b1afd95ffbcad68ce92d5b0d6f2",
       "hex_package": "wotex_modbus",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-modbus", "docs/packages/wotex-modbus"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:a5088f75b45e6c5feef91cf329af8af50622495e40a1fb324bfb4e784fa56cce",
+      "id": "wotex-modbus",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:4aec8b21f7d3879490185114ea4827558bcf4750fe17ddf6c6c8d975c9827767"
+      "repository_path": "packages/wotex-modbus",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Modbus",
+      "tree_digest": "sha256:396ad0d5e531f40f86a6aec980c54c1fb85e3e7c6bc01b432c01e021b9b23d36",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-coap",
-      "title": "CoAP",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-coap",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-coap",
+        "docs/packages/wotex-coap"
+      ],
+      "expected_collection_digest": "sha256:ecbd93668091a9a58201cf4f4eb8be69923aae68e3f672db6e709f5f9f29f739",
       "hex_package": "wotex_coap",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-coap", "docs/packages/wotex-coap"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:929bb773c845feadf8e08c7799ece6ef63a1f2864008c9302da9737df6135dd0",
+      "id": "wotex-coap",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:5c8359d34e716435b11b36c0bfec2405119a1e187c9dff40cf206ee84f4243f2"
+      "repository_path": "packages/wotex-coap",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "CoAP",
+      "tree_digest": "sha256:c5ace0a3ae95a5a15449278664eb0651c0d4e89b55ba5ca428804ed70d1b630e",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-bacnet",
-      "title": "BACnet",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-bacnet",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-bacnet",
+        "docs/packages/wotex-bacnet"
+      ],
+      "expected_collection_digest": "sha256:77aefda73f0ed34d68565dd475646a96daa9a7b9de03f86ed6a1e748c7e49e90",
       "hex_package": "wotex_bacnet",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-bacnet", "docs/packages/wotex-bacnet"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:5ce4d09eecf60528a8a984688bfec32cac6c75eb28d5c465046165c23abf196f",
+      "id": "wotex-bacnet",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:eaeeb7425a9dce3d9d6735fb15cc64a8f0e744f7ef0d013409d8811dd462e663"
+      "repository_path": "packages/wotex-bacnet",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "BACnet",
+      "tree_digest": "sha256:a644be43187c185610c7e46a5fd4a1a6f5e4497d5154381addfe117c18573ac5",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-opcua",
-      "title": "OPC UA",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-opcua",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-opcua",
+        "docs/packages/wotex-opcua"
+      ],
+      "expected_collection_digest": "sha256:171626f13b2343011d1fe71e171bc795c5e9c3703ce2452a80d3fd58d3eb791d",
       "hex_package": "wotex_opcua",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-opcua", "docs/packages/wotex-opcua"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:5710b712446c9374f0fc3ec41bbe4cafc6a37db6a7d6563860932192d367e46a",
+      "id": "wotex-opcua",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:07bf7f08c0602fd24c45980b2a9146f0bdb131965c9b2d210aae24d9a6da43fc"
+      "repository_path": "packages/wotex-opcua",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "OPC UA",
+      "tree_digest": "sha256:4c6d4079744105aedc88858659df3c1f0098751e40c36bd9d5fd40257576c1ea",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-ble",
-      "title": "Bluetooth LE",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-ble",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-ble",
+        "docs/packages/wotex-ble"
+      ],
+      "expected_collection_digest": "sha256:8d59a4089bb45990751466a687d908894e88e4a660b2281c509c75125cdb5b02",
       "hex_package": "wotex_ble",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-ble", "docs/packages/wotex-ble"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:57d9614a3e54c08aa265fa785e0c87faa8ac58588968d66c2a4fb19016176256",
+      "id": "wotex-ble",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:5b4d5318f84118986145f83beba914679dabb1f85e0dd1397c1491a4726a4b9d"
+      "repository_path": "packages/wotex-ble",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Bluetooth LE",
+      "tree_digest": "sha256:8dc73cec24b311df674e9a515e38de3871a331c219d68750c0cf4cc33fd9745a",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-matter",
-      "title": "Matter",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-matter",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-matter",
+        "docs/packages/wotex-matter"
+      ],
+      "expected_collection_digest": "sha256:3e390e3ae9a89b1c5a611027e01d3f910722b0842de61fb3e851822887549b4f",
       "hex_package": "wotex_matter",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-matter", "docs/packages/wotex-matter"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:9d8b1b32ee9846eb0faf8b9a2798bd2274b6af5003e0b36dc6e25073f2321e16",
+      "id": "wotex-matter",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:22f4dce5fcb6c9698f2c93e10e2fe61bfd89113b114c54056d7e5dddee2eb023"
+      "repository_path": "packages/wotex-matter",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Matter",
+      "tree_digest": "sha256:adfb5f179c953e729b89a74d8bdbd8f69e442343dc54e0db21b9ad0c276bd9be",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-thread",
-      "title": "Thread",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-thread",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-thread",
+        "docs/packages/wotex-thread"
+      ],
+      "expected_collection_digest": "sha256:21e6517a868106bde7ad2e4fdb39a67810173dcbdc0f36a33230e6cb21bfa9b8",
       "hex_package": "wotex_thread",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-thread", "docs/packages/wotex-thread"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:4f2a31e09078255c43ec9ed4910d9b671822ee9908c7638acd5e981e671e2cbc",
+      "id": "wotex-thread",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:a22e6413e5a7a3d95e4f7860d059ecfec39d869dd25dee9adf9ed10cb6af79da"
+      "repository_path": "packages/wotex-thread",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Thread",
+      "tree_digest": "sha256:8efa086f03dad1f0ce3ff5c960af851c9a62e9c6d733022f9cd7f0f1ac5ed9ca",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-directory",
-      "title": "Discovery",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-directory",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-directory",
+        "docs/packages/wotex-directory"
+      ],
+      "expected_collection_digest": "sha256:7eec031766b4624f5755b3535463c60bd23eed5f9da0bfa3ca64088077eeb76a",
       "hex_package": "wotex_directory",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-directory", "docs/packages/wotex-directory"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:54b96edf1b39125364ed6bc86bdb3d6dabee5eed82d5c4fa9d22265a0403e11d",
+      "id": "wotex-directory",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:d7c902e6fbd78f6532b593b121a4747fa02713edbd123b081dbe3f269f298e28"
+      "repository_path": "packages/wotex-directory",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Discovery",
+      "tree_digest": "sha256:831164ee4af3002a5c9394b4ef55f72b4f1148b169b62e000db8e75e4106a6cf",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-continuum",
-      "title": "Exchange",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-continuum",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-continuum",
+        "docs/packages/wotex-continuum"
+      ],
+      "expected_collection_digest": "sha256:6c52a35924a5b3560f83a4ac4ac17f30e7b4bafd31c01ee8a40ffd77146cd16d",
       "hex_package": "wotex_continuum",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-continuum", "docs/packages/wotex-continuum"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:dee87852b0508b1cd3472405d96ce3f829cb6c52f011566728e054bc80c7bb99",
+      "id": "wotex-continuum",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:3bb23980949c698a35927698d74bf6cfeafa11efcaeb51a25b998fbc4010afeb"
+      "repository_path": "packages/wotex-continuum",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Exchange",
+      "tree_digest": "sha256:e0d13f814de73a598df59ec3d3ba7ee84e7a93dc3a3ecfe28f451b15c6b42e7c",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-nx",
-      "title": "Numerical computing",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-nx",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-profiles",
+        "docs/packages/wotex-profiles"
+      ],
+      "expected_collection_digest": "sha256:2fbe7a4176622c86d3216b9809452759c5c2b9581ec7b63992ab3e7a9884079a",
+      "hex_package": "wotex_profiles",
+      "id": "wotex-profiles",
       "kind": "mix_package",
+      "license": "Apache-2.0",
+      "repository_path": "packages/wotex-profiles",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Profiles",
+      "tree_digest": "sha256:2443bc3dbb670f03dd6e131538264bc7d97fb1ea5ab1c83d994b8ad8c1fa1a16",
+      "version": "0.1.0"
+    },
+    {
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-routines",
+        "docs/packages/wotex-routines"
+      ],
+      "expected_collection_digest": "sha256:1b1c4977223cc1dba056a1a75ce5575f2b38556cfa2016d9d4ff8071a0ab5061",
+      "hex_package": "wotex_routines",
+      "id": "wotex-routines",
+      "kind": "mix_package",
+      "license": "Apache-2.0",
+      "repository_path": "packages/wotex-routines",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Routines",
+      "tree_digest": "sha256:94532d9a92808cd2913e0b7fbf9c46ceae88b9d516d68f2234169cbc346d10bf",
+      "version": "0.1.0"
+    },
+    {
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-udp",
+        "docs/packages/wotex-udp"
+      ],
+      "expected_collection_digest": "sha256:62d09ff487929f38c5872496384ae37a92168f81bd44348c1557808a78832ad5",
+      "hex_package": "wotex_udp",
+      "id": "wotex-udp",
+      "kind": "mix_package",
+      "license": "Apache-2.0",
+      "repository_path": "packages/wotex-udp",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "UDP datagram transport",
+      "tree_digest": "sha256:6368071c9221f5acc0a64721e8a9bd37705b8c22453fa3409be43380f3f0e947",
+      "version": "0.1.0"
+    },
+    {
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-zigbee",
+        "docs/packages/wotex-zigbee"
+      ],
+      "expected_collection_digest": "sha256:c297d37de1d323e4127c7acc96a83f85c70f329f869258acee8f308bddba47ed",
+      "hex_package": "wotex_zigbee",
+      "id": "wotex-zigbee",
+      "kind": "mix_package",
+      "license": "Apache-2.0",
+      "repository_path": "packages/wotex-zigbee",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Zigbee coordinator",
+      "tree_digest": "sha256:f6d6db8c2cad45f392c5070fb71e89f5df8132da116ef50b51b50d07991ab086",
+      "version": "0.1.0"
+    },
+    {
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-nx",
+        "docs/packages/wotex-nx"
+      ],
+      "expected_collection_digest": "sha256:7c38eddb19f9a5216f9e72f7fc12cdbce05212e0b2449e60b13e0d8d8ccc2493",
       "hex_package": "wotex_nx",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-nx", "docs/packages/wotex-nx"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:5513fdc3c61f40a1711d0c525c4558379d94379cb596663f206d2d45a41d2876",
+      "id": "wotex-nx",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:53212fc3f5470346f322a6791346057c555a7ad5cbb1c8cac1972eed280cb6e8"
+      "repository_path": "packages/wotex-nx",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Numerical computing",
+      "tree_digest": "sha256:baf5d7a333c10a5ea2ed4de50f80f13f56526b3acb1d061b2b6679b27eaaf60f",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-conformance",
-      "title": "Conformance",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-conformance",
-      "kind": "mix_package",
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "packages/wotex-conformance",
+        "docs/packages/wotex-conformance"
+      ],
+      "expected_collection_digest": "sha256:839ae9f13edb85bb924c9c9d16e2445638294937b21112449ff3ae028ae9de9c",
       "hex_package": "wotex_conformance",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-conformance", "docs/packages/wotex-conformance"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:a5da0b6715b3e950b2a2582925553bbd5b69e087cff5a3478e773e6154872aba",
-      "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:cf0c56fa7c27f13d42a745e610b27f69f7b0ba9a805ad8893ea49c7b00bf3400"
-    },
-    {
-      "id": "wotex-lab",
-      "title": "Lab and workbench",
-      "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": "packages/wotex-lab",
+      "id": "wotex-conformance",
       "kind": "mix_package",
-      "hex_package": "wotex_lab",
-      "version": "0.1.0",
-      "documentation_roots": ["packages/wotex-lab", "docs/packages/wotex-lab"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:e9a0087e16e9b9cb29d60fd5ab73906a7af04d28f32e00190b72ac810883cc84",
       "license": "Apache-2.0",
-      "build_command": ["mix", "doc_shell.build", "--no-start"],
-      "expected_collection_digest": "sha256:935d14f4d0866fe3ccc51a7d0339fad3d68aea3e21fa697780fdfee57b5a8549"
-    },
-    {
-      "id": "family-docs",
-      "title": "Wotex guides",
+      "repository_path": "packages/wotex-conformance",
       "repository_url": "https://github.com/wotex-project/wotex",
-      "repository_path": ".",
-      "kind": "documentation",
-      "hex_package": null,
-      "version": "0.1.0",
-      "documentation_roots": ["docs/README.md", "docs/architecture", "docs/guides"],
-      "default_branch": "main",
-      "revision": "ce72aeb79e8ebd95278f2a2d4276b54320b163c6",
-      "tree_digest": "sha256:6e9fcd458dec024d5bb3ed2a5e1871ddf2e1103bc95d2fd29a99158ad045f4f9",
-      "license": "Apache-2.0",
-      "build_command": ["mix", "run", "--no-start", "bin/build.exs", "--source", "family-docs"],
-      "expected_collection_digest": "sha256:efc4774406d89f51a723367fafc3a7d094b3241cfc95a61c6ee6e9a86499b98d"
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Conformance",
+      "tree_digest": "sha256:144b05eaf44398d98b05efdb2d19a34ff1c286ff040e53ef437e2d7cdb6b634c",
+      "version": "0.1.0"
     },
     {
-      "id": "wotex-dot",
-      "title": "Project and contribution",
-      "repository_url": "https://github.com/wotex-project/.github",
-      "repository_path": ".",
-      "kind": "documentation",
-      "hex_package": null,
-      "version": "0.1.0",
-      "documentation_roots": ["CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md", "SUPPORT.md", "profile"],
+      "build_command": [
+        "mix",
+        "doc_shell.build",
+        "--no-start"
+      ],
       "default_branch": "main",
-      "revision": "0a38b3d877816c42b865f220977090f1a8751959",
-      "tree_digest": "sha256:4738b5609c05167372fbc92282e8b9eb9b67a51d3138d2aac6033a685fc4705a",
+      "documentation_roots": [
+        "packages/wotex-lab",
+        "docs/packages/wotex-lab"
+      ],
+      "expected_collection_digest": "sha256:38ee276800d57ac34f8d70d325ef4679b8e28c1b7bb3e8c72c939596b560a785",
+      "hex_package": "wotex_lab",
+      "id": "wotex-lab",
+      "kind": "mix_package",
       "license": "Apache-2.0",
-      "build_command": ["mix", "run", "--no-start", "bin/build.exs", "--source", "wotex-dot"],
-      "expected_collection_digest": "sha256:80ca8798b63c2dbfb0e546c104aea977cffa99e0ce0195568055c5780eb08392"
+      "repository_path": "packages/wotex-lab",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Lab and workbench",
+      "tree_digest": "sha256:2c81ec059fe6ac2ccca557df45ef5f5468dfc624330bcae4e16a701d49cf13ff",
+      "version": "0.1.0"
+    },
+    {
+      "build_command": [
+        "mix",
+        "run",
+        "--no-start",
+        "bin/build.exs",
+        "--source",
+        "family-docs"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "docs/README.md",
+        "docs/architecture",
+        "docs/guides"
+      ],
+      "expected_collection_digest": "sha256:94c05ae18711c45925b85bd28bd2264d2d4ad09b375152fb8471248cf5963932",
+      "hex_package": null,
+      "id": "family-docs",
+      "kind": "documentation",
+      "license": "Apache-2.0",
+      "repository_path": ".",
+      "repository_url": "https://github.com/wotex-project/wotex",
+      "revision": "cf06a5b9bc8b6c37ac9d0e7ff50f34d847a03304",
+      "title": "Wotex guides",
+      "tree_digest": "sha256:33982940e14cb00a3e88dd580a6fc2788a70752f72957e2b0cb77a1a744a28fa",
+      "version": "0.1.0"
+    },
+    {
+      "build_command": [
+        "mix",
+        "run",
+        "--no-start",
+        "bin/build.exs",
+        "--source",
+        "wotex-dot"
+      ],
+      "default_branch": "main",
+      "documentation_roots": [
+        "CONTRIBUTING.md",
+        "CODE_OF_CONDUCT.md",
+        "SECURITY.md",
+        "SUPPORT.md",
+        "profile"
+      ],
+      "expected_collection_digest": "sha256:9f432faa77c01a099d21d73f955fc71b5766619e013713853a612620faa1f842",
+      "hex_package": null,
+      "id": "wotex-dot",
+      "kind": "documentation",
+      "license": "Apache-2.0",
+      "repository_path": ".",
+      "repository_url": "https://github.com/wotex-project/.github",
+      "revision": "e7780928f5e1a77507d1ea09b1b66ca8b03fe65f",
+      "title": "Project and contribution",
+      "tree_digest": "sha256:f1153e0dfd18102758e361c37bb2b7f303c1f7bc71dbbfb27071802ec6359973",
+      "version": "0.1.0"
     }
-  ]
+  ],
+  "tree_digest_algorithm": "sha256-git-ls-tree-v1"
 }

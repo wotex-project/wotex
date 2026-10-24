@@ -22,6 +22,9 @@ defmodule Wotex.Lab.Docs.Projector do
     {"concepts", "Concepts"},
     {"core", "Core Thing Description"},
     {"runtime", "Runtime"},
+    {"profiles", "Profiles"},
+    {"routines", "Routines"},
+    {"transports", "Transports"},
     {"bindings", "Bindings"},
     {"protocols", "Protocols"},
     {"discovery", "Discovery and exchange"},
@@ -45,7 +48,8 @@ defmodule Wotex.Lab.Docs.Projector do
     "wotex_opcua" => "opc-ua",
     "wotex_ble" => "bluetooth-le",
     "wotex_matter" => "matter",
-    "wotex_thread" => "thread"
+    "wotex_thread" => "thread",
+    "wotex_zigbee" => "zigbee"
   }
 
   @doc "Returns the Wotex site declaration for the exact admitted collection cohort."
@@ -268,6 +272,9 @@ defmodule Wotex.Lab.Docs.Projector do
   defp collection_section("wotex_dot", _), do: "project"
   defp collection_section("wotex", _), do: "core"
   defp collection_section("wotex_runtime", _), do: "runtime"
+  defp collection_section("wotex_profiles", _), do: "profiles"
+  defp collection_section("wotex_routines", _), do: "routines"
+  defp collection_section("wotex_udp", _), do: "transports"
   defp collection_section(id, _) when is_map_key(@binding_names, id), do: "bindings"
   defp collection_section(id, _) when is_map_key(@protocol_names, id), do: "protocols"
 
@@ -312,6 +319,9 @@ defmodule Wotex.Lab.Docs.Projector do
   defp route("bindings", collection_id, document) do
     "/bindings/#{Map.fetch!(@binding_names, collection_id)}/#{slug(document["document_id"])}/"
   end
+
+  defp route("transports", "wotex_udp", document),
+    do: "/transports/udp/#{slug(document["document_id"])}/"
 
   defp route("protocols", collection_id, document) do
     "/protocols/#{Map.fetch!(@protocol_names, collection_id)}/#{slug(document["document_id"])}/"

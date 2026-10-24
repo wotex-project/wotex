@@ -52,5 +52,21 @@ defmodule WotexWorkspace.PackageFilesTest do
     end
   end
 
+  test "the documentation cohort explicitly admits every registered package" do
+    catalogue =
+      Workspace.root()
+      |> Path.join("packages/wotex-lab/priv/documentation/cohort.json")
+      |> File.read!()
+      |> JSON.decode!()
+
+    package_ids =
+      catalogue["sources"]
+      |> Enum.filter(&(&1["kind"] == "mix_package"))
+      |> Enum.map(& &1["id"])
+      |> Enum.sort()
+
+    assert package_ids == Enum.sort(packages())
+  end
+
   defp packages, do: Map.keys(Manifest.load!().packages)
 end

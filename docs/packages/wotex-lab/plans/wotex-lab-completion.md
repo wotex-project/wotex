@@ -1,6 +1,6 @@
 # Wotex Lab completion contract
 
-Plan version: 1.17.0. Package baseline: 0.1.0. Normative Lab owners:
+Plan version: 1.17.1. Package baseline: 0.1.0. Normative Lab owners:
 [specification catalogue](../specs/catalogue.yaml).
 
 The default Lab runs against simulated devices over real local transports.
@@ -82,6 +82,12 @@ documentation target, bringing it to twenty package sources plus family and
 governance documents. All four producers have the same build-only DocShell
 dependency. The previous eighteen-source lock is historical until an executed
 twenty-two-source build replaces it.
+
+Version 1.17.1 replaces that historical lock with actual twenty-two-source
+collection digests. The closed catalogue and taxonomy cover every registered
+package, including distinct Profiles, Routines, UDP and Zigbee routes.
+Malformed catalogue records fail with structured errors. The documentation
+implementation plan now separates existing source from remaining qualification.
 
 ## Delivery status
 

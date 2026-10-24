@@ -1,6 +1,6 @@
 # WLB.12: Unified ecosystem documentation
 
-Specification version: 0.7.0. Contract: accepted. Implementation status:
+Specification version: 0.7.1. Contract: accepted. Implementation status:
 partial. Evidence status: partial. Adoption status: reference_available.
 
 The documentation cohort pins published DocShell 1.0.0 across the family
@@ -77,10 +77,11 @@ This composition requires DocShell's 1.0 presentation API and the Phoenix
 Assets PHA.01 0.3 inline-search seam. The inspected Phoenix Assets 1.2.1 Hex
 archive does not supply that inline seam; an explicitly supplied source candidate can be
 qualified separately. Its declared DocShell requirement also excludes 1.0;
-the existing explicit source-candidate switch can test API compatibility but
-does not establish archive resolution. Published renderer adoption requires
-both the inline seam and a requirement admitting the selected DocShell. A
-successful source-candidate build cannot establish published-renderer availability. The historical 0.3.2 evidence below does
+a newer committed source candidate admits 1.0. Explicit source and archive
+checks qualify that candidate separately from the published archive. Published
+renderer adoption requires both the inline seam and a requirement admitting
+the selected DocShell. A successful source-candidate build cannot establish
+published-renderer availability. The historical 0.3.2 evidence below does
 not qualify the changed reader, assets or scope tags. Fresh reader browser,
 publication and archive checks remain required before the 0.4.0 evidence can
 be declared complete. Member projection has separate source and browser checks;
@@ -156,9 +157,12 @@ this repository, plus the separate `wotex-dot` source. A directory under
 The accepted membership contains all twenty registered packages plus the family
 documentation and project governance sources. The four newly admitted packages
 use the same DocShell 1.0 build-only dependency and existing isolated extraction
-configuration. The committed eighteen-source cohort remains historical until
-the owning collection builder regenerates all twenty-two sources from exact
-revisions; adding names or dependencies does not renew collection evidence.
+configuration. The committed twenty-two-source lock records actual isolated
+collection extraction from one repository revision plus the exact governance
+revision. The previous eighteen-source lock is historical. Old eighteen-source
+catalogues now fail closed against the complete membership contract.
+Catalogue validation also returns structured errors for malformed source
+records or revision types and rejects credential-bearing URLs.
 
 Every row except the last two names a package under `packages/`.
 `packages/wotex-lab/priv/documentation/cohort.json` describes each member with
@@ -300,6 +304,9 @@ Canonical route families are:
 /docs/start/
 /docs/concepts/<page>/
 /docs/runtime/<page>/
+/docs/profiles/<page>/
+/docs/routines/<page>/
+/docs/transports/udp/<page>/
 /docs/bindings/<binding>/<page>/
 /docs/protocols/<protocol>/<page>/
 /docs/discovery/<page>/
