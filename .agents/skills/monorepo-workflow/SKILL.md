@@ -33,3 +33,25 @@ and report the full gate as unrun. Read `tooling/packages.yaml` or
 `mix help wotex.<task>` only for the task or lane being selected. Report
 the base, commands and actual results; passing caller tests alone does not
 establish an entire specification's completion.
+
+## Retain the selected subject and final review
+
+Record the actual comparison base and `mix affected --base REF --detail`
+classification: directly changed packages receive their full gate, transitive
+dependents their configured fast gate. Inspect working-tree and renamed/deleted
+paths as well as commits; an empty or one-hop reference selection does not
+establish complete behavioral reach. `lib/wotex/workspace/affected.ex` and its
+tests own that selection. Root tooling changes still need their own assertions.
+
+Before handoff, review changed public signatures/callbacks, actual consumers and
+proving assertions, including independent refusals and forbidden effects. Use
+[implementation custody](../implementation-custody/SKILL.md) for admitted codec
+execution rather than assuming a pure codec or transport-stream workflow covers
+its owner/deadline checks. Reuse prior evidence only for unchanged source,
+lock/configuration, assertions and runtime/archive subject.
+
+For authorized heavy gates, establish capacity and ownership of new outputs
+before builds; preserve retained package evidence and shared caches. Clean only
+the run's newly owned artifacts. Guidance-only changes do not justify setup,
+native builds or full package suites; retain the existing release/security and
+explicit-only lane requirements when those mechanisms are actually affected.

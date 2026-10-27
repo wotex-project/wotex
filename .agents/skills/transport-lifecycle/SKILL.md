@@ -37,3 +37,11 @@ For native adapters, use the existing scripted bridge and fault tests for the
 changed Port boundary. Select native or interop lanes only within the scope
 allowed by `AGENTS.md`. Run focused tests and then the applicable package
 validation; identify which paths were actually exercised.
+
+For admitted codec/task execution rather than a protocol subscription, select
+[implementation custody](../implementation-custody/SKILL.md). Keep the separate
+custodian and consumer supervision boundary. On stream startup failure, receiver
+death or cancellation, observe the owned close/retirement path; report an
+unconfirmed cleanup state instead of treating a timeout as proof of termination.
+Independent receiver/client instances must not close one another's handle.
+Protocol completion still grants no canonical observation or physical-effect claim.

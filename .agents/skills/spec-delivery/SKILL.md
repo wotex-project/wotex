@@ -29,3 +29,13 @@ Select mechanism-specific skills by their descriptions and validate the
 affected code through `monorepo-workflow`. Compare implementation, docs and
 vectors before claiming completion. Report source review separately from
 executed tests; planned cases and schema validity do not prove support.
+
+For each affected invariant, name the public stimulus, enforcing owner,
+observable result, forbidden effect and actual independent assertion. Keep
+missing admission, authority or cleanup proof visible even if other cases pass.
+For Runtime admitted implementations or codec tasks, select
+[implementation custody](../implementation-custody/SKILL.md); a valid descriptor
+or returned value cannot establish fresh policy, supervised retirement or host
+authority. Review the final public caller/callback and consumer diff before
+using `monorepo-workflow` results as delivery evidence. Bind source/archive,
+lock/configuration, toolchain and assertion identities when reusing prior proof.

@@ -38,3 +38,12 @@ Report repository revision, package path, archive and lock digests, toolchain
 and actual commands in chat. Preserve historical evidence until its owning
 checks have been rerun. Do not infer readiness from source visibility or a
 development version.
+
+Bind the result to the actual source tree/package path, archive member bytes,
+lock and dependency identity, toolchain, runtime `priv` fixtures and consumer
+assertions. Inspect extracted bytes independently of a successful build command;
+a source-path consumer can accidentally see repository-only files that an archive
+lacks. Changed members, fixtures or assertions invalidate their earlier proof.
+Keep historical evidence with its original subject until the owning lane reruns.
+Track newly created archive/consumer outputs and clean only those owned artifacts;
+never clear shared package caches or retained provenance to obtain space.
