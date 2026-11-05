@@ -255,8 +255,8 @@ Each package's `AGENTS.md` and README list its lanes and prerequisites.
   dependency audits and host gates. BLE uses macOS for its CoreBluetooth SDK
   tests; the other package gates run on Linux. Only native packages install
   the extra C/C++ toolchain dependencies.
-- **Archive**: package archives and their consumers, after the workspace and
-  package gates pass. Archive checks do not wait for SDK qualification.
+  Each package gate also runs its archive and consumer script. CI does not
+  repeat those same scripts in a separate archive job.
 - **Native**: native builds, software interoperability, clang-tidy, native
   tests and upstream native advisories in one lane per selected native
   package. It runs nightly, on dispatch with `native=true`, or on pull

@@ -367,36 +367,6 @@ jobs:
             packages/${{ matrix.package }}/cover/
             packages/${{ matrix.package }}/hosts/workbench/_build/test/e2e/
 
-  archive:
-    name: Archives and consumers
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    needs: [manifest, affected, workspace, check]
-    if: needs.affected.outputs.any == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}
-          otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
-      - run: mix deps.get --check-locked
-      - name: Package dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r package; do
-            (cd "packages/$package" && WOTEX_PATH_DEPS=1 mix deps.get --check-locked)
-          done < <(jq -r '.[]' <<< '${{ needs.affected.outputs.packages }}')
-      - name: Build and inspect archives
-        shell: bash
-        run: |
-          set -euo pipefail
-          args=()
-          while IFS= read -r package; do
-            args+=(--package "$package")
-          done < <(jq -r '.[]' <<< '${{ needs.affected.outputs.packages }}')
-          mix wotex.archive "${args[@]}"
-
   native:
     name: ${{ matrix.package }} native lane
     # The BLE software fixture builds and boots arm64 guest images.

@@ -59,6 +59,8 @@ code, the explicit native lanes and CI. Ordinary push and pull-request CI
 runs the affected package gates without the separate native tools. SDK builds,
 software interoperability and native analysis run together in the nightly or
 explicit native lane; they are not repeated in a second blocking matrix.
+Archive and consumer checks run inside each package gate, without a duplicate
+repository-level archive job.
 
 Benchmarks are not part of any gate. They write Markdown reports to the
 package's `bench/output/`, which its HexDocs include.
