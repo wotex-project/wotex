@@ -8,7 +8,7 @@ defmodule Wotex.BACnet.RuntimeStreamTest do
   @moduletag :capture_log
 
   setup do
-    {:ok, peer} = :gen_udp.open(55_834, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, peer} = :gen_udp.open(18_834, [:binary, active: false, ip: {127, 0, 0, 1}])
     on_exit(fn -> :gen_udp.close(peer) end)
 
     {:ok, td} =
@@ -34,8 +34,8 @@ defmodule Wotex.BACnet.RuntimeStreamTest do
     config = [
       client: IPv4,
       local_ip: :none,
-      local_port: 55_835,
-      destination: {{127, 0, 0, 1}, 55_834},
+      local_port: 18_835,
+      destination: {{127, 0, 0, 1}, 18_834},
       target: "123",
       timeout: 500,
       cov: %{lifetime: 2, renew: false}
@@ -98,7 +98,7 @@ defmodule Wotex.BACnet.RuntimeStreamTest do
 
     send_apdu(peer, <<0x20, cancel_id, 28>>)
     assert :ok = Task.await(stop)
-    {:ok, socket} = :gen_udp.open(55_835, [:binary])
+    {:ok, socket} = :gen_udp.open(18_835, [:binary])
     :gen_udp.close(socket)
   end
 
@@ -393,12 +393,12 @@ defmodule Wotex.BACnet.RuntimeStreamTest do
   end
 
   defp assert_socket_free do
-    {:ok, socket} = :gen_udp.open(55_835, [:binary])
+    {:ok, socket} = :gen_udp.open(18_835, [:binary])
     :gen_udp.close(socket)
   end
 
   defp await_socket_free(attempts) when attempts > 0 do
-    case :gen_udp.open(55_835, [:binary]) do
+    case :gen_udp.open(18_835, [:binary]) do
       {:ok, socket} ->
         :gen_udp.close(socket)
 
@@ -423,7 +423,7 @@ defmodule Wotex.BACnet.RuntimeStreamTest do
       :gen_udp.send(
         peer,
         {127, 0, 0, 1},
-        55_835,
+        18_835,
         <<0x81, 0x0A, byte_size(apdu) + 6::16, 1, 4, apdu::binary>>
       )
 end

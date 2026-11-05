@@ -224,7 +224,9 @@ jobs:
 
   check:
     name: ${{ matrix.package }} (${{ matrix.lane }})
-    runs-on: ubuntu-24.04
+    # BLE's complete gate includes the real CoreBluetooth SDK build. Linux
+    # BlueZ and virtual-controller qualification remain in the native lane.
+    runs-on: ${{ matrix.package == 'wotex-ble' && 'macos-15' || 'ubuntu-24.04' }}
     # Runtime gates precede the native SDK validation matrix below.
     timeout-minutes: 75
     needs: [manifest, affected]
@@ -282,11 +284,15 @@ jobs:
             packages/${{ matrix.package }}/hosts/*/deps
             packages/${{ matrix.package }}/hosts/*/_build
             ~/.cache/rustler_precompiled
-          key: package-v2-${{ matrix.package }}-${{ matrix.lane }}-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package), format('packages/{0}/hosts/*/mix.lock', matrix.package)) }}
+          key: package-v3-${{ runner.os }}-${{ matrix.package }}-${{ matrix.lane }}-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package), format('packages/{0}/hosts/*/mix.lock', matrix.package)) }}
       - name: Native toolchain
+        if: runner.os == 'Linux'
         # Runtime fixtures compile C/C++; OPC UA coverage also builds its
         # pinned open62541 SDK before the separate native validation job.
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev libglib2.0-dev libmnl-dev
+      - name: macOS manifest reader
+        if: runner.os == 'macOS'
+        run: command -v yq >/dev/null || brew install yq
       - name: Dependencies
         working-directory: packages/${{ matrix.package }}
         run: mix deps.get --check-locked
@@ -341,13 +347,13 @@ jobs:
         env:
           WOTEX_LAB_E2E: "1"
           WOTEX_LAB_SIMULATORS: "1"
-        run: MIX_ENV=test mix test test/e2e
+        run: env MIX_ENV=test mix test test/e2e
       - name: Lab independent software devices
         if: matrix.package == 'wotex-lab' && matrix.lane == 'current'
         working-directory: packages/wotex-lab
         env:
           WOTEX_LAB_SIMULATORS: "1"
-        run: MIX_ENV=test mix test test/wotex/lab/modbus_simulator_test.exs
+        run: env MIX_ENV=test mix test test/wotex/lab/modbus_simulator_test.exs
       - name: Retain package diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
@@ -391,7 +397,7 @@ jobs:
             packages/${{ matrix.package }}/hosts/*/deps
             packages/${{ matrix.package }}/hosts/*/_build
             ~/.cache/rustler_precompiled
-          key: package-v2-${{ matrix.package }}-current-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package), format('packages/{0}/hosts/*/mix.lock', matrix.package)) }}
+          key: package-v3-${{ runner.os }}-${{ matrix.package }}-current-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package), format('packages/{0}/hosts/*/mix.lock', matrix.package)) }}
       - name: Native toolchain
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev libglib2.0-dev libmnl-dev
       - name: LLVM ${{ env.LLVM_MAJOR }} (clang-format, clang-tidy)

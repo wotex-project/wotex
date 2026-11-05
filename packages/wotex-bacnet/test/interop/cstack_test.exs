@@ -14,7 +14,7 @@ defmodule Wotex.BACnet.CStackTest do
              BACnet.connect(
                client: IPv4,
                local_ip: :none,
-               local_port: 55_812,
+               local_port: 18_812,
                destination: {{127, 0, 0, 1}, port},
                timeout: 3000
              )

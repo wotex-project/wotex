@@ -102,6 +102,13 @@ defmodule Wotex.Lab.HostedArtifactTest do
     reorder_central_directory!(path)
 
     assert :ok = Artifact.normalize_escript!(path)
+    normalized = File.read!(path)
+    {:ok, parts} = :escript.extract(String.to_charlist(path), [])
+    {:ok, actual} = :zip.extract(Keyword.fetch!(parts, :archive), [:memory])
+    assert actual == Enum.sort_by(entries, &elem(&1, 0))
+    assert :ok = Artifact.normalize_escript!(path)
+    assert File.read!(path) == normalized
+    assert File.ls!(root) == ["reordered-directory"]
   end
 
   @tag :integration

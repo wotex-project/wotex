@@ -7,7 +7,7 @@ defmodule Wotex.BACnet.COVBoundaryTest do
   alias Wotex.BACnet.{Subscription, Tags, TestClient}
   alias Wotex.BACnet.Test.COVFaultClient
   @request %{type: :cov, object_type: 1, instance: 0, device_instance: 123, lifetime: 2}
-  @destination {{127, 0, 0, 1}, 55_828}
+  @destination {{127, 0, 0, 1}, 18_828}
 
   test "WBA-C01 WBA-S04 optional custom-client callbacks fail explicitly after whole-input validation" do
     {:ok, session} = BACnet.connect(client: TestClient)

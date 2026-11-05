@@ -10,7 +10,7 @@ defmodule Wotex.BACnet.RuntimeFrameTest do
   @external_resource @fixture
   @corpus Jason.decode!(File.read!(@fixture))
   @moduletag corpus_sha256: Base.encode16(:crypto.hash(:sha256, File.read!(@fixture)), case: :lower)
-  @destination {{127, 0, 0, 1}, 55_834}
+  @destination {{127, 0, 0, 1}, 18_834}
   @types %{
     "boolean" => :boolean,
     "unsigned_integer" => :unsigned_integer,
@@ -79,7 +79,7 @@ defmodule Wotex.BACnet.RuntimeFrameTest do
           )
 
     assert {:error, %Error{code: :invalid_runtime_frame}} =
-             RuntimeFrame.validate(value, metadata, c.request, {{127, 0, 0, 2}, 55_834})
+             RuntimeFrame.validate(value, metadata, c.request, {{127, 0, 0, 2}, 18_834})
   end
 
   test "WBA-S05 WBA-I05 projection requires the selected bounded native value", c do

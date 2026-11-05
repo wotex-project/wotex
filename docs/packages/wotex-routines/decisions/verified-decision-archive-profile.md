@@ -99,7 +99,7 @@ counts. A smaller fixture cannot stand in for the specified capacity trace.
 
 ## Isolated semantic mutations
 
-### VDA-T8 — Resource-bound renewal
+### VDA-T8: Resource-bound renewal
 
 VDA-T8 adds thirty-three behavioral cases independently implemented in each family.
 The thirty metric/clock-cell cases check all five JSON axes through Transition.verify,
