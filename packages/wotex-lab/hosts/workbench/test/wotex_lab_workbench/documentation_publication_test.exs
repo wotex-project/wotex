@@ -97,7 +97,13 @@ defmodule WotexLabWorkbench.Documentation.PublicationTest do
       end
 
     manifest_path = Path.join(docs, "site-manifest.json")
-    manifest = manifest_path |> File.read!() |> JSON.decode!() |> Map.put("routes", routes)
+
+    manifest =
+      manifest_path
+      |> File.read!()
+      |> JSON.decode!()
+      |> Map.put("routes", routes)
+
     bytes = JSON.encode!(manifest)
     {:ok, limits} = DocShell.Presentation.Limits.new()
     assert byte_size(bytes) > 4_194_304
