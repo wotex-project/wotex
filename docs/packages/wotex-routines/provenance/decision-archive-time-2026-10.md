@@ -2,7 +2,7 @@
 
 Recorded: 2026-10-24. Repository commit: `22c8592852278ea70d5e27c68526bdb1dd9bd35d`.
 Package path: `packages/wotex-routines`. Scope: VDA-T9 in the
-[independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t9--time-matrix-archive-renewal)
+[independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t9-time-matrix-archive-renewal)
 and the time/consumer obligations in [verified decisions](../specs/verified-decision-v1.md).
 
 ## Exact inputs

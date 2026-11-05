@@ -202,7 +202,7 @@ The broader VD-T1–T14 acceptance matrix and owning verifier milestone remain
 open. This archive result grants no current consumer authority, installed clock,
 host transaction, wider Model/Analysis or physical qualification.
 
-## VDA-T9 — Time-matrix archive renewal
+## VDA-T9: Time-matrix archive renewal
 
 The separate `--decision-time-consumers` opt-in entry builds the same exact
 three-library cohort and isolated source/journal consumers. It adds eighteen
