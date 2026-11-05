@@ -220,7 +220,7 @@ packages:
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.06-evidence-conformance-and-observability.md"
       - id: "WLB.07"
-        version: "0.9.2"
+        version: "0.9.3"
         implementation_status: "implemented"
         path: "docs/packages/wotex-lab/specs/WLB.07-cookbooks-and-machine-interfaces.md"
       - id: "WLB.08"

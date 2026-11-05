@@ -1,6 +1,6 @@
 # WLB.07: Executable cookbooks and machine interfaces
 
-Specification version: 0.9.2. Contract: accepted. Source status: the sixteen
+Specification version: 0.9.3. Contract: accepted. Source status: the sixteen
 executable cookbooks under `priv/cookbooks/`, the `Wotex.Lab.Cookbook`
 catalogue, the runner evidence in `test/wotex/lab/cookbook_test.exs`, the
 `Wotex.Lab.Graph` generator with its nine representations and the
@@ -160,7 +160,16 @@ and expose design tokens, the seam table, the admitted scenario descriptors of
 WLB.02 and the simulated Things of the session's explicit instance. Tools are
 `parse_td`, `parse_tm`, `explain_error`, `list_things`, `read_property`, `conformance_observe`,
 `explain_seam` and `verify_control_model`; every call is bounded by per-call
-limits and per-session call and output quotas. `query_metrics` is listed only
+limits and per-session call and output quotas. Streamable HTTP atomically
+claims the session before dispatch and refuses an overlapping request with HTTP
+409 without entering a tool. Its final state replaces only that same claim;
+DELETE or expiry prevents a completing request from restoring the session.
+Already entered consumer work is not rolled back. An interrupted request
+cannot expose the previous unaccounted state for reuse. Every HTTP initialize
+creates a separate benchmark-job key instead of inheriting the base server's
+key. `test/wotex/lab/mcp_http_session_test.exs` coordinates overlapping requests,
+deletion and independent HTTP sessions at the actual Plug boundary.
+`query_metrics` is listed only
 when the host builds the session with `metrics: %{history: pid, scope: map}`
 from its authenticated context. It sends the WLB.10 request fields through one
 disposable owner-bound `Metrics.Gateway` per call with a six-hour range, 2,000

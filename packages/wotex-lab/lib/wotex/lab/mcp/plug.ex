@@ -16,13 +16,19 @@ if Code.ensure_loaded?(Plug.Conn) do
     because this server pushes nothing. Session ids are random and expire
     with `:session_ttl_ms` (30 minutes). Nothing here authorizes writes: the
     session inherits the host's `:writes` decision and token.
+
+    One request at a time may own a session's mutable accounting. Overlapping
+    requests receive HTTP 409 before a tool runs. Deleting or expiring the
+    session prevents an in-flight request from restoring it; it does not undo
+    work that already entered a consumer port. Each initialized HTTP session
+    receives its own benchmark-job authority, independent of the base server.
     """
 
     @behaviour Plug
 
     import Plug.Conn
 
-    alias Wotex.Lab.MCP.Server
+    alias Wotex.Lab.MCP.{Jobs, Server}
 
     @max_body_bytes 1_048_576
     @session_ttl_ms 1_800_000
@@ -84,7 +90,8 @@ if Code.ensure_loaded?(Plug.Conn) do
 
     defp dispatch(conn, config, %{"method" => "initialize"} = message) do
       id = Base.url_encode64(:crypto.strong_rand_bytes(18), padding: false)
-      {reply, state} = Server.handle(config.server, message)
+      base = %{config.server | session_key: if(config.server.jobs, do: Jobs.session_key())}
+      {reply, state} = Server.handle(base, message)
       expire(config)
 
       :ets.insert(
@@ -99,14 +106,50 @@ if Code.ensure_loaded?(Plug.Conn) do
 
     defp dispatch(conn, config, message) do
       with [id] <- get_req_header(conn, "mcp-session-id"),
-           [{^id, state, expires}] <- :ets.lookup(config.sessions, id),
-           true <- expires > System.monotonic_time(:millisecond) do
-        {reply, state} = Server.handle(state, message)
-        :ets.insert(config.sessions, {id, state, expires})
-        if reply, do: reply(conn, 200, reply), else: send_resp(conn, 202, "")
+           {:ok, state, expires, lease} <- claim(config.sessions, id) do
+        try do
+          {reply, state} = Server.handle(state, message)
+
+          if expires > System.monotonic_time(:millisecond) and
+               replace(config.sessions, id, lease, expires, state) do
+            if reply, do: reply(conn, 200, reply), else: send_resp(conn, 202, "")
+          else
+            refuse(conn, 404, "unknown or expired session; initialize first")
+          end
+        after
+          # A raised callback must not release an old, unaccounted state.
+          :ets.select_delete(config.sessions, [{{id, lease, expires}, [], [true]}])
+        end
       else
+        {:error, :busy} -> refuse(conn, 409, "session request in progress")
         _ -> refuse(conn, 404, "unknown or expired session; initialize first")
       end
+    end
+
+    defp claim(sessions, id) do
+      now = System.monotonic_time(:millisecond)
+
+      case :ets.lookup(sessions, id) do
+        [{^id, state, expires}] when is_map(state) and expires > now ->
+          lease = {:busy, make_ref()}
+
+          if replace(sessions, id, state, expires, lease),
+            do: {:ok, state, expires, lease},
+            else: {:error, :busy}
+
+        [{^id, {:busy, _}, expires}] when expires > now ->
+          {:error, :busy}
+
+        _ ->
+          {:error, :unknown}
+      end
+    end
+
+    defp replace(sessions, id, expected, expires, replacement) do
+      :ets.select_replace(sessions, [
+        {{id, :"$1", expires}, [{:==, :"$1", {:const, expected}}],
+         [{:const, {id, replacement, expires}}]}
+      ]) == 1
     end
 
     defp origin(conn, origins) do
