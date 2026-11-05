@@ -137,6 +137,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     needs: [manifest, affected]
+    if: github.event_name != 'schedule'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -227,10 +228,10 @@ jobs:
     # BLE's complete gate includes the real CoreBluetooth SDK build. Linux
     # BlueZ and virtual-controller qualification remain in the native lane.
     runs-on: ${{ matrix.package == 'wotex-ble' && 'macos-15' || 'ubuntu-24.04' }}
-    # Runtime gates precede the native SDK validation matrix below.
+    # SDK analysis and software interoperability run in the native lane.
     timeout-minutes: 75
     needs: [manifest, affected]
-    if: needs.affected.outputs.any == 'true'
+    if: github.event_name != 'schedule' && needs.affected.outputs.any == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -286,9 +287,9 @@ jobs:
             ~/.cache/rustler_precompiled
           key: package-v3-${{ runner.os }}-${{ matrix.package }}-${{ matrix.lane }}-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package), format('packages/{0}/hosts/*/mix.lock', matrix.package)) }}
       - name: Native toolchain
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && contains(fromJSON(needs.manifest.outputs.native), matrix.package)
         # Runtime fixtures compile C/C++; OPC UA coverage also builds its
-        # pinned open62541 SDK before the separate native validation job.
+        # pinned open62541 SDK within the package gate.
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev libglib2.0-dev libmnl-dev
       - name: macOS manifest reader
         if: runner.os == 'macOS'
@@ -325,8 +326,8 @@ jobs:
             fi
           done
       - name: Package gate
-        # Fail behaviour, coverage, archive and analysis checks before starting
-        # SDK validation. Native checks remain required in native_check.
+        # Ordinary CI covers behaviour, coverage, archives and BEAM analysis.
+        # SDK analysis and software interoperability use the native lane.
         working-directory: packages/${{ matrix.package }}
         shell: bash
         run: |
@@ -365,143 +366,6 @@ jobs:
             ${{ runner.temp }}/package-gate.log
             packages/${{ matrix.package }}/cover/
             packages/${{ matrix.package }}/hosts/workbench/_build/test/e2e/
-
-  native_check:
-    name: ${{ matrix.package }} native checks
-    runs-on: ubuntu-24.04
-    # Matter's cold SDK builder has its own 90-minute budget; retain time for
-    # the subsequent LLVM analysis and native assertions after that build.
-    timeout-minutes: ${{ matrix.package == 'wotex-matter' && 150 || 75 }}
-    needs: [manifest, affected, workspace, check]
-    if: needs.affected.outputs.any_native == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        package: ${{ fromJSON(needs.affected.outputs.native) }}
-    env:
-      WOTEX_PATH_DEPS: "1"
-      MIX_ENV: dev
-      ELIXIR_ERL_OPTIONS: "+fnu"
-      WOTEX_NATIVE_CACHE: ~/.cache/wotex-native
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}
-          otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
-      - uses: actions/cache@v4
-        with:
-          path: |
-            packages/${{ matrix.package }}/deps
-            packages/${{ matrix.package }}/_build
-            packages/${{ matrix.package }}/hosts/*/deps
-            packages/${{ matrix.package }}/hosts/*/_build
-            ~/.cache/rustler_precompiled
-          key: package-v3-${{ runner.os }}-${{ matrix.package }}-current-${{ hashFiles(format('packages/{0}/mix.lock', matrix.package), format('packages/{0}/hosts/*/mix.lock', matrix.package)) }}
-      - name: Native toolchain
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libssl-dev libexpat1-dev libglib2.0-dev libmnl-dev
-      - name: LLVM ${{ env.LLVM_MAJOR }} (clang-format, clang-tidy)
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_MAJOR} main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-          sudo apt-get install -y "clang-format-${LLVM_MAJOR}" "clang-tidy-${LLVM_MAJOR}"
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ needs.manifest.outputs.rust }}
-          components: rustfmt, clippy
-      - name: Native cache key
-        if: matrix.package != 'wotex-matter'
-        id: native_cache
-        shell: bash
-        run: |
-          set -euo pipefail
-          inputs=(
-            "HEAD:packages/${{ matrix.package }}"
-            "HEAD:lib"
-            "HEAD:tooling/native"
-            "HEAD:tooling/packages.yaml"
-            "HEAD:rust-toolchain.toml"
-            "HEAD:.clang-format"
-            "HEAD:.clang-format-ignore"
-            "HEAD:.clang-tidy"
-          )
-          digest=$(
-            for input in "${inputs[@]}"; do
-              git rev-parse "$input"
-            done | git hash-object --stdin
-          )
-          echo "key=native-${{ matrix.package }}-$digest" >> "$GITHUB_OUTPUT"
-      - if: matrix.package != 'wotex-matter'
-        # Keyed from tracked inputs before the gate creates nested build trees.
-        # Matter's SDK workspace is several GB; its gate rebuilds it.
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/wotex-native/${{ matrix.package }}
-          key: ${{ steps.native_cache.outputs.key }}
-      - name: Workspace dependencies
-        # Native validation uses the root mix native.* tasks.
-        run: mix deps.get --check-locked
-      - name: Package dependencies
-        run: mix pkg "${{ matrix.package }}" deps.get --check-locked
-      - name: Native formatting and analysis
-        shell: bash
-        run: |
-          set -euo pipefail
-          mix native.lint --tidy --package "${{ matrix.package }}" 2>&1 | tee "$RUNNER_TEMP/native-lint.log"
-      - name: Native tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          mix native.test --package "${{ matrix.package }}" 2>&1 | tee "$RUNNER_TEMP/native-test.log"
-      - name: Retain native gate diagnostics
-        if: failure() || cancelled()
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-gate-diagnostics-${{ matrix.package }}
-          retention-days: 7
-          if-no-files-found: warn
-          path: |
-            ${{ runner.temp }}/native-lint.log
-            ${{ runner.temp }}/native-test.log
-            ~/.cache/wotex-native/${{ matrix.package }}/**/*.log
-
-  archive:
-    name: Archives and consumers
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    needs: [manifest, affected, workspace, check, native_check]
-    if: >-
-      !cancelled() && needs.affected.outputs.any == 'true' &&
-      needs.workspace.result == 'success' && needs.check.result == 'success' &&
-      (needs.native_check.result == 'success' || needs.native_check.result == 'skipped')
-    steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.elixir }}
-          otp-version: ${{ fromJSON(needs.manifest.outputs.toolchains).current.otp }}
-      - run: mix deps.get --check-locked
-      - name: Package dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r package; do
-            (cd "packages/$package" && WOTEX_PATH_DEPS=1 mix deps.get --check-locked)
-          done < <(jq -r '.[]' <<< '${{ needs.affected.outputs.packages }}')
-      - name: Build and inspect archives
-        shell: bash
-        run: |
-          set -euo pipefail
-          args=()
-          while IFS= read -r package; do
-            args+=(--package "$package")
-          done < <(jq -r '.[]' <<< '${{ needs.affected.outputs.packages }}')
-          mix wotex.archive "${args[@]}"
 
   native:
     name: ${{ matrix.package }} native lane
