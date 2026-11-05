@@ -83,6 +83,10 @@ jobs:
         working-directory: .candidates/phoenix-assets
         run: pnpm install --frozen-lockfile
 
+      - name: Build the Phoenix Assets documentation browser assets
+        working-directory: .candidates/phoenix-assets
+        run: pnpm run build:doc-shell-assets
+
       - name: Use the Workbench pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
         with:
