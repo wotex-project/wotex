@@ -43,7 +43,7 @@ tests.
 | 0 | While editing | `mix pkg <name> test <files>`, `mix impact Module fun --run`; `mix native.lint --package <name>` for C, C++ or Rust | The tests next to the change; native formatting and Rust lint |
 | 1 | A package change is ready | `mix check.fast --package <name>` | Compile with warnings as errors, format check, Credo strict, the package's tests, for a package with native code `mix native.lint`, and for a package with host applications (`hosts:` in `tooling/packages.yaml`) the same compile, format, Credo and test steps in each host |
 | 2 | Before a commit | `mix check` | `mix workspace`, then the full gate for changed packages and the fast gate for their dependents (`mix check.affected`) |
-| 3 | Repository-wide change, CI, explicit request | `mix check.all` | Workspace checks and every package's full gate |
+| 3 | Repository-wide change or explicit full qualification | `mix check.all` | Workspace checks and every package's full gate |
 
 Benchmarks are outside the tiers and run only when invoked; see
 [Benchmarks](#benchmarks).
@@ -250,15 +250,21 @@ Each package's `AGENTS.md` and README list its lanes and prerequisites.
   results depend on the compiler version, the native tools and wotex-lab's
   host gates (`lanes.minimum.skip`): the hosts are applications built with the
   current toolchain, and the minimum lane verifies library compatibility. It
-  still runs wotex-lab's `optional_deps` step. The current lane runs everything,
-  including clang-tidy and the native tests, with native build workspaces
-  cached per package. The runners are Linux, so the Linux suites run natively; Matter's
-  SDK build and its clang-tidy run in Docker.
-- **Archive**: package archives and their consumers.
-- **Native**: the native and software-profile lanes of every native package
-  in `tooling/packages.yaml`, nightly, on dispatch, or on pull requests
-  labelled `native`; after the native build it runs `mix native.lint --tidy`
-  and `mix native.test` against that build.
+  still runs wotex-lab's `optional_deps` step. Both lanes omit the separate
+  native tools; the current lane retains the remaining static analysis,
+  dependency audits and host gates. BLE uses macOS for its CoreBluetooth SDK
+  tests; the other package gates run on Linux. Only native packages install
+  the extra C/C++ toolchain dependencies.
+- **Archive**: package archives and their consumers, after the workspace and
+  package gates pass. Archive checks do not wait for SDK qualification.
+- **Native**: native builds, software interoperability, clang-tidy, native
+  tests and upstream native advisories in one lane per selected native
+  package. It runs nightly, on dispatch with `native=true`, or on pull
+  requests labelled `native`. There is no second native analysis matrix.
+  The nightly run selects all native packages and omits the ordinary
+  workspace, package and archive jobs. A native qualification result is
+  separate from ordinary push CI; changes to native code should request this
+  lane for the affected packages before release.
 
 ## Usage rules
 

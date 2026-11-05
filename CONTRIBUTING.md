@@ -55,7 +55,10 @@ test` for Rust. `mise.toml` pins the current toolchain (Elixir 1.20.2, OTP
 29.0.4, Rust 1.97.1); CI also verifies the declared minimum (Elixir 1.18.4,
 OTP 27.3.4.18) and pins LLVM 23 for clang-format and clang-tidy. See the
 [development guide](docs/guides/development.md) for Dexter, Dialyzer, native
-code, the explicit native lanes and CI.
+code, the explicit native lanes and CI. Ordinary push and pull-request CI
+runs the affected package gates without the separate native tools. SDK builds,
+software interoperability and native analysis run together in the nightly or
+explicit native lane; they are not repeated in a second blocking matrix.
 
 Benchmarks are not part of any gate. They write Markdown reports to the
 package's `bench/output/`, which its HexDocs include.
@@ -78,7 +81,7 @@ beside the package tests, not in repository-level tooling.
 | `mix check.fast [--package NAME]...` | Inner-loop gate for the selected (default: changed) packages: compile with warnings as errors, format check, `credo --strict`, `mix test`, `mix native.lint` for packages with native code, and the same four Mix steps in each host application a package declares in `tooling/packages.yaml` (wotex-lab's Workbench and Nerves hosts). |
 | `mix check [--base REF]` | Pre-commit gate: `mix workspace`, then `mix check.affected` (the arguments go to `check.affected`). |
 | `mix check.affected [--base REF]` | The full `mix check --no-retry` for changed packages, `check.fast` for dependents. |
-| `mix check.all` | CI-equivalent: workspace checks plus every package's full gate. Heavy; only for repository-wide changes or on explicit request. |
+| `mix check.all` | Complete local qualification: workspace checks plus every package's full gate. Heavy; only for repository-wide changes or on explicit request. |
 | `mix workspace` | Root self-check: compile, format, credo, root tests, catalogue drift, documentation links, sibling-API boundary of changed packages. |
 | `mix format.all [--check] [--all]` | `mix format` in the root and every changed package (`--all`: every package). |
 | `mix lint [--package NAME]...` | `credo --strict` in the changed (or named) packages. |

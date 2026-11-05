@@ -62,7 +62,7 @@ and `test/` select nothing.
 | 0 | While editing | `mix pkg NAME test FILES` or `mix impact MODULE [FUN] --run`; `mix native.lint --package NAME` for C, C++ or Rust |
 | 1 | Change ready in one package | `mix check.fast --package NAME` |
 | 2 | Before a commit | `mix check`: `mix workspace`, then `mix check.affected` (the full gate for changed packages, the fast gate for dependents) |
-| 3 | CI, repository-wide changes, explicit request | `mix check.all`, native lanes |
+| 3 | Repository-wide changes or explicit full qualification | `mix check.all`, native lanes |
 
 The fast gate runs `compile --warnings-as-errors`, `format
 --check-formatted`, `credo --strict` and `test` with `MIX_ENV=test`, and for a
