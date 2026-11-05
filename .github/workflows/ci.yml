@@ -459,7 +459,7 @@ jobs:
           set -euo pipefail
           mix native.test --package "${{ matrix.package }}" 2>&1 | tee "$RUNNER_TEMP/native-test.log"
       - name: Retain native gate diagnostics
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: native-gate-diagnostics-${{ matrix.package }}
@@ -623,7 +623,7 @@ jobs:
       - name: Upstream advisories
         run: mix wotex.native.advisories --package "${{ matrix.package }}"
       - name: Retain native diagnostics
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: native-diagnostics-${{ matrix.package }}
