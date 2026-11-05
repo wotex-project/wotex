@@ -30,6 +30,11 @@ choose validation for code changes. `mix setup` provisions dependencies and
 the Dexter index when setup is needed; do not repeat it on a prepared checkout
 or install dependencies for guidance-only work.
 
+Use [security-review](.agents/skills/security-review/SKILL.md) for requested
+security audits and cross-package protocol-input, credential, admission or
+authorization changes. It selects existing mechanism skills as needed; ordinary
+pure-value and numerical edits do not require a cross-package security audit.
+
 - Locate definitions and callers with `mix def Module [fun]` and
   `mix refs Module [fun]`. Before changing a public function, inspect callers
   and `mix impact Module [fun]`; `--run` runs identified package tests.
