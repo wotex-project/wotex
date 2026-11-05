@@ -64,10 +64,10 @@ defmodule WotexLab.MixProject do
       {:exqlite, "~> 0.40", optional: true},
       {:req, "~> 0.7.4", optional: true},
       {:ex_maude, "== 0.5.0", optional: true},
-      {:bandit, "~> 1.13.1", only: :test},
+      {:bandit, "~> 1.14.1", only: :test},
       {:testcontainers, "== 2.4.0", only: :test, runtime: false},
       # Testcontainers 2.4 pins Hackney 1.x; Tesla supports the patched 4.x API.
-      {:hackney, "== 4.8.5", only: :test, runtime: false, override: true},
+      {:hackney, "== 4.9.1", only: :test, runtime: false, override: true},
       {:plug, "~> 1.18", optional: true},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.5", only: :dev, runtime: false},
