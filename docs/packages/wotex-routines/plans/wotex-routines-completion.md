@@ -274,7 +274,7 @@ renewal is qualified below.
 
 ## Archive time-matrix qualification
 
-The [VDA-T9 archive profile](../decisions/verified-decision-archive-profile.md#vda-t9--time-matrix-archive-renewal)
+The [VDA-T9 archive profile](../decisions/verified-decision-archive-profile.md#vda-t9-time-matrix-archive-renewal)
 adds eighteen independent time cases per source/journal family, a fifty-nine-case
 combined baseline and eight assertion-only faults across twenty-five semantic
 cases each. Both extracted families now pass all fifty-nine baseline cases and

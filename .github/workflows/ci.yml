@@ -369,7 +369,9 @@ jobs:
   native_check:
     name: ${{ matrix.package }} native checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    # Matter's cold SDK builder has its own 90-minute budget; retain time for
+    # the subsequent LLVM analysis and native assertions after that build.
+    timeout-minutes: ${{ matrix.package == 'wotex-matter' && 150 || 75 }}
     needs: [manifest, affected, workspace, check]
     if: needs.affected.outputs.any_native == 'true'
     strategy:
@@ -457,7 +459,7 @@ jobs:
           set -euo pipefail
           mix native.test --package "${{ matrix.package }}" 2>&1 | tee "$RUNNER_TEMP/native-test.log"
       - name: Retain native gate diagnostics
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: native-gate-diagnostics-${{ matrix.package }}
@@ -505,7 +507,9 @@ jobs:
     name: ${{ matrix.package }} native lane
     # The BLE software fixture builds and boots arm64 guest images.
     runs-on: ${{ matrix.package == 'wotex-ble' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
-    timeout-minutes: 180
+    # Matter builds separate native/software workspaces and runs both BEAM
+    # lanes before native analysis. Their command and test deadlines stay fixed.
+    timeout-minutes: ${{ matrix.package == 'wotex-matter' && 240 || 180 }}
     needs: [manifest, affected]
     if: >-
       needs.affected.outputs.any_native == 'true' && (
@@ -619,7 +623,7 @@ jobs:
       - name: Upstream advisories
         run: mix wotex.native.advisories --package "${{ matrix.package }}"
       - name: Retain native diagnostics
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: native-diagnostics-${{ matrix.package }}
@@ -635,5 +639,7 @@ jobs:
             ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*/*.log
             ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*/result.json
             ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*/acceptance.json
+            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*/fixtures/test.log
+            ${{ runner.temp }}/software-${{ matrix.package }}/run-*/*/fixtures/acceptance.json
             ${{ runner.temp }}/software-${{ matrix.package }}/*.log
             ${{ runner.temp }}/software-${{ matrix.package }}/*.json

@@ -6,6 +6,10 @@ defmodule WotexLabWorkbench.Documentation.Publication do
   routes and files are validated before the destination is touched. Replacing
   an existing publication uses a same-filesystem backup and rollback boundary,
   so a failed producer or preflight leaves the preceding complete tree intact.
+
+  The documentation manifest follows DocShell's default per-file ceiling,
+  including full module/member route indexes. Storybook manifests retain a
+  separate 4 MiB ceiling. Both reads remain bounded before JSON decoding.
   """
 
   alias WotexLabWorkbench.Documentation.{Build, CommandEnvironment, StorybookBuilder}
@@ -232,16 +236,34 @@ defmodule WotexLabWorkbench.Documentation.Publication do
 
   defp manifest(root, name) do
     path = Path.join(root, name)
+    maximum = manifest_ceiling(name)
 
     with {:ok, stat} <- File.lstat(path),
-         true <- stat.type == :regular and stat.size <= 4_194_304,
-         {:ok, bytes} <- File.read(path),
+         true <- stat.type == :regular and stat.size <= maximum,
+         {:ok, bytes} <- read_manifest(path, maximum),
          {:ok, value} <- JSON.decode(bytes),
          true <- is_map(value) do
       {:ok, value}
     else
       false -> {:error, {:invalid_publication_manifest, name}}
       {:error, reason} -> {:error, {:invalid_publication_manifest, name, reason}}
+    end
+  end
+
+  defp manifest_ceiling("site-manifest.json") do
+    {:ok, limits} = DocShell.Presentation.Limits.new()
+    limits.max_file_bytes
+  end
+
+  defp manifest_ceiling("storybook-manifest.json"), do: 4_194_304
+
+  defp read_manifest(path, maximum) do
+    case File.open(path, [:read, :binary], &IO.binread(&1, maximum + 1)) do
+      {:ok, bytes} when is_binary(bytes) and byte_size(bytes) <= maximum -> {:ok, bytes}
+      {:ok, :eof} -> {:ok, ""}
+      {:ok, {:error, _} = error} -> error
+      {:ok, _} -> {:error, :manifest_byte_limit}
+      {:error, _} = error -> error
     end
   end
 

@@ -1,4 +1,6 @@
 defmodule WotexLabWorkbench.Documentation.PublicationTest do
+  @moduledoc false
+
   use ExUnit.Case, async: false
 
   alias WotexLabWorkbench.Documentation.Publication
@@ -71,6 +73,88 @@ defmodule WotexLabWorkbench.Documentation.PublicationTest do
              )
 
     assert File.read!(Path.join(destination, "preceding-publication")) == "complete"
+  end
+
+  test "a full documentation manifest uses the producer's per-file ceiling" do
+    root = temporary_path("publication-large-manifest")
+    docs = Path.join(root, "docs")
+    storybook = Path.join(root, "storybook")
+    destination = Path.join(root, "public")
+    fixture_docs(docs, "/docs/")
+    fixture_storybook(storybook, "/design-system/")
+    on_exit(fn -> File.rm_rf(root) end)
+
+    routes =
+      for index <- 1..16_000 do
+        route = "/docs/wotex_lab/modules/documentation/publication/member-#{index}/"
+
+        %{
+          "id" => "wotex_lab:documentation/publication/member-#{index}",
+          "route" => route,
+          "file" => String.trim_leading(route, "/") <> "index.html",
+          "content_digest" => "sha256:" <> String.duplicate("a", 64)
+        }
+      end
+
+    manifest_path = Path.join(docs, "site-manifest.json")
+
+    manifest =
+      manifest_path
+      |> File.read!()
+      |> JSON.decode!()
+      |> Map.put("routes", routes)
+
+    bytes = JSON.encode!(manifest)
+    {:ok, limits} = DocShell.Presentation.Limits.new()
+    assert byte_size(bytes) > 4_194_304
+    assert byte_size(bytes) < limits.max_file_bytes
+    File.write!(manifest_path, bytes)
+
+    assert {:ok, published} =
+             Publication.publish(
+               %{documentation: docs, storybook: storybook},
+               destination: destination,
+               base_path: "/docs/"
+             )
+
+    assert published.documentation_manifest == manifest
+    assert File.read!(Path.join(destination, "site-manifest.json")) == bytes
+  end
+
+  test "oversized producer manifests leave the preceding publication intact" do
+    {:ok, limits} = DocShell.Presentation.Limits.new()
+
+    for {name, maximum} <- [
+          {"site-manifest.json", limits.max_file_bytes},
+          {"storybook-manifest.json", 4_194_304}
+        ] do
+      root = temporary_path("publication-manifest-ceiling")
+      docs = Path.join(root, "docs")
+      storybook = Path.join(root, "storybook")
+      destination = Path.join(root, "public")
+      fixture_docs(docs, "/docs/")
+      fixture_storybook(storybook, "/design-system/")
+      File.mkdir!(destination)
+      File.write!(Path.join(destination, "preceding-publication"), "complete")
+      on_exit(fn -> File.rm_rf(root) end)
+
+      source = if name == "site-manifest.json", do: docs, else: storybook
+
+      File.open!(Path.join(source, name), [:write, :binary], fn file ->
+        {:ok, ^maximum} = :file.position(file, maximum)
+        IO.binwrite(file, "}")
+      end)
+
+      assert {:error, {:invalid_publication_manifest, ^name}} =
+               Publication.publish(
+                 %{documentation: docs, storybook: storybook},
+                 destination: destination,
+                 base_path: "/docs/"
+               )
+
+      assert File.read!(Path.join(destination, "preceding-publication")) == "complete"
+      refute File.exists?(Path.join(destination, "publication-manifest.json"))
+    end
   end
 
   defp fixture_docs(root, base_path) do
