@@ -165,6 +165,9 @@ settings:
 overrides:
   esbuild: 0.28.2
 
+patchedDependencies:
+  deepmerge@4.3.1: cf59762ee23e6c19623f165b0d57b373a8f9e2a982dee48808fec2922c6e67b0
+
 importers:
 
   .:
@@ -1993,7 +1996,7 @@ snapshots:
 
   '@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.2)(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.2))':
     dependencies:
-      deepmerge: 4.3.1
+      deepmerge: 4.3.1(patch_hash=cf59762ee23e6c19623f165b0d57b373a8f9e2a982dee48808fec2922c6e67b0)
       magic-string: 1.4.1
       obug: 2.2.1
       svelte: 5.57.2
@@ -2195,7 +2198,7 @@ snapshots:
 
   deep-eql@5.0.2: {}
 
-  deepmerge@4.3.1: {}
+  deepmerge@4.3.1(patch_hash=cf59762ee23e6c19623f165b0d57b373a8f9e2a982dee48808fec2922c6e67b0): {}
 
   default-browser-id@5.0.1: {}
 
