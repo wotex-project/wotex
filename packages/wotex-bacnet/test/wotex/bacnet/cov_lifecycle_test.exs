@@ -6,20 +6,20 @@ defmodule Wotex.BACnet.COVLifecycleTest do
   alias Wotex.BACnet
   alias Wotex.BACnet.{BACstack, Error, IPv4, Subscription, Tags}
   @moduletag :capture_log
-  @destination {{127, 0, 0, 1}, 55_828}
+  @destination {{127, 0, 0, 1}, 18_828}
   @fixture Jason.decode!(File.read!(Path.expand("../../fixtures/cov_lifecycle_v1.json", __DIR__)))
 
   setup context do
     # The admission case holds all 64 requests before responding. Reserve enough
     # peer receive capacity for that burst, including the kernel's UDP accounting.
     {:ok, peer} =
-      :gen_udp.open(55_828, [:binary, active: false, ip: {127, 0, 0, 1}, recbuf: 262_144])
+      :gen_udp.open(18_828, [:binary, active: false, ip: {127, 0, 0, 1}, recbuf: 262_144])
 
     {:ok, session} =
       BACnet.connect(
         client: IPv4,
         local_ip: :none,
-        local_port: 55_829,
+        local_port: 18_829,
         destination: @destination,
         timeout: Map.get(context, :session_timeout, 500)
       )
@@ -463,7 +463,7 @@ defmodule Wotex.BACnet.COVLifecycleTest do
     for key <- [:transport, :client, :segmentator, :segments_store],
         do: refute(Process.alive?(group[key]))
 
-    {:ok, socket} = :gen_udp.open(55_829, [:binary])
+    {:ok, socket} = :gen_udp.open(18_829, [:binary])
     :gen_udp.close(socket)
   end
 
@@ -479,7 +479,7 @@ defmodule Wotex.BACnet.COVLifecycleTest do
     for key <- [:transport, :client, :segmentator, :segments_store],
         do: refute(Process.alive?(group[key]))
 
-    {:ok, socket} = :gen_udp.open(55_829, [:binary])
+    {:ok, socket} = :gen_udp.open(18_829, [:binary])
     :gen_udp.close(socket)
   end
 
@@ -759,7 +759,7 @@ defmodule Wotex.BACnet.COVLifecycleTest do
       :gen_udp.send(
         peer,
         {127, 0, 0, 1},
-        55_829,
+        18_829,
         <<0x81, 0x0A, byte_size(apdu) + 6::16, 1, 4, apdu::binary>>
       )
 end

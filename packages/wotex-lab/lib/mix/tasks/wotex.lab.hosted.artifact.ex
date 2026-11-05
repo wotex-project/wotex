@@ -452,18 +452,35 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
          normalized <- normalize_zip!(archive),
          {:ok, files} <- :zip.extract(normalized, [:memory]),
          selected <- select_escript_entries!(files),
-         {:ok, {_, selected_archive}} <-
-           :zip.create(~c"wotex-lab-hosted-worker.zip", selected, [
-             :memory,
-             {:uncompress, :all},
-             {:extra, []}
-           ]),
+         selected_archive <- selected_zip!(path, selected),
          selected_archive <- normalize_zip!(selected_archive),
          {:ok, _} <- :zip.extract(selected_archive, [:memory]),
          :ok <- File.write(path, prefix <> selected_archive, [:binary]) do
       :ok
     else
       _ -> Mix.raise("hosted worker Escript could not be normalized")
+    end
+  end
+
+  defp selected_zip!(path, files) do
+    directory = private_sibling!(path, "zip")
+    archive = Path.join(directory, "worker.zip")
+
+    try do
+      # OTP's memory ZIP writer repeatedly copies the accumulated archive on
+      # positioned writes. Use a private file for the large stored NIF entries.
+      with {:ok, _} <-
+             :zip.create(String.to_charlist(archive), files, [
+               {:uncompress, :all},
+               {:extra, []}
+             ]),
+           {:ok, bytes} <- File.read(archive) do
+        bytes
+      else
+        _ -> Mix.raise("hosted worker Escript could not be normalized")
+      end
+    after
+      File.rm_rf!(directory)
     end
   end
 
@@ -538,7 +555,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
       "hosted worker ZIP directories disagree"
     )
 
-    normalized_local <> normalized_central <> eocd
+    IO.iodata_to_binary([normalized_local, normalized_central, eocd])
   end
 
   defp zip_eocd!(archive) do
@@ -552,7 +569,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
   end
 
   defp normalize_local_entries!(<<>>, _, entries, _, []),
-    do: {<<>>, entries}
+    do: {[], entries}
 
   defp normalize_local_entries!(bytes, offset, entries, uncompressed, [expected | expected_tail]) do
     {expected_name, expected_offset, expected_flags, expected_compression, expected_crc,
@@ -598,7 +615,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
       {normalized_remaining, entries} =
         normalize_local_entries!(remaining, next_offset, [expected | entries], total, expected_tail)
 
-      {header <> normalized_remaining, entries}
+      {[header, normalized_remaining], entries}
     else
       _ -> Mix.raise("hosted worker ZIP local entry is invalid")
     end
@@ -609,7 +626,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
 
   defp normalize_central_entries!(<<>>, entries, expected) do
     require!(length(entries) == expected, "hosted worker ZIP directory count is invalid")
-    {<<>>, entries}
+    {[], entries}
   end
 
   defp normalize_central_entries!(bytes, entries, expected) do
@@ -647,7 +664,7 @@ defmodule Mix.Tasks.Wotex.Lab.Hosted.Artifact do
           expected
         )
 
-      {header <> normalized_remaining, entries}
+      {[header, normalized_remaining], entries}
     else
       _ -> Mix.raise("hosted worker ZIP directory entry is invalid")
     end

@@ -121,11 +121,11 @@ defmodule Wotex.BACnet.CharacterStringTest do
   end
 
   test "WBA-S01 WBA-S02 WBA-V01 WBA-V04 owned UDP retains charset through reassembly" do
-    {:ok, peer} = :gen_udp.open(55_823, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, peer} = :gen_udp.open(18_823, [:binary, active: false, ip: {127, 0, 0, 1}])
     {:ok, {_, port}} = :inet.sockname(peer)
 
     {:ok, handle} =
-      IPv4.connect(local_ip: :none, local_port: 55_819, destination: {{127, 0, 0, 1}, port})
+      IPv4.connect(local_ip: :none, local_port: 18_819, destination: {{127, 0, 0, 1}, port})
 
     on_exit(fn ->
       IPv4.disconnect(handle)

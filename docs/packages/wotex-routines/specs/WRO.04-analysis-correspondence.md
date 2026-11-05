@@ -557,7 +557,7 @@ archive inputs; the complete combined verifier milestone remains open.
 
 ## Archive resource-bound qualification
 
-The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal)
+The [VDA-T8 archive profile](../decisions/verified-decision-archive-profile.md#vda-t8-resource-bound-renewal)
 requires independent argument/output accounting across both Time grammars and
 all selected JSON resource axes. Both extracted consumers now pass forty-one
 cases and catch thirteen faults each through assertions with no harness errors,

@@ -278,8 +278,8 @@ defmodule Wotex.BACnet.ServiceBoundaryTest do
     {:ok, handle} =
       IPv4.connect(
         local_ip: :none,
-        local_port: 55_812,
-        destination: {{127, 0, 0, 1}, 55_813},
+        local_port: 18_812,
+        destination: {{127, 0, 0, 1}, 18_813},
         timeout: 50
       )
 
@@ -298,7 +298,7 @@ defmodule Wotex.BACnet.ServiceBoundaryTest do
     :sys.get_state(handle.owner)
     assert {:messages, []} = Process.info(state.client, :messages)
     :sys.resume(state.client)
-    source = {{127, 0, 0, 1}, 55_813}
+    source = {{127, 0, 0, 1}, 18_813}
 
     for sequence <- 0..31 do
       result =
@@ -402,10 +402,10 @@ defmodule Wotex.BACnet.ServiceBoundaryTest do
   end
 
   test "WBA-S02 WBA-V04 a segmented ACK with reserved header bits fails only its call" do
-    {:ok, peer} = :gen_udp.open(55_824, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, peer} = :gen_udp.open(18_824, [:binary, active: false, ip: {127, 0, 0, 1}])
 
     {:ok, handle} =
-      IPv4.connect(local_ip: :none, local_port: 55_821, destination: {{127, 0, 0, 1}, 55_824})
+      IPv4.connect(local_ip: :none, local_port: 18_821, destination: {{127, 0, 0, 1}, 18_824})
 
     on_exit(fn ->
       IPv4.disconnect(handle)

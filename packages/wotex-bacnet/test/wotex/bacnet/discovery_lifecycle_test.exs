@@ -6,8 +6,8 @@ defmodule Wotex.BACnet.DiscoveryLifecycleTest do
   alias Wotex.BACnet
   alias Wotex.BACnet.{BACstack, Device, Error, IPv4}
   @moduletag :capture_log
-  @port 55_839
-  @peer_port 55_838
+  @port 18_839
+  @peer_port 18_838
 
   setup do
     {:ok, peer} = :gen_udp.open(@peer_port, [:binary, active: false, ip: {127, 0, 0, 1}])
@@ -58,14 +58,14 @@ defmodule Wotex.BACnet.DiscoveryLifecycleTest do
   end
 
   test "WBA-N04 identical instance from two sources remains two observations", c do
-    {:ok, second} = :gen_udp.open(55_840, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, second} = :gen_udp.open(18_840, [:binary, active: false, ip: {127, 0, 0, 1}])
     on_exit(fn -> :gen_udp.close(second) end)
     call = Task.async(fn -> BACnet.who_is(c.session) end)
     service(c.peer)
     send_apdu(second, i_am(10))
     send_apdu(c.peer, i_am(10))
 
-    assert {:ok, [%Device{source: {_, @peer_port}}, %Device{source: {_, 55_840}}]} =
+    assert {:ok, [%Device{source: {_, @peer_port}}, %Device{source: {_, 18_840}}]} =
              Task.await(call)
   end
 
@@ -86,7 +86,7 @@ defmodule Wotex.BACnet.DiscoveryLifecycleTest do
     session = c.session
     missing = put_in(session.handle.stack.discovery, nil)
     assert {:error, %Error{code: :discovery_not_configured}} = BACnet.who_is(missing)
-    forged = put_in(session.handle.stack.discovery.destination, {{127, 0, 0, 1}, 55_840})
+    forged = put_in(session.handle.stack.discovery.destination, {{127, 0, 0, 1}, 18_840})
     assert {:error, %Error{code: :invalid_discovery_options}} = BACnet.who_is(forged)
     assert listeners(c.client) == []
     assert {:error, :timeout} = :gen_udp.recv(c.peer, 0, 10)

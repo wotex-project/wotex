@@ -2,7 +2,7 @@
 
 Recorded: 2026-10-24. Repository commit: `816d417d676700a13f8d266a5bea03d255ccfe5b`.
 Package path: `packages/wotex-routines`. Scope: VDA-T8 in the
-[independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal)
+[independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t8-resource-bound-renewal)
 and VD-T10/VD-T12/VD-T13 in the [verified-decision contract](../specs/verified-decision-v1.md).
 
 ## Exact inputs

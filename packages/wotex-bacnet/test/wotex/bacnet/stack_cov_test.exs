@@ -7,7 +7,7 @@ defmodule Wotex.BACnet.StackCOVTest do
   alias BACnet.Stack.Client
   alias Wotex.BACnet.{BACstack, CharacterString, COVRequest, IPv4, StackClient}
   @moduletag :capture_log
-  @destination {{127, 0, 0, 1}, 55_826}
+  @destination {{127, 0, 0, 1}, 18_826}
   @corpus Jason.decode!(File.read!(Path.expand("../../fixtures/cov_transport_v1.json", __DIR__)))
   @receipts Enum.find(@corpus["cases"], &(&1["id"] == "WBA-CT01"))
   @assemblies Enum.find(@corpus["cases"], &(&1["id"] == "WBA-CT02"))
@@ -20,8 +20,8 @@ defmodule Wotex.BACnet.StackCOVTest do
   }
 
   setup do
-    {:ok, peer} = :gen_udp.open(55_826, [:binary, active: false, ip: {127, 0, 0, 1}])
-    {:ok, handle} = IPv4.connect(local_ip: :none, local_port: 55_827, destination: @destination)
+    {:ok, peer} = :gen_udp.open(18_826, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, handle} = IPv4.connect(local_ip: :none, local_port: 18_827, destination: @destination)
     {:ok, request} = COVRequest.new(@request, self())
 
     on_exit(fn ->
@@ -106,7 +106,7 @@ defmodule Wotex.BACnet.StackCOVTest do
         do: refute(Process.alive?(Map.fetch!(group, key)))
 
     refute Process.alive?(c.handle.owner)
-    assert {:ok, port} = :gen_udp.open(55_827, [:binary, active: false])
+    assert {:ok, port} = :gen_udp.open(18_827, [:binary, active: false])
     :gen_udp.close(port)
   end
 
@@ -599,7 +599,7 @@ defmodule Wotex.BACnet.StackCOVTest do
       :gen_udp.send(
         peer,
         {127, 0, 0, 1},
-        55_827,
+        18_827,
         <<0x81, 0x0A, byte_size(apdu) + 6::16, 1, 4, apdu::binary>>
       )
 

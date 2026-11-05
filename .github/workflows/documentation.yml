@@ -17,6 +17,12 @@ on:
   schedule:
     - cron: "41 3 * * *"
   workflow_dispatch:
+    inputs:
+      profile:
+        description: "Source cohort to qualify"
+        type: choice
+        options: [release, rolling]
+        default: release
 
 concurrency:
   group: documentation-${{ github.ref }}
@@ -50,8 +56,8 @@ jobs:
       - name: Checkout Phoenix Assets candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: futhr/phoenix-assets
-          ref: 23fe311734fed26337c3b919341852342f691831
+          repository: ghostshift-assembly/phoenix-assets
+          ref: f2ffc2400e887757c6ef08f44fd034b1e7fc9bb9
           path: .candidates/phoenix-assets
           persist-credentials: false
 
@@ -76,6 +82,10 @@ jobs:
       - name: Install the pinned Phoenix Assets frontend graph
         working-directory: .candidates/phoenix-assets
         run: pnpm install --frozen-lockfile
+
+      - name: Build the Phoenix Assets documentation browser assets
+        working-directory: .candidates/phoenix-assets
+        run: pnpm run build:doc-shell-assets
 
       - name: Use the Workbench pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
@@ -121,6 +131,7 @@ jobs:
           WOTEX_PATH_DEPS: "1"
           DOC_SHELL_CANDIDATE: ${{ github.workspace }}/.candidates/doc_shell
           PHOENIX_ASSETS_CANDIDATE: ${{ github.workspace }}/.candidates/phoenix-assets
+          REQUESTED_PROFILE: ${{ inputs.profile }}
         run: |
           set -euo pipefail
           repository_name=${GITHUB_REPOSITORY#*/}
@@ -129,10 +140,17 @@ jobs:
           else
             pages_prefix="/$repository_name"
           fi
-          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]] ||
+             [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$REQUESTED_PROFILE" == "rolling" ]]; then
             profile=rolling
           else
             profile=release
+          fi
+          if [[ "$profile" == "rolling" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            # The local rolling resolver reads refs/heads/main. Bind that ref
+            # in this disposable checkout to the workflow's branch commit;
+            # the manifest retains its actual SHA and verified tree digests.
+            git -C "$GITHUB_WORKSPACE" branch --force main "$GITHUB_SHA"
           fi
           mix wotex_lab.docs.build \
             --destination "$GITHUB_WORKSPACE/_site" \

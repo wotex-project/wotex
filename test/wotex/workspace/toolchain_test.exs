@@ -105,7 +105,7 @@ defmodule Wotex.Workspace.ToolchainTest do
     devices = Enum.find(steps, &(&1["name"] == "Lab independent software devices"))
     assert browser["env"]["WOTEX_LAB_E2E"] == "1"
     assert browser["env"]["WOTEX_LAB_SIMULATORS"] == "1"
-    assert browser["run"] == "MIX_ENV=test mix test test/e2e"
+    assert browser["run"] == "env MIX_ENV=test mix test test/e2e"
     assert devices["env"]["WOTEX_LAB_SIMULATORS"] == "1"
   end
 

@@ -226,7 +226,7 @@ static void release(struct run *run) {
 static void transfer(struct run *run, size_t input_count, size_t output_count, size_t fragment,
                      int slow, int expected) {
     size_t sent = 0, received = 0; int eof = 0;
-    int64_t deadline = now() + 10000;
+    int64_t started = now(), deadline = started + 10000;
     while (!eof || run->status < 0) {
         struct pollfd fds[2] = {{run->input, sent < input_count ? POLLOUT : 0, 0},
             {run->output, POLLIN, 0}};
@@ -243,7 +243,7 @@ static void transfer(struct run *run, size_t input_count, size_t output_count, s
         }
         if (fds[1].revents & (POLLIN | POLLHUP)) {
             unsigned char bytes[4096];
-            ssize_t size = read(run->output, bytes, slow ? 511 : sizeof(bytes));
+            ssize_t size = read(run->output, bytes, slow ? 23 : sizeof(bytes));
             CHECK(size >= 0 || errno == EAGAIN || errno == EINTR, "owner output read");
             if (size == 0) eof = 1;
             if (size > 0) {
@@ -251,7 +251,14 @@ static void transfer(struct run *run, size_t input_count, size_t output_count, s
                     CHECK(bytes[index] == pattern(received + (size_t)index), "exact output bytes");
                 received += (size_t)size;
                 CHECK(received <= output_count, "output byte ceiling");
-                if (slow) sleep_ms(1);
+                if (slow) {
+                    /* Pace bytes, not read calls: a pipe may return only a
+                     * fragment, and relative sleeps compound scheduler delay.
+                     * Keep the slow reader at 511 bytes/ms without consuming
+                     * the guardian's finite drain budget on tiny fragments. */
+                    int64_t remaining = started + (int64_t)(received / 511) - now();
+                    if (remaining > 0) sleep_ms((int)remaining);
+                }
             }
         }
         observe(run);

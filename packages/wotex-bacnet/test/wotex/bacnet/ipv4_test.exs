@@ -62,7 +62,7 @@ defmodule Wotex.BACnet.IPv4Test do
   end
 
   test "owned process group starts with no retries, forwards frames and cleans up on disconnect" do
-    opts = [local_ip: :none, local_port: 55_808, destination: {{127, 0, 0, 1}, 55_809}, timeout: 20]
+    opts = [local_ip: :none, local_port: 18_808, destination: {{127, 0, 0, 1}, 18_809}, timeout: 20]
     assert {:ok, handle} = IPv4.connect(opts)
     assert {:ok, client} = StackOwner.client(handle.owner)
     state = :sys.get_state(client).sdk
@@ -101,7 +101,7 @@ defmodule Wotex.BACnet.IPv4Test do
     task =
       Task.async(fn ->
         {:ok, handle} =
-          IPv4.connect(local_ip: :none, local_port: 55_810, destination: {{127, 0, 0, 1}, 55_809})
+          IPv4.connect(local_ip: :none, local_port: 18_810, destination: {{127, 0, 0, 1}, 18_809})
 
         send(parent, {:handle, handle})
 
@@ -117,7 +117,7 @@ defmodule Wotex.BACnet.IPv4Test do
     assert_receive {:DOWN, ^ref, :process, _, :normal}
 
     {:ok, handle} =
-      IPv4.connect(local_ip: :none, local_port: 55_810, destination: {{127, 0, 0, 1}, 55_809})
+      IPv4.connect(local_ip: :none, local_port: 18_810, destination: {{127, 0, 0, 1}, 18_809})
 
     ref = Process.monitor(handle.owner)
     GenServer.stop(handle.stack.client)
@@ -130,18 +130,18 @@ defmodule Wotex.BACnet.IPv4Test do
           [local_ip: {999, 0, 0, 1}],
           [local_ip: :none, destination: nil],
           [local_ip: :none, destination: {{127, 0, 0, 1}, 0}],
-          [local_ip: :none, destination: {{0, 0, 0, 0}, 55_809}],
+          [local_ip: :none, destination: {{0, 0, 0, 0}, 18_809}],
           [
             local_ip: :none,
-            local_port: 55_810,
-            destination: {{127, 0, 0, 1}, 55_809},
+            local_port: 18_810,
+            destination: {{127, 0, 0, 1}, 18_809},
             security_mode: :bacnet_sc
           ],
           [
             local_ip: :none,
-            local_port: 55_810,
-            destination: {{127, 0, 0, 1}, 55_809},
-            destination: {{127, 0, 0, 1}, 55_808}
+            local_port: 18_810,
+            destination: {{127, 0, 0, 1}, 18_809},
+            destination: {{127, 0, 0, 1}, 18_808}
           ]
         ],
         do: assert(match?({:error, _}, IPv4.connect(opts)))

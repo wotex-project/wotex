@@ -206,7 +206,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
     task =
       Task.async(fn ->
         StackOwner.start_link(
-          [local_ip: :none, local_port: 55_820, timeout: 5000, owner: receiver],
+          [local_ip: :none, local_port: 18_820, timeout: 5000, owner: receiver],
           acquire
         )
       end)
@@ -230,7 +230,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
     assert Enum.count(resources, fn {_, pid} -> Process.alive?(pid) end) ==
              row["expected"]["active_owned_resources"]
 
-    {:ok, socket} = :gen_udp.open(55_820, [:binary])
+    {:ok, socket} = :gen_udp.open(18_820, [:binary])
     :gen_udp.close(socket)
   end
 
@@ -272,7 +272,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
 
     {:ok, owner} =
       StackOwner.start_link(
-        [local_ip: :none, local_port: 55_817, timeout: 5000, owner: self()],
+        [local_ip: :none, local_port: 18_817, timeout: 5000, owner: self()],
         acquire
       )
 
@@ -287,7 +287,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
     for key <- [:transport, :segments_store, :segmentator],
         do: refute(Process.alive?(Map.fetch!(group, key)))
 
-    {:ok, socket} = :gen_udp.open(55_817, [:binary])
+    {:ok, socket} = :gen_udp.open(18_817, [:binary])
     :gen_udp.close(socket)
   end
 
@@ -296,8 +296,8 @@ defmodule Wotex.BACnet.StackLifecycleTest do
       {:ok, handle} =
         IPv4.connect(
           local_ip: :none,
-          local_port: 55_818,
-          destination: {{127, 0, 0, 1}, 55_815},
+          local_port: 18_818,
+          destination: {{127, 0, 0, 1}, 18_815},
           timeout: 60_000
         )
 
@@ -312,7 +312,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
       for key <- [:transport, :segments_store, :segmentator, :client],
           do: refute(Process.alive?(Map.fetch!(group, key)))
 
-      {:ok, socket} = :gen_udp.open(55_818, [:binary])
+      {:ok, socket} = :gen_udp.open(18_818, [:binary])
       :gen_udp.close(socket)
     end
   end
@@ -335,7 +335,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
 
   test "WBA-S03 WBA-V05 deadline escalation cannot propagate a kill to the closing caller" do
     {:ok, owner} =
-      StackOwner.start_link(local_ip: :none, local_port: 55_832, timeout: 1000, owner: self())
+      StackOwner.start_link(local_ip: :none, local_port: 18_832, timeout: 1000, owner: self())
 
     group = :sys.get_state(owner)
 
@@ -350,7 +350,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
     assert_receive {:DOWN, ^monitor, :process, ^owner, :killed}, 100
     for ref <- monitors, do: assert_receive({:DOWN, ^ref, :process, _, _}, 100)
     assert System.monotonic_time(:millisecond) - started < 200
-    {:ok, socket} = :gen_udp.open(55_832, [:binary])
+    {:ok, socket} = :gen_udp.open(18_832, [:binary])
     :gen_udp.close(socket)
   end
 
@@ -376,7 +376,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
     for _ <- 1..10 do
       {:ok, owner} =
         StackOwner.start_link(
-          [local_ip: :none, local_port: 55_832, timeout: 1000, owner: self()],
+          [local_ip: :none, local_port: 18_832, timeout: 1000, owner: self()],
           acquire
         )
 
@@ -390,7 +390,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
       for key <- [:transport, :segmentator, :segments_store],
           do: refute(Process.alive?(group[key]))
 
-      {:ok, socket} = :gen_udp.open(55_832, [:binary])
+      {:ok, socket} = :gen_udp.open(18_832, [:binary])
       :gen_udp.close(socket)
     end
   end
@@ -407,8 +407,8 @@ defmodule Wotex.BACnet.StackLifecycleTest do
     {:ok, handle} =
       IPv4.connect(
         local_ip: :none,
-        local_port: 55_814,
-        destination: {{127, 0, 0, 1}, 55_815},
+        local_port: 18_814,
+        destination: {{127, 0, 0, 1}, 18_815},
         timeout: 60_000
       )
 
@@ -421,7 +421,7 @@ defmodule Wotex.BACnet.StackLifecycleTest do
     assert {:error, %{code: :deadline_exceeded}} = IPv4.request(handle, @message, 10)
     for reference <- references, do: assert_receive({:DOWN, ^reference, :process, _, _}, 1000)
     assert :ok = IPv4.disconnect(handle)
-    {:ok, socket} = :gen_udp.open(55_814, [:binary])
+    {:ok, socket} = :gen_udp.open(18_814, [:binary])
     :gen_udp.close(socket)
   end
 end

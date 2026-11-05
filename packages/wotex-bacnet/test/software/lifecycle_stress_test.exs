@@ -102,7 +102,7 @@ defmodule Wotex.BACnet.LifecycleStressTest do
   end
 
   defp connect(destination),
-    do: IPv4.connect(local_ip: :none, local_port: 55_822, destination: destination, timeout: 3000)
+    do: IPv4.connect(local_ip: :none, local_port: 18_822, destination: destination, timeout: 3000)
 
   defp resources(handle) do
     state = :sys.get_state(handle.owner)
@@ -144,7 +144,7 @@ defmodule Wotex.BACnet.LifecycleStressTest do
     assert :ok = IPv4.disconnect(handle)
     for reference <- monitors, do: assert_receive({:DOWN, ^reference, :process, _, _}, 1000)
     assert :erlang.port_info(resources.socket) == :undefined
-    {:ok, rebound} = :gen_udp.open(55_822, [:binary])
+    {:ok, rebound} = :gen_udp.open(18_822, [:binary])
     :gen_udp.close(rebound)
   end
 

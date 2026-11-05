@@ -8,14 +8,14 @@ defmodule Wotex.BACnet.StandaloneContractTest do
   @moduletag :capture_log
 
   setup do
-    {:ok, peer} = :gen_udp.open(55_836, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, peer} = :gen_udp.open(18_836, [:binary, active: false, ip: {127, 0, 0, 1}])
 
     {:ok, session} =
       BACnet.connect(
         client: IPv4,
         local_ip: :none,
-        local_port: 55_837,
-        destination: {{127, 0, 0, 1}, 55_836},
+        local_port: 18_837,
+        destination: {{127, 0, 0, 1}, 18_836},
         timeout: 100
       )
 
@@ -187,7 +187,7 @@ defmodule Wotex.BACnet.StandaloneContractTest do
       BACnet.connect(
         client: BACstack,
         stack_client: client,
-        destination: {{127, 0, 0, 1}, 55_836},
+        destination: {{127, 0, 0, 1}, 18_836},
         timeout: 100
       )
 
@@ -270,7 +270,7 @@ defmodule Wotex.BACnet.StandaloneContractTest do
       :gen_udp.send(
         peer,
         {127, 0, 0, 1},
-        55_837,
+        18_837,
         <<0x81, 0x0A, byte_size(apdu) + 6::16, 1, 4, apdu::binary>>
       )
 end

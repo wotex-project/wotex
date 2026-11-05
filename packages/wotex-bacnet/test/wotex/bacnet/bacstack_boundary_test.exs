@@ -127,7 +127,7 @@ defmodule Wotex.BACnet.BACstackBoundaryTest do
   test "a runtime frame with an invalid native value keeps its typed error" do
     {:ok, form} = Wotex.Form.new(%{"href" => "bacnet://123/1,7/85", "op" => "observeproperty"})
     {:ok, value} = Encoding.create({:real, 1.5})
-    destination = {{127, 0, 0, 1}, 55_834}
+    destination = {{127, 0, 0, 1}, 18_834}
 
     request = %Request{
       operation: :observeproperty,

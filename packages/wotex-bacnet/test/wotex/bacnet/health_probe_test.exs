@@ -8,14 +8,14 @@ defmodule Wotex.BACnet.HealthProbeTest do
   @probe %{type: :read_property, object_type: 1, instance: 7, property: 85, array_index: 0}
 
   setup do
-    {:ok, peer} = :gen_udp.open(55_830, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, peer} = :gen_udp.open(18_830, [:binary, active: false, ip: {127, 0, 0, 1}])
 
     {:ok, session} =
       BACnet.connect(
         client: IPv4,
         local_ip: :none,
-        local_port: 55_831,
-        destination: {{127, 0, 0, 1}, 55_830},
+        local_port: 18_831,
+        destination: {{127, 0, 0, 1}, 18_830},
         timeout: 500
       )
 
@@ -102,7 +102,7 @@ defmodule Wotex.BACnet.HealthProbeTest do
     :gen_udp.send(
       peer,
       {127, 0, 0, 1},
-      55_831,
+      18_831,
       <<0x81, 0x0A, byte_size(apdu) + 6::16, 1, 0, apdu::binary>>
     )
   end

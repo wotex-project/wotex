@@ -10,8 +10,8 @@ defmodule Wotex.BACnet.OwnedSessionTest do
       BACnet.connect(
         client: IPv4,
         local_ip: :none,
-        local_port: 55_838,
-        destination: {{127, 0, 0, 1}, 55_839},
+        local_port: 18_838,
+        destination: {{127, 0, 0, 1}, 18_839},
         timeout: 100
       )
 
@@ -24,13 +24,13 @@ defmodule Wotex.BACnet.OwnedSessionTest do
     Process.exit(native_owner, :kill)
     assert_receive {:DOWN, ^monitor, :process, ^stack, _}, 1100
     refute Process.alive?(client)
-    assert {:ok, socket} = :gen_udp.open(55_838, [:binary])
+    assert {:ok, socket} = :gen_udp.open(18_838, [:binary])
     :gen_udp.close(socket)
   end
 
   test "WBA-S03 borrowed session-owner loss leaves the borrowed stack alive" do
     {:ok, stack} =
-      StackOwner.start_link(local_ip: :none, local_port: 55_838, timeout: 100, owner: self())
+      StackOwner.start_link(local_ip: :none, local_port: 18_838, timeout: 100, owner: self())
 
     on_exit(fn -> StackOwner.close(stack) end)
     {:ok, client} = StackOwner.client(stack)
@@ -39,7 +39,7 @@ defmodule Wotex.BACnet.OwnedSessionTest do
       BACnet.connect(
         client: BACstack,
         stack_client: client,
-        destination: {{127, 0, 0, 1}, 55_839},
+        destination: {{127, 0, 0, 1}, 18_839},
         timeout: 100
       )
 
@@ -56,7 +56,7 @@ defmodule Wotex.BACnet.OwnedSessionTest do
 
   test "WBA-S03 stack custody binds once and only through its original owner" do
     {:ok, stack} =
-      StackOwner.start_link(local_ip: :none, local_port: 55_838, timeout: 100, owner: self())
+      StackOwner.start_link(local_ip: :none, local_port: 18_838, timeout: 100, owner: self())
 
     on_exit(fn -> StackOwner.close(stack) end)
     session = spawn(fn -> receive do: (:stop -> :ok) end)
@@ -78,7 +78,7 @@ defmodule Wotex.BACnet.OwnedSessionTest do
 
   test "WBA-S03 failed stack-custody binding cleans the temporary session owner" do
     {:ok, stack} =
-      StackOwner.start_link(local_ip: :none, local_port: 55_838, timeout: 100, owner: self())
+      StackOwner.start_link(local_ip: :none, local_port: 18_838, timeout: 100, owner: self())
 
     on_exit(fn -> StackOwner.close(stack) end)
     {:ok, client} = StackOwner.client(stack)
@@ -89,7 +89,7 @@ defmodule Wotex.BACnet.OwnedSessionTest do
 
     assert {:error, %Error{code: :connection_closed}} =
              BACstack.connect_owned(
-               [stack_client: client, destination: {{127, 0, 0, 1}, 55_839}],
+               [stack_client: client, destination: {{127, 0, 0, 1}, 18_839}],
                dead
              )
 

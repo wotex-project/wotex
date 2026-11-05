@@ -553,7 +553,7 @@ physical authority.
 
 ## Archive resource-bound qualification
 
-The [independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t8--resource-bound-renewal)
+The [independent archive profile](../decisions/verified-decision-archive-profile.md#vda-t8-resource-bound-renewal)
 adds thirty-three behavioral cases per independent source/journal family. Both
 Time grammars, relevant-present/relevant-absent/irrelevant UTC, native/plain
 inputs and five public verification operations must cover all five JSON resource
